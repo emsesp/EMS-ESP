@@ -67,7 +67,9 @@ const _Model_Type Model_Types[] = {
 
 };
 
-/* 
+uint8_t Device_Ids[] = {0x08, 0x09, 0x0B, 0x10, 0x11, 0x17, 0x18, 0x21};
+
+/*
  * Known thermostat types and their abilities
  */
 const _Thermostat_Type Thermostat_Types[] = {
@@ -82,6 +84,7 @@ const _Thermostat_Type Thermostat_Types[] = {
 
 // calculate sizes of arrays
 uint8_t _Model_Types_max      = ArraySize(Model_Types);      // number of models
+uint8_t _Device_Ids_max       = ArraySize(Device_Ids);      // number of relevant device ids
 uint8_t _Thermostat_Types_max = ArraySize(Thermostat_Types); // number of defined thermostat types
 
 const _EMS_Type EMS_Types[] = {
@@ -1412,9 +1415,9 @@ _EMS_MODEL_ID ems_getBoilerModel() {
 void ems_scanDevices() {
     // send Version request to all known EMS devices
     myDebug("Scanning EMS bus for devices. This may take a few seconds.");
-    for (int i = 0; i < _Model_Types_max; i++) {
-        if ((Model_Types[i].model_id != EMS_MODEL_NONE) && (Model_Types[i].model_id != EMS_MODEL_SERVICEKEY)) {
-            ems_doReadCommand(EMS_TYPE_Version, Model_Types[i].type_id);
+    for (int i = 0; i < _Device_Ids_max; i++) {
+        if ((Device_Ids[i] != EMS_MODEL_NONE) && (Device_Ids[i] != EMS_MODEL_SERVICEKEY)) {
+            ems_doReadCommand(EMS_TYPE_Version, Device_Ids[i]);
         }
     }
 }
