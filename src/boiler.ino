@@ -385,9 +385,9 @@ void showInfo() {
                     EMS_Thermostat.year + 2000);
 
             if (EMS_Thermostat.mode == 0) {
-                myDebug("  Mode is set to low");
+                myDebug("  Mode is set to night");
             } else if (EMS_Thermostat.mode == 1) {
-                myDebug("  Mode is set to manual");
+                myDebug("  Mode is set to day");
             } else if (EMS_Thermostat.mode == 2) {
                 myDebug("  Mode is set to auto");
             } else {
@@ -658,8 +658,10 @@ void MQTTcallback(unsigned int type, const char * topic, const char * message) {
             myDebug("MQTT topic: thermostat mode value %s", message);
             if (strcmp((char *)message, "auto") == 0) {
                 ems_setThermostatMode(2);
-            } else if (strcmp((char *)message, "manual") == 0) {
+            } else if (strcmp((char *)message, "day") == 0) {
                 ems_setThermostatMode(1);
+            } else if (strcmp((char *)message, "night") == 0) {
+                ems_setThermostatMode(0);
             }
         }
 
@@ -777,7 +779,7 @@ void _showerColdShotStop() {
     }
 }
 
-/* 
+/*
  *  Shower Logic
  */
 void showerCheck() {
