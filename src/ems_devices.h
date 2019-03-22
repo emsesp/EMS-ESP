@@ -71,10 +71,16 @@
 #define EMS_TYPE_RC30StatusMessage_curr 2     // current temp
 
 // RC35 specific
-#define EMS_TYPE_RC35StatusMessage 0x3E       // is an automatic thermostat broadcast giving us temps
+//lobocobra start
+//#define EMS_TYPE_RC35StatusMessage 0x3E       // is an automatic thermostat broadcast giving us temps
+#define EMS_TYPE_RC35StatusMessage 0x48       // is an automatic thermostat broadcast giving us temps
+//lobocobra end
 #define EMS_TYPE_RC35StatusMessage_setpoint 2 // desired temp
 #define EMS_TYPE_RC35StatusMessage_curr 3     // current temp
-#define EMS_TYPE_RC35Set 0x3D                 // for setting values like temp and mode (Working mode HC1)
+//lobocobra start
+//#define EMS_TYPE_RC35Set 0x3D                 // for setting values like temp and mode (Working mode HC1)
+#define EMS_TYPE_RC35Set 0x47                 // for setting values like temp and mode (Working mode HC1)
+//lobocobra end
 #define EMS_OFFSET_RC35Set_mode 7             // position of thermostat mode
 #define EMS_OFFSET_RC35Set_temp_day 2         // position of thermostat setpoint temperature for day time
 #define EMS_OFFSET_RC35Set_temp_night 1       // position of thermostat setpoint temperature for night time
