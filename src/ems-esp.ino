@@ -17,7 +17,10 @@
 
 // Dallas external temp sensors
 DS18 ds18;
-
+// lobocobra start
+//int EMS_TYPE_RC35Set = 0x3D; // we load per default HC1 data and overwrite it later
+//int EMS_TYPE_RC35StatusMessage = 0x3E;
+// lobocobra end
 // shared libraries
 #include <MyESP.h>
 
@@ -71,6 +74,10 @@ typedef struct {
     uint16_t publish_time; // frequency of MQTT publish in seconds
     uint8_t  led_gpio;
     uint8_t  dallas_gpio;
+    // lobocobra start
+    uint8_t       heatingcircuit; // rc35 define nr 2 if you have a floor heating
+    // lobocobra end
+
     uint8_t  dallas_parasite;
 } _EMSESP_Status;
 
@@ -87,6 +94,9 @@ command_t PROGMEM project_cmds[] = {
     {true, "led <on | off>", "toggle status LED on/off"},
     {true, "led_gpio <gpio>", "set the LED pin. Default is the onboard LED (D1=5)"},
     {true, "dallas_gpio <gpio>", "set the pin for external Dallas temperature sensors (D5=14)"},
+    // lobocobra start
+    {"set heatingcircuit <nr>", "set for rc35 the heatingcircuit 1/2"},
+    // lobocobra end
     {true, "dallas_parasite <on | off>", "set to on if powering Dallas via parasite"},
     {true, "thermostat_type <type ID>", "set the thermostat type id (e.g. 10 for 0x10)"},
     {true, "boiler_type <type ID>", "set the boiler type id (e.g. 8 for 0x08)"},
@@ -276,6 +286,10 @@ void showInfo() {
     }
 
     myDebug("  LED is %s, Test Mode is %s", EMSESP_Status.led_enabled ? "on" : "off", EMSESP_Status.test_mode ? "on" : "off");
+    // lobocobra start
+    myDebug("  RC35 active heating cicrcuit is %d Memory1: %d Memory2 %d", EMSESP_Status.heatingcircuit,EMS_TYPE_RC35Set, EMS_TYPE_RC35StatusMessage );
+    //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+    // lobocobra end
     myDebug("  # connected Dallas temperature sensors=%d", EMSESP_Status.dallas_sensors);
 
     myDebug("  Thermostat is %s, Boiler is %s, Shower Timer is %s, Shower Alert is %s",
@@ -545,7 +559,9 @@ void publishValues(bool force) {
 
         rootThermostat[THERMOSTAT_CURRTEMP] = _float_to_char(s, EMS_Thermostat.curr_roomTemp);
         rootThermostat[THERMOSTAT_SELTEMP]  = _float_to_char(s, EMS_Thermostat.setpoint_roomTemp);
-
+        //lobocobra start mqtt
+        rootThermostat[THERMOSTAT_RC35HC]  =  _int_to_char(s, EMSESP_Status.heatingcircuit);
+        //lobocobra end
         // RC20 has different mode settings
         if (ems_getThermostatModel() == EMS_MODEL_RC20) {
             if (EMS_Thermostat.mode == 0) {
@@ -665,6 +681,15 @@ bool FSCallback(MYESP_FSACTION action, const JsonObject json) {
             EMSESP_Status.dallas_gpio = EMSESP_DALLAS_GPIO; // default value
             recreate_config           = true;
         }
+        // lobocobra start
+        // heatingcircuit 2 for rc35
+        if (!(EMSESP_Status.heatingcircuit = json["heatingcircuit"])) {
+            EMSESP_Status.heatingcircuit = EMSESP_HEATINGCIRCUIT; // default value 
+            //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set =0x47  : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+            //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+            recreate_config           = true;
+        }          
+        // lobocobra end
 
         // dallas_parasite
         if (!(EMSESP_Status.dallas_parasite = json["dallas_parasite"])) {
@@ -715,6 +740,9 @@ bool FSCallback(MYESP_FSACTION action, const JsonObject json) {
         json["led"]             = EMSESP_Status.led_enabled;
         json["led_gpio"]        = EMSESP_Status.led_gpio;
         json["dallas_gpio"]     = EMSESP_Status.dallas_gpio;
+        // lobocobra start
+        json["heatingcircuit"]  = EMSESP_Status.heatingcircuit;
+        // lobocobra end
         json["dallas_parasite"] = EMSESP_Status.dallas_parasite;
         json["thermostat_type"] = EMS_Thermostat.type_id;
         json["boiler_type"]     = EMS_Boiler.type_id;
@@ -780,6 +808,15 @@ bool SettingsCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, c
             EMSESP_Status.dallas_gpio = atoi(value);
             ok                        = true;
         }
+        // lobocobra start
+        // heatingcircuit
+        if ((strcmp(setting, "heatingcircuit") == 0) && (wc == 2)) {
+            EMSESP_Status.heatingcircuit = atoi(value);
+           //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+           //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+            ok                        = true;
+        }        
+        // lobocobra end        
 
         // dallas_parasite
         if ((strcmp(setting, "dallas_parasite") == 0) && (wc == 2)) {
@@ -843,6 +880,9 @@ bool SettingsCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, c
         myDebug("  led=%s", EMSESP_Status.led_enabled ? "on" : "off");
         myDebug("  led_gpio=%d", EMSESP_Status.led_gpio);
         myDebug("  dallas_gpio=%d", EMSESP_Status.dallas_gpio);
+        // lobocobra start
+        myDebug("  heatingcircuit=%d Memory: %d", EMSESP_Status.heatingcircuit,EMS_TYPE_RC35Set);
+        // lobocobra end         
         myDebug("  dallas_parasite=%s", EMSESP_Status.dallas_parasite ? "on" : "off");
 
         if (EMS_Thermostat.type_id == EMS_ID_NONE) {
@@ -1026,6 +1066,10 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
     if (type == MQTT_CONNECT_EVENT) {
         myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_TEMP);
         myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_MODE);
+        // lobocobra start mqtt
+        myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_RC35HC);
+        myESP.mqttSubscribe(TOPIC_MQTT_CMD_RAW);
+        // lobocobra end          
         myESP.mqttSubscribe(TOPIC_BOILER_WWACTIVATED);
         myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWTEMP);
         myESP.mqttSubscribe(TOPIC_BOILER_CMD_COMFORT);
@@ -1071,6 +1115,26 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
                 ems_setThermostatMode(0);
             }
         }
+        // lobocobra start mqtt
+        // thermostat heat circuit 1/2 changes
+        if (strcmp(topic, TOPIC_THERMOSTAT_CMD_RC35HC) == 0) {
+            uint8_t f     = atoi((char *)message);
+            myDebug("++++++++++++++++++MQTT topic: thermostat circuit %d", f);
+            EMSESP_Status.heatingcircuit = (f > 1) +1;
+            //myDebug("***************rrsMQTT topic: thermostat circuit %d", message);
+            //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+            //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+            publishValues(true); // publish back immediately            
+        }
+        // lobocobra end    
+        // lobocobra start // send mqtt to raw 
+        if (strcmp(topic, TOPIC_MQTT_CMD_RAW) == 0) {
+            myDebug("++++++++++++++++++MQTT topic: RAW telegram %s", message);
+            //char Str[] = "0b 90 47 02 01"; // works!!!
+            //ems_sendRawTelegram((char *)&Str); //works!!!
+            ems_sendRawTelegram((char *)&message[0]); //works!!!
+        }
+        // lobocobra end              
 
         // wwActivated
         if (strcmp(topic, TOPIC_BOILER_WWACTIVATED) == 0) {
@@ -1160,6 +1224,9 @@ void initEMSESP() {
 
     EMSESP_Status.led_gpio    = EMSESP_LED_GPIO;
     EMSESP_Status.dallas_gpio = EMSESP_DALLAS_GPIO;
+    // lobocobra start
+    EMSESP_Status.heatingcircuit = EMSESP_HEATINGCIRCUIT;
+    // lobocobra end
 
     // shower settings
     EMSESP_Shower.timerStart    = 0;
@@ -1198,6 +1265,9 @@ void do_ledcheck() {
 
 // Thermostat scan
 void do_scanThermostat() {
+    // lobocobra start
+    // PROBABLY HERE EMS_Thermostat gets loaded
+    // lobocobra end    
     if ((ems_getBusConnected()) && (!myESP.getUseSerial())) {
         myDebug("> Scanning thermostat message type #0x%02X..", scanThermostat_count);
         ems_doReadCommand(scanThermostat_count, EMS_Thermostat.type_id);
@@ -1369,6 +1439,10 @@ void setup() {
 
     // check for Dallas sensors
     EMSESP_Status.dallas_sensors = ds18.setup(EMSESP_Status.dallas_gpio, EMSESP_Status.dallas_parasite); // returns #sensors
+    //lobocobra start
+    //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+    //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+    // lobocobra end
 }
 
 //

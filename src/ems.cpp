@@ -13,6 +13,10 @@
 #include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
 #include <MyESP.h>
 #include <list> // std::list
+//lobocobra start
+//extern int EMS_TYPE_RC35Set;
+//extern int EMS_TYPE_RC35StatusMessage;
+// lobocobra end
 
 // myESP
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
@@ -936,6 +940,9 @@ void _process_UBAParametersMessage(uint8_t type, uint8_t * data, uint8_t length)
  */
 void _process_UBAMonitorWWMessage(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Boiler.wWCurTmp  = _toFloat(1, data);
+    //lobocobra start fix negative celius if you have no boiler
+    //if (EMS_Boiler.wWCurTmp <0) EMS_Boiler.wWCurTmp =0;
+    //lobocobra end    
     EMS_Boiler.wWStarts  = _toLong(13, data);
     EMS_Boiler.wWWorkM   = _toLong(10, data);
     EMS_Boiler.wWOneTime = bitRead(data[5], 1);
