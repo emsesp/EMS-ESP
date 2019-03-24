@@ -34,8 +34,13 @@
 #define THERMOSTAT_CURRTEMP "thermostat_currtemp"       // current temperature
 #define THERMOSTAT_SELTEMP "thermostat_seltemp"         // selected temperature
 #define THERMOSTAT_MODE "thermostat_mode"               // mode
-// lobocobra start
+// lobocobra start                                      // Text displaced in MQTT
 #define THERMOSTAT_RC35HC "thermostat_rc35hc"           // RC35, which heating circuit is active
+#define THERMOSTAT_daytemp "thermostat_daytemp"         // RC35, current day temperature set
+#define THERMOSTAT_nighttemp "thermostat_nighttemp"     // RC35, current night temperature set
+#define THERMOSTAT_holidaytemp "thermostat_holidaytemp" // RC35, current holiday temperature set
+#define THERMOSTAT_heatingtype "thermostat_heatingtype" // RC35, current what heating type is it 3=floorheating
+#define THERMOSTAT_circuitcalctemp "thermostat_circuitcalctemp" // RC35, calculated heating water
 #define MQTT_RAW "mqtt_raw" // send mqtt answer
 // lobocobra end
 

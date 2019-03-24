@@ -551,26 +551,26 @@ void publishValues(bool force) {
     }
 
     // handle the thermostat values separately
- //lobo   myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>1 thermostat enables: %d", ems_getThermostatEnabled());
      
     if (ems_getThermostatEnabled()) {
         // only send thermostat values if we actually have them
-        if (((int)EMS_Thermostat.curr_roomTemp == (int)0) || ((int)EMS_Thermostat.setpoint_roomTemp == (int)0)) {
-           //lobo myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>1 exit loop: %d", ems_getThermostatEnabled());
-           //lobo myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>2 exit loop thermostat curr temp: %d", EMS_Thermostat.curr_roomTemp);
-           //loobo myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>3 exit loop thermostat setpoint: %d", EMS_Thermostat.setpoint_roomTemp);
-            return; }
-//lobo    myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>2 thermostat curr temp: %d", (int)EMS_Thermostat.curr_roomTemp);
+        // lobocobra fast fix.... NOT WORKING CURRENTLY SO WE PREVENT NOTHING IS SENT
+        //if (((int)EMS_Thermostat.curr_roomTemp == (int)0) || ((int)EMS_Thermostat.setpoint_roomTemp == (int)0)) {
+        //  return; }
     
         // build new json object
         doc.clear();
         JsonObject rootThermostat = doc.to<JsonObject>();
- //lobo   myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>3 thermostat setpoint: %d", (int)EMS_Thermostat.setpoint_roomTemp);  
-
+ 
         rootThermostat[THERMOSTAT_CURRTEMP] = _float_to_char(s, EMS_Thermostat.curr_roomTemp);
         rootThermostat[THERMOSTAT_SELTEMP]  = _float_to_char(s, EMS_Thermostat.setpoint_roomTemp);
-        //lobocobra start mqtt
-        rootThermostat[THERMOSTAT_RC35HC]  =  _int_to_char(s, EMSESP_Status.heatingcircuit);
+        //lobocobra start send mqtt message
+        rootThermostat[THERMOSTAT_RC35HC]  =        _int_to_char(s, EMSESP_Status.heatingcircuit); //console command so I used other variable
+        rootThermostat[THERMOSTAT_daytemp]  =       _float_to_char(s, EMS_Thermostat.daytemp);
+        rootThermostat[THERMOSTAT_nighttemp]  =     _float_to_char(s, EMS_Thermostat.nighttemp);
+        rootThermostat[THERMOSTAT_holidaytemp]  =   _float_to_char(s, EMS_Thermostat.holidaytemp);
+        rootThermostat[THERMOSTAT_heatingtype]  =   _int_to_char(s, EMS_Thermostat.heatingtype);
+        rootThermostat[THERMOSTAT_circuitcalctemp]= _int_to_char(s, EMS_Thermostat.circuitcalctemp);
         //lobocobra end
         // RC20 has different mode settings
         if (ems_getThermostatModel() == EMS_MODEL_RC20) {
@@ -590,7 +590,6 @@ void publishValues(bool force) {
                 rootThermostat[THERMOSTAT_MODE] = "auto";
             }
         }
-//lobo myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>4 mode...: %d", EMS_Thermostat.mode);  
         data[0] = '\0'; // reset data for next package
         serializeJson(doc, data, sizeof(data));
 
@@ -603,7 +602,6 @@ void publishValues(bool force) {
         if ((previousThermostatPublishCRC != fchecksum) || force) {
             previousThermostatPublishCRC = fchecksum;
             myDebugLog("Publishing thermostat data via MQTT");
-//lobo myDebug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>5 we should start mqtt...: %d", (int)EMS_Thermostat.setpoint_roomTemp);  
             // send values via MQTT
             myESP.mqttPublish(TOPIC_THERMOSTAT_DATA, data);
         }
