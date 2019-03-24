@@ -1058,16 +1058,18 @@ void _process_RC30StatusMessage(uint8_t type, uint8_t * data, uint8_t length) {
 void _process_RC35StatusMessage(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Thermostat.setpoint_roomTemp = ((float)data[EMS_TYPE_RC35StatusMessage_setpoint]) / (float)2;
     // check if temp sensor is unavailable 
-    if ((data[0] == 0x7D) && (data[1] = 0x00)) {
+    // lobocobra start  (data[0] is bitwise, so something is wrong, same for data[1])
+    //if ((data[0] == 0x7D) && (data[1] = 0x00)) {
+    if ((data[3] == 0x7D) ) {
+    // lobocobra end
         EMS_Thermostat.curr_roomTemp = EMS_VALUE_FLOAT_NOTSET;
     } else {
         EMS_Thermostat.curr_roomTemp = _toFloat(EMS_TYPE_RC35StatusMessage_curr, data);
     }
     EMS_Thermostat.day_mode     = bitRead(data[EMS_OFFSET_RC35Get_mode_day], 1); //get day mode flag
     //lobocobra start (load new variables)
-    EMS_Thermostat.circuitcalctemp  = data[EMS_OFFSET_RC35Set_circuitcalctemp]; // 0x48 caclulated temperatur Vorlauf bit 14
-
-    myDebug("lobo CCCCCCCCCCCCalc Vorlauf TEMP: %d", 
+    EMS_Thermostat.circuitcalctemp  = data[EMS_OFFSET_RC35Set_circuitcalctemp];  // 0x48 caclulated temperatur Vorlauf bit 14
+        myDebug("lobo CCCCCCCCCCCCalc Vorlauf TEMP: %d", 
         EMS_Thermostat.circuitcalctemp
         );    
     //lobocobra end

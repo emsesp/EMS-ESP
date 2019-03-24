@@ -552,17 +552,20 @@ void publishValues(bool force) {
 
     // handle the thermostat values separately
      
-    if (ems_getThermostatEnabled()) {
+    if (ems_getThermostatEnabled() || force) { //lobo added force, no reason to not have it, mqtt came not often before
         // only send thermostat values if we actually have them
         // lobocobra fast fix.... NOT WORKING CURRENTLY SO WE PREVENT NOTHING IS SENT
         //if (((int)EMS_Thermostat.curr_roomTemp == (int)0) || ((int)EMS_Thermostat.setpoint_roomTemp == (int)0)) {
-        //  return; }
+        if ((int)EMS_Thermostat.setpoint_roomTemp <= (int)0 || ((int)EMS_Thermostat.daytemp <= (int)0) ) {     // if we have not those values, then we received not yet the corresponding telegram... be patient       
+            myDebug("LLLLLLets see what value is loaded if we have no data I dont believe its 0 %d",(int)EMS_Thermostat.daytemp );
+            return; 
+        }
     
         // build new json object
         doc.clear();
         JsonObject rootThermostat = doc.to<JsonObject>();
  
-        rootThermostat[THERMOSTAT_CURRTEMP] = _float_to_char(s, EMS_Thermostat.curr_roomTemp);
+        if (EMS_Thermostat.curr_roomTemp != EMS_VALUE_FLOAT_NOTSET) {rootThermostat[THERMOSTAT_CURRTEMP] = _float_to_char(s, EMS_Thermostat.curr_roomTemp);} //lobo only show this value if you have a thermostat
         rootThermostat[THERMOSTAT_SELTEMP]  = _float_to_char(s, EMS_Thermostat.setpoint_roomTemp);
         //lobocobra start send mqtt message
         rootThermostat[THERMOSTAT_RC35HC]  =        _int_to_char(s, EMSESP_Status.heatingcircuit); //console command so I used other variable
@@ -1254,7 +1257,10 @@ void do_publishSensorValues() {
 void do_publishValues() {
     // don't publish if we're not connected to the EMS bus
     if ((ems_getBusConnected()) && (!myESP.getUseSerial()) && myESP.isMQTTConnected()) {
-        publishValues(false);
+        //publishValues(false);
+        //lobocobra start
+        publishValues(true); // we need to force all 2 min a message, if not termostat delivers no data for hours
+        //lobocobra end
     }
 }
 
