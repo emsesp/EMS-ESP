@@ -226,6 +226,13 @@ typedef struct {
     uint8_t day;
     uint8_t month;
     uint8_t year;
+    //lobocobra start here we define additional values we read and send over mqtt
+    float daytemp;           // 0x47 byte 2 
+    float nighttemp;         // 0x47 byte 1
+    float holidaytemp;       // 0x47 byte 3
+    uint8_t heatingtype;     // 0x47 byte 0 bit floor heating = 3 0x47
+    uint8_t circuitcalctemp; // 0x48 byte 14
+    //lobocobra end
 } _EMS_Thermostat;
 
 // call back function signature for processing telegram types

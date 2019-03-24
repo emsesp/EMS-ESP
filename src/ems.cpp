@@ -180,6 +180,13 @@ void ems_init() {
     EMS_Thermostat.year              = 0;
     EMS_Thermostat.mode              = 255; // dummy value
     EMS_Thermostat.day_mode          = 255; // dummy value
+    //lobocobra start
+    EMS_Thermostat.daytemp          = EMS_VALUE_FLOAT_NOTSET; // 0x47 byte 
+    EMS_Thermostat.nighttemp        = EMS_VALUE_FLOAT_NOTSET; // 0x47 byte 
+    EMS_Thermostat.holidaytemp      = EMS_VALUE_FLOAT_NOTSET; // 0x47 byte 
+    EMS_Thermostat.heatingtype      = EMS_VALUE_FLOAT_NOTSET; // 0x47 byte floor heating = 3
+    EMS_Thermostat.circuitcalctemp  = EMS_VALUE_FLOAT_NOTSET; // 0x48 byte 14
+    //lobocobra end
 
     EMS_Thermostat.type_id         = EMS_ID_NONE;
     EMS_Thermostat.read_supported  = false;
@@ -749,6 +756,7 @@ void _ems_processTelegram(uint8_t * telegram, uint8_t length) {
             }
             // call callback function to process it
             // as we only handle complete telegrams (not partial) check that the offset is 0
+            // lobocobra info: telegram is checked and ok, depending the address 0x47 (etc) the right function is started
             if (offset == EMS_ID_NONE) {
                 (void)EMS_Types[i].processType_cb(type, data, length - 5);
             }
@@ -1043,17 +1051,26 @@ void _process_RC30StatusMessage(uint8_t type, uint8_t * data, uint8_t length) {
  * type 0x3E - data from the RC35 thermostat (0x10) - 16 bytes
  * For reading the temp values only
  * received every 60 seconds
+ * lobocobra start
+ * after a incoming telegram 0x48 is checked as correct, this code is started to evaluate the content
+ * lobocobra end
  */
 void _process_RC35StatusMessage(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Thermostat.setpoint_roomTemp = ((float)data[EMS_TYPE_RC35StatusMessage_setpoint]) / (float)2;
-
-    // check if temp sensor is unavailable
+    // check if temp sensor is unavailable 
     if ((data[0] == 0x7D) && (data[1] = 0x00)) {
         EMS_Thermostat.curr_roomTemp = EMS_VALUE_FLOAT_NOTSET;
     } else {
         EMS_Thermostat.curr_roomTemp = _toFloat(EMS_TYPE_RC35StatusMessage_curr, data);
     }
     EMS_Thermostat.day_mode     = bitRead(data[EMS_OFFSET_RC35Get_mode_day], 1); //get day mode flag
+    //lobocobra start (load new variables)
+    EMS_Thermostat.circuitcalctemp  = data[EMS_OFFSET_RC35Set_circuitcalctemp]; // 0x48 caclulated temperatur Vorlauf bit 14
+
+    myDebug("lobo CCCCCCCCCCCCalc Vorlauf TEMP: %d", 
+        EMS_Thermostat.circuitcalctemp
+        );    
+    //lobocobra end
     EMS_Sys_Status.emsRefreshed = true;                                          // triggers a send the values back via MQTT
 }
 
@@ -1096,9 +1113,29 @@ void _process_RC30Set(uint8_t type, uint8_t * data, uint8_t length) {
  * type 0x3D - for reading the mode from the RC35 thermostat (0x10)
  * Working Mode Heating Circuit 1 (HC1)
  * received only after requested
+ * lobocobra start
+ * after a incoming telegram 0x47 is checked as correct, this code is started to evaluate the content
+ * lobocobra end
  */
 void _process_RC35Set(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Thermostat.mode = data[EMS_OFFSET_RC35Set_mode];
+    //lobocobra start
+    //after a valid telegram is received, those processes here a launched
+    //so here I can load the newest data
+    //lobocobra start here we define additional values we read and send over mqtt
+    EMS_Thermostat.daytemp      = data[EMS_OFFSET_RC35Set_temp_day]     / (float)2;    // byte 2 0x47
+    EMS_Thermostat.nighttemp    = data[EMS_OFFSET_RC35Set_temp_night]   / (float)2;    // byte 1 0x47
+    EMS_Thermostat.holidaytemp  = data[EMS_OFFSET_RC35Set_temp_holiday] / (float)2;    // byte 3 0x47
+    EMS_Thermostat.heatingtype  = data[EMS_OFFSET_RC35Set_heatingtype];                // byte 0 bit floor heating = 3 0x47
+
+    myDebug("lobo DDDDDDDDDDDDDDDDDDDay TEMP: %d Night TEMP: %d Ferien TEMP %d Heizungstyp: %d", 
+        (int)EMS_Thermostat.daytemp,
+        (int)EMS_Thermostat.nighttemp,
+        (int)EMS_Thermostat.holidaytemp,
+        EMS_Thermostat.heatingtype
+        );
+    EMS_Sys_Status.emsRefreshed = true;                                          // triggers a send the values back via MQTT        
+    //lobocobra end
 }
 
 /**
@@ -1533,6 +1570,7 @@ void ems_printAllTypes() {
  * Read commands when sent must respond by the destination (target) immediately (or within 10ms)
  */
 void ems_doReadCommand(uint8_t type, uint8_t dest, bool forceRefresh) {
+    //lobo myDebug("*******>>>>>>>>>>>>>>>>>>>>>>>>> type: %d destination: %d force %d", type, dest, forceRefresh);
     // if not a valid type of boiler is not accessible then quits
     if ((type == EMS_ID_NONE) || (dest == EMS_ID_NONE)) {
         return;
