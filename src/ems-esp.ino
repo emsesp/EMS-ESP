@@ -18,8 +18,8 @@
 // Dallas external temp sensors
 DS18 ds18;
 // lobocobra start
-//int EMS_TYPE_RC35Set = 0x3D; // we load per default HC1 data and overwrite it later
-//int EMS_TYPE_RC35StatusMessage = 0x3E;
+int EMS_TYPE_RC35Set = 0x3D; // we load per default HC1 data and overwrite it later
+int EMS_TYPE_RC35StatusMessage = 0x3E;
 // lobocobra end
 // shared libraries
 #include <MyESP.h>
@@ -556,8 +556,9 @@ void publishValues(bool force) {
         // only send thermostat values if we actually have them
         // lobocobra fast fix.... NOT WORKING CURRENTLY SO WE PREVENT NOTHING IS SENT
         //if (((int)EMS_Thermostat.curr_roomTemp == (int)0) || ((int)EMS_Thermostat.setpoint_roomTemp == (int)0)) {
+            //myDebug("lobo Hope I can findit adress EMS_TYPE_RC35Set: %d",EMS_TYPE_RC35Set);
         if ((int)EMS_Thermostat.setpoint_roomTemp <= (int)0 || ((int)EMS_Thermostat.daytemp <= (int)0) ) {     // if we have not those values, then we received not yet the corresponding telegram... be patient       
-            myDebug("LLLLLLets see what value is loaded if we have no data I dont believe its 0 %d",(int)EMS_Thermostat.daytemp );
+            //myDebug("Lobo Lets see what value is loaded if we have no data I dont believe its 0 %d",(int)EMS_Thermostat.daytemp );
             return; 
         }
     
@@ -823,8 +824,8 @@ bool SettingsCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, c
         // heatingcircuit
         if ((strcmp(setting, "heatingcircuit") == 0) && (wc == 2)) {
             EMSESP_Status.heatingcircuit = atoi(value);
-           //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
-           //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+           ( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+           ( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
             ok                        = true;
         }        
         // lobocobra end        
@@ -892,7 +893,7 @@ bool SettingsCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, c
         myDebug("  led_gpio=%d", EMSESP_Status.led_gpio);
         myDebug("  dallas_gpio=%d", EMSESP_Status.dallas_gpio);
         // lobocobra start
-        myDebug("  heatingcircuit=%d Memory: %d", EMSESP_Status.heatingcircuit,EMS_TYPE_RC35Set);
+        myDebug("  heatingcircuit=%d Read Type: %d Status: %d ", EMSESP_Status.heatingcircuit,EMS_TYPE_RC35Set,EMS_TYPE_RC35StatusMessage);
         // lobocobra end         
         myDebug("  dallas_parasite=%s", EMSESP_Status.dallas_parasite ? "on" : "off");
 
@@ -1436,6 +1437,10 @@ void setup() {
     myESP.begin(APP_HOSTNAME, APP_NAME, APP_VERSION);
 
     // at this point we have the settings from our internall SPIFFS config file
+    //lobocobra start after reboot we make sure we set the right circuit adress
+    ( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
+    ( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
+    // lobocobra end
 
     // enable regular checks if not in test mode
     if (!EMSESP_Status.test_mode) {
@@ -1453,10 +1458,7 @@ void setup() {
 
     // check for Dallas sensors
     EMSESP_Status.dallas_sensors = ds18.setup(EMSESP_Status.dallas_gpio, EMSESP_Status.dallas_parasite); // returns #sensors
-    //lobocobra start
-    //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35Set = 0x47 : EMS_TYPE_RC35Set = 0x3D; // if HC is 2 set 0x47
-    //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
-    // lobocobra end
+
 }
 
 //

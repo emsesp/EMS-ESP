@@ -14,8 +14,8 @@
 #include <MyESP.h>
 #include <list> // std::list
 //lobocobra start
-//extern int EMS_TYPE_RC35Set;
-//extern int EMS_TYPE_RC35StatusMessage;
+extern int EMS_TYPE_RC35Set;
+extern int EMS_TYPE_RC35StatusMessage;
 // lobocobra end
 
 // myESP
@@ -373,7 +373,9 @@ int _ems_findType(uint8_t type) {
     bool    typeFound = false;
     // scan through known ID types
     while (i < _EMS_Types_max) {
-        if (EMS_Types[i].type == type) {
+        //lobocobra start we accept also if we have 47 or 48 instead of 3D or 3E
+        if ((EMS_Types[i].type == type) || (EMS_Types[i].type == type -10 )) {
+        //lobocobra end
             typeFound = true; // we have a match
             break;
         }
@@ -737,7 +739,9 @@ void _ems_processTelegram(uint8_t * telegram, uint8_t length) {
     int  i          = 0;
 
     while (i < _EMS_Types_max) {
-        if (EMS_Types[i].type == type) {
+        //lobocobra start we accept also if we have 47 or 48 instead of 3D or 3E
+        if ((EMS_Types[i].type == type) || (EMS_Types[i].type == type -10) ){
+        //lobocobra end
             typeFound  = true;
             commonType = (EMS_Types[i].model_id == EMS_MODEL_ALL);                       // is it common type for everyone?
             forUs      = (src == EMS_Boiler.type_id) || (src == EMS_Thermostat.type_id); // is it for us? So the src must match
@@ -1069,9 +1073,7 @@ void _process_RC35StatusMessage(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Thermostat.day_mode     = bitRead(data[EMS_OFFSET_RC35Get_mode_day], 1); //get day mode flag
     //lobocobra start (load new variables)
     EMS_Thermostat.circuitcalctemp  = data[EMS_OFFSET_RC35Set_circuitcalctemp];  // 0x48 caclulated temperatur Vorlauf bit 14
-        myDebug("lobo CCCCCCCCCCCCalc Vorlauf TEMP: %d", 
-        EMS_Thermostat.circuitcalctemp
-        );    
+        //myDebug("lobo Calc Vorlauf TEMP: %d", EMS_Thermostat.circuitcalctemp);    
     //lobocobra end
     EMS_Sys_Status.emsRefreshed = true;                                          // triggers a send the values back via MQTT
 }
@@ -1130,12 +1132,12 @@ void _process_RC35Set(uint8_t type, uint8_t * data, uint8_t length) {
     EMS_Thermostat.holidaytemp  = data[EMS_OFFSET_RC35Set_temp_holiday] / (float)2;    // byte 3 0x47
     EMS_Thermostat.heatingtype  = data[EMS_OFFSET_RC35Set_heatingtype];                // byte 0 bit floor heating = 3 0x47
 
-    myDebug("lobo DDDDDDDDDDDDDDDDDDDay TEMP: %d Night TEMP: %d Ferien TEMP %d Heizungstyp: %d", 
-        (int)EMS_Thermostat.daytemp,
-        (int)EMS_Thermostat.nighttemp,
-        (int)EMS_Thermostat.holidaytemp,
-        EMS_Thermostat.heatingtype
-        );
+    //myDebug("lobo Day TEMP: %d Night TEMP: %d Ferien TEMP %d Heizungstyp: %d", 
+    //    (int)EMS_Thermostat.daytemp,
+    //    (int)EMS_Thermostat.nighttemp,
+    //    (int)EMS_Thermostat.holidaytemp,
+    //    EMS_Thermostat.heatingtype
+    //    );
     EMS_Sys_Status.emsRefreshed = true;                                          // triggers a send the values back via MQTT        
     //lobocobra end
 }
