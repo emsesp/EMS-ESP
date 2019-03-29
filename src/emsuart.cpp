@@ -24,8 +24,8 @@ os_event_t recvTaskQueue[EMSUART_recvTaskQueueLen]; // our Rx queue
 // Important: do not use ICACHE_FLASH_ATTR !
 //
 static void emsuart_rx_intr_handler(void * para) {
-    static uint16_t length;
-    static uint8_t  uart_buffer[EMS_MAXBUFFERSIZE];
+    static uint8_t length;
+    static uint8_t uart_buffer[EMS_MAXBUFFERSIZE];
 
     // is a new buffer? if so init the thing for a new telegram
     if (EMS_Sys_Status.emsRxStatus == EMS_RX_STATUS_IDLE) {
@@ -67,18 +67,13 @@ static void emsuart_rx_intr_handler(void * para) {
 
 /*
  * system task triggered on BRK interrupt
- * Read commands are all asynchronous
- * When a buffer is full it is sent to the ems_parseTelegram() function in ems.cpp. This is the hook
+ * incoming received messages are always asynchronous
+ * The full buffer is sent to the ems_parseTelegram() function in ems.cpp.
  */
 static void ICACHE_FLASH_ATTR emsuart_recvTask(os_event_t * events) {
-    // get next free EMS Receive buffer
     _EMSRxBuf * pCurrent = pEMSRxBuf;
-    pEMSRxBuf            = paEMSRxBuf[++emsRxBufIdx % EMS_MAXBUFFERS];
-
-    // transmit EMS buffer, excluding the BRK
-    if (pCurrent->writePtr > 1) {
-        ems_parseTelegram((uint8_t *)pCurrent->buffer, (pCurrent->writePtr) - 1);
-    }
+    ems_parseTelegram((uint8_t *)pCurrent->buffer, (pCurrent->writePtr) - 1); //  transmit EMS buffer, excluding the BRK
+    pEMSRxBuf = paEMSRxBuf[++emsRxBufIdx % EMS_MAXBUFFERS];                   // next free EMS Receive buffer
 }
 
 /*
@@ -102,7 +97,7 @@ void ICACHE_FLASH_ATTR emsuart_init() {
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD);
 
     // set 9600, 8 bits, no parity check, 1 stop bit
-    USD(EMSUART_UART)  = (UART_CLK_FREQ / EMSUART_BAUD);  
+    USD(EMSUART_UART)  = (UART_CLK_FREQ / EMSUART_BAUD);
     USC0(EMSUART_UART) = EMSUART_CONFIG; // 8N1
 
     // flush everything left over in buffer, this clears both rx and tx FIFOs
@@ -144,7 +139,7 @@ void ICACHE_FLASH_ATTR emsuart_init() {
 void ICACHE_FLASH_ATTR emsuart_stop() {
     ETS_UART_INTR_DISABLE();
     //ETS_UART_INTR_ATTACH(NULL, NULL);
-    //system_uart_swap(); // to be sure, swap Tx/Rx back. Idea from Simon Arlott
+    //system_uart_swap(); // to be sure, swap Tx/Rx back.
     //detachInterrupt(digitalPinToInterrupt(D7));
     //noInterrupts();
 }
