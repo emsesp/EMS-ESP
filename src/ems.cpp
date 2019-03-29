@@ -1091,15 +1091,11 @@ void _process_RC30StatusMessage(uint8_t src, uint8_t * data, uint8_t length) {
  * lobocobra end
  */
 void _process_RC35StatusMessage(uint8_t src, uint8_t * data, uint8_t length) {
-    myDebug("PPPPPPPPP>>>>>>>>>> loboinfo1094 EMS_Thermostat.setpoint_roomTemp:%d EMS_TYPE_RC35StatusMessage_setpoint:%d DAYSWITCH:%d",(int)EMS_Thermostat.setpoint_roomTemp,(int)EMS_TYPE_RC35StatusMessage_setpoint, (int)EMS_Thermostat.day_mode);
     EMS_Thermostat.setpoint_roomTemp = _toByte(EMS_TYPE_RC35StatusMessage_setpoint); // is * 2
     if ( (EMS_Thermostat.setpoint_roomTemp == 0) && (EMS_Thermostat.daytemp > 0) && EMS_Thermostat.day_mode )   { EMS_Thermostat.setpoint_roomTemp =  EMS_Thermostat.daytemp * 2;}; //lobocobra dirty fix as during the day there is no temperature set on pos2 in 0x48 only in 0x47... so if we have data from there we overwrite it.... REALLY UGLY hack!!!
-    myDebug(">>>>>>>>>> loboinfo1097 EMS_Thermostat.setpoint_roomTemp:%d SRC:%d",(int)EMS_Thermostat.setpoint_roomTemp,(int)src);
-    myDebug(">>>>>>>>>> loboinfo1098 _toByte(EMS_TYPE_RC35StatusMessage_setpoint):%d",(int)_toByte(EMS_TYPE_RC35StatusMessage_setpoint));
     // check if temp sensor is unavailable 
     // lobocobra start here we load the data from the incoming telegramm
     // byte 0, is the wrong value, so we fix it, for HC2
-    myDebug(">>>>>>>>>> loboinfo1101 data0:%d data1:%d data3:%d",(int)data[0],(int)data[1],(int)data[3]);
     //if ((data[0] == 0x7D) && (data[1] = 0x00)) { //if HC is turned off and mode set (daymod,sommermode) .... we must also check if we have a sensor!!!
     if ( (data[3] == 0x7D) || ((data[0] == 0x7D) && (data[1] = 0x00)) ) {
     // lobocobra end we empty roomTemp if HC is not activated or we have no sensor installed
