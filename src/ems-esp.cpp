@@ -453,9 +453,8 @@ void showInfo() {
     if (ems_getThermostatEnabled()) {
         myDebug("%sThermostat stats:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
         myDebug("  Thermostat type: %s", ems_getThermostatDescription(buffer_type));
-        // lobocobra start
-        // here we print the info
-        // lobocobra end
+        // lobocobra info: here we print the info
+        
         if ((ems_getThermostatModel() == EMS_MODEL_EASY) || (ems_getThermostatModel() == EMS_MODEL_BOSCHEASY)) {
             // for easy temps are * 100
             // also we don't have the time or mode
@@ -615,7 +614,7 @@ void publishValues(bool force) {
         last_boilerActive = ((EMS_Boiler.tapwaterActive << 1) + EMS_Boiler.heatingActive); // remember last state
     }
     // handle the thermostat values separately
-    if (ems_getThermostatEnabled() || force) { //lobo added force, no reason to not have it, mqtt came not often before
+    if (ems_getThermostatEnabled() || force) { //lobo added force, no reason to not have it.
         // only send thermostat values if we actually have them
 		// ensure that MQTT message is sent when we are on HC2 for RC35
         if ((EMS_Thermostat.curr_roomTemp <= 0) && (EMS_Thermostat.daytemp <= 0)){ //lobo we only stop if both are negative, then we wait. we define at mqtt print to not publish negativ values
@@ -764,8 +763,7 @@ void do_publishSensorValues() {
 void do_publishValues() {
     // don't publish if we're not connected to the EMS bus
     if ((ems_getBusConnected()) && (!myESP.getUseSerial()) && myESP.isMQTTConnected()) {
-		// lobocobra force send of MQTT if not thermostat messages are not sent too long
-        publishValues(true);
+		// lobocobra force send of MQTT if not thermostat messages occur to seldom
     }
 }
 
@@ -1170,8 +1168,9 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
         if (strcmp(second_cmd, "temp") == 0) {
             ems_setThermostatTemp(_readFloatNumber());
             //lobocobra start
-            //initiatie a read 0x48 to have the new value updated
-            //ems_doReadCommand(72, EMS_Thermostat.type_id); would probably need a delay to have it working
+            //initiatie a read 0x48 to have the new value updated, delay is needed to make sure the right value is red
+            delay(200);
+            ems_doReadCommand(72, EMS_Thermostat.type_id); // would probably need a delay to have it working
             //lobocobra end
             ok = true;
         } else if (strcmp(second_cmd, "mode") == 0) {
@@ -1317,6 +1316,31 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             myDebug("MQTT topic: RAW telegram: %s", message);
             ems_sendRawTelegram((char *)&message[0]); 
         }
+
+        // set night temp value
+        if (strcmp(topic, TOPIC_THERMOSTAT_CMD_NIGHTTEMP) == 0) {
+            float f     = strtof((char *)message, 0);
+            char  s[10] = {0};
+            myDebug("MQTT topic: new thermostat night temperature value %s", _float_to_char(s, f));
+            ems_setThermostatTemp(f,1);
+            publishValues(true); // publish back immediately
+        }
+        // set daytemp value
+        if (strcmp(topic, TOPIC_THERMOSTAT_CMD_DAYTEMP) == 0) {
+            float f     = strtof((char *)message, 0);
+            char  s[10] = {0};
+            myDebug("MQTT topic: new thermostat day temperature value %s", _float_to_char(s, f));
+            ems_setThermostatTemp(f,2);
+            publishValues(true); // publish back immediately
+        }        
+        // set holiday value
+        if (strcmp(topic, TOPIC_THERMOSTAT_CMD_HOLIDAYTEMP) == 0) {
+            float f     = strtof((char *)message, 0);
+            char  s[10] = {0};
+            myDebug("MQTT topic: new thermostat holiday temperature value %s", _float_to_char(s, f));
+            ems_setThermostatTemp(f,3);
+            publishValues(true); // publish back immediately
+        }                
         // set daytemp value
         //if (strcmp(topic, TOPIC_MQTT_CMD_DAYTEMP) == 0) {
         //float f     = strtof((char *)message, 0);

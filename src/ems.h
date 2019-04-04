@@ -278,7 +278,7 @@ void        ems_init();
 void        ems_doReadCommand(uint8_t type, uint8_t dest, bool forceRefresh = false);
 void        ems_sendRawTelegram(char * telegram);
 
-void ems_setThermostatTemp(float temp);
+void ems_setThermostatTemp(float temp, int temptype=0); //lobocobra added optinal temptype 0=normal 1=night 2=day 3=holiday
 void ems_setThermostatMode(uint8_t mode);
 void ems_setWarmWaterTemp(uint8_t temperature);
 void ems_setWarmWaterActivated(bool activated);

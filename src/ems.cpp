@@ -1755,8 +1755,8 @@ void ems_sendRawTelegram(char * telegram) {
 /**
  * Set the temperature of the thermostat
  */
-void ems_setThermostatTemp(float temperature) {
-    if (!ems_getThermostatEnabled()) {
+void ems_setThermostatTemp(float temperature, int temptype) { //lobocobra add optional temptype 0=normal 1=day 2=night 3=holiday
+    if (!ems_getThermostatEnabled() || (temperature <=10) || (temperature >30 ) ) { // lobocobra we only allow temperatures, that make sense
         return;
     }
 
@@ -1793,12 +1793,27 @@ void ems_setThermostatTemp(float temperature) {
         EMS_TxTelegram.comparisonPostRead = EMS_TYPE_RC30StatusMessage;
     } else if ((model_id == EMS_MODEL_RC35) || (model_id == EMS_MODEL_ES73)) {
         EMS_TxTelegram.type = EMS_TYPE_RC35Set;
-        if (EMS_Thermostat.day_mode == 0) {
-            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
-        } else if (EMS_Thermostat.day_mode == 1) {
-            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
-        }
-
+      //lobocobra start  
+      switch (temptype)
+      {
+          case 0: // automatic selection, if no type is defined, we use the standard code
+            if (EMS_Thermostat.day_mode == 0) {
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
+            } else if (EMS_Thermostat.day_mode == 1) {
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
+            }
+              break;
+          case 1: // change the night temp
+              EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
+              break;
+          case 2: //  change the day temp
+              EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
+              break;
+          case 3: // change the holiday temp
+              EMS_TxTelegram.offset = 3; //holiday on RC35
+              break;              
+      }
+      // lobocobra end
         EMS_TxTelegram.comparisonPostRead = EMS_TYPE_RC35StatusMessage;
     }
 
