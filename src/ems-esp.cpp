@@ -763,7 +763,7 @@ void do_publishSensorValues() {
 void do_publishValues() {
     // don't publish if we're not connected to the EMS bus
     if ((ems_getBusConnected()) && (!myESP.getUseSerial()) && myESP.isMQTTConnected()) {
-		// lobocobra force send of MQTT if not thermostat messages occur to seldom
+        publishValues(true);// lobocobra force send of MQTT if not thermostat messages occur to seldom
     }
 }
 
