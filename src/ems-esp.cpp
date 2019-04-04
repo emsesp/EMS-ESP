@@ -322,11 +322,13 @@ void showInfo() {
     }
 
     myDebug("  LED is %s, Silent mode is %s", EMSESP_Status.led ? "on" : "off", EMSESP_Status.silent_mode ? "on" : "off");
+
     // lobocobra start
     myDebug("  RC35 active heating cicrcuit is %d Memory1: %d Memory2 %d", EMSESP_Status.heatingcircuit,EMS_TYPE_RC35Set, EMS_TYPE_RC35StatusMessage );
     //( EMSESP_Status.heatingcircuit == 2 ) ? EMS_TYPE_RC35StatusMessage =0x48  : EMS_TYPE_RC35StatusMessage = 0x3E; // if HC is 2 set 0x48 // TO BE CHECKED IF NEEDED, without no data for setpoint
     // lobocobra end
-    myDebug("  # connected Dallas temperature sensors=%d", EMSESP_Status.dallas_sensors);
+    myDebug("  %d external temperature sensor%s connected", EMSESP_Status.dallas_sensors, (EMSESP_Status.dallas_sensors > 1) ? "s" : "");
+
 
     myDebug("  Thermostat is %s, Boiler is %s, Shower Timer is %s, Shower Alert is %s",
             (ems_getThermostatEnabled() ? "enabled" : "disabled"),
@@ -343,7 +345,6 @@ void showInfo() {
             EMS_Sys_Status.emxCrcErr);
 
     myDebug("");
-
     myDebug("%sBoiler stats:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
 
     // version details
@@ -436,10 +437,9 @@ void showInfo() {
                 EMS_Boiler.UBAuptime % 60);
     }
 
-    myDebug(""); // newline
-
     // For SM10 Solar Module
     if (EMS_Other.SM10) {
+        myDebug(""); // newline
         myDebug("%sSolar Module stats:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
         _renderShortValue("  Collector temperature", "C", EMS_Other.SM10collectorTemp);
         _renderShortValue("  Bottom temperature", "C", EMS_Other.SM10bottomTemp);
@@ -447,10 +447,9 @@ void showInfo() {
         _renderBoolValue("  Pump active", EMS_Other.SM10pump);
     }
 
-    myDebug(""); // newline
-
     // Thermostat stats
     if (ems_getThermostatEnabled()) {
+        myDebug(""); // newline
         myDebug("%sThermostat stats:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
         myDebug("  Thermostat type: %s", ems_getThermostatDescription(buffer_type));
         // lobocobra info: here we print the info
@@ -494,23 +493,24 @@ void showInfo() {
                 myDebug("  Mode is set to ?");
             }
         }
+
         myDebug(""); // newline
     }
 
     // Dallas
     if (EMSESP_Status.dallas_sensors != 0) {
-        //char s[80]       = {0};
+        myDebug(""); // newline
         char buffer[128] = {0};
         char valuestr[8] = {0}; // for formatting temp
         myDebug("%sExternal temperature sensors:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
         for (uint8_t i = 0; i < EMSESP_Status.dallas_sensors; i++) {
-            myDebug("  Sensor #%d %s: %s C", i + 1, ds18.getDeviceString(buffer, i), _float_to_char(valuestr, ds18.getValue(i) ));
+            myDebug("  Sensor #%d %s: %s C", i + 1, ds18.getDeviceString(buffer, i), _float_to_char(valuestr, ds18.getValue(i)));
         }
-        myDebug(""); // newline
     }
 
     // show the Shower Info
     if (EMSESP_Status.shower_timer) {
+        myDebug(""); // newline
         myDebug("%sShower stats:%s", COLOR_BOLD_ON, COLOR_BOLD_OFF);
         myDebug("  Shower is %s", (EMSESP_Shower.showerOn ? "running" : "off"));
     }
