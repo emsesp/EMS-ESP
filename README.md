@@ -257,6 +257,7 @@ These incoming MQTT topics are also handled:
 | thermostat_cmd_mode | TOPIC_THERMOSTAT_CMD_MODE | auto, day, night       | sets the thermostat mode                 |
 | wwactivated         | TOPIC_BOILER_WWACTIVATED  | 0 or 1                 | turns boiler warm water on/off (not tap) |
 | boiler_cmd_wwtemp   | TOPIC_BOILER_CMD_WWTEMP   | temperature as a float | sets the boiler wwtemp current setpoint  |
+| restart             | MQTT_TOPIC_RESTART        | 1                      | restarts the ems-esp device              |
 
 If MQTT is not used use 'set mqtt_host' to remove it.
 
