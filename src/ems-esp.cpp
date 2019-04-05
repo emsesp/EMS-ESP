@@ -1196,6 +1196,8 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         myESP.mqttSubscribe(TOPIC_SHOWER_TIMER);
         myESP.mqttSubscribe(TOPIC_SHOWER_ALERT);
         myESP.mqttSubscribe(TOPIC_SHOWER_COLDSHOT);
+        myESP.mqttSubscribe(MQTT_TOPIC_RESTART);
+
 
         // subscribe to a start message and send the first publish
         myESP.mqttSubscribe(MQTT_TOPIC_START);
@@ -1213,6 +1215,12 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         if (strcmp(topic, MQTT_TOPIC_START) == 0) {
             myDebug("Received boottime: %s", message);
             myESP.setBoottime(message);
+        }
+        
+        // Restart the device
+        if (strcmp(topic, MQTT_TOPIC_RESTART) == 0) {
+            myDebug("Received restart command", message);
+            myESP.resetESP();
         }
 
         // thermostat temp changes
