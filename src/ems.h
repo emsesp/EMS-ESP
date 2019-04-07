@@ -13,8 +13,9 @@
 #include <Arduino.h>
 
 // EMS IDs
-#define EMS_ID_NONE 0x00 // Fixed - used as a dest in broadcast messages and empty type IDs
-#define EMS_ID_ME 0x0B   // Fixed - our device, hardcoded as the "Service Key"
+#define EMS_ID_NONE 0x00      // Fixed - used as a dest in broadcast messages and empty type IDs
+#define EMS_PLUS_ID_NONE 0x01 // Fixed - used as a dest in broadcast messages and empty type IDs
+#define EMS_ID_ME 0x0B        // Fixed - our device, hardcoded as the "Service Key"
 #define EMS_ID_DEFAULT_BOILER 0x08
 #define EMS_ID_SM10 0x30 // Solar Module SM10
 
@@ -89,8 +90,8 @@ typedef struct {
     _EMS_SYS_LOGGING emsLogging;       // logging
     bool             emsRefreshed;     // fresh data, needs to be pushed out to MQTT
     bool             emsBusConnected;  // is there an active bus
-    unsigned long    emsRxTimestamp;   // timestamp of last EMS message received
-    unsigned long    emsPollTimestamp; // timestamp of last EMS poll sent to us
+    uint32_t         emsRxTimestamp;   // timestamp of last EMS message received
+    uint32_t         emsPollFrequency; // time between EMS polls
     bool             emsTxCapable;     // able to send via Tx
     bool             emsTxDisabled;    // true to prevent all Tx
     uint8_t          txRetryCount;     // # times the last Tx was re-sent
@@ -109,7 +110,7 @@ typedef struct {
     uint8_t                 comparisonOffset;   // offset of where the byte is we want to compare too later
     uint8_t                 comparisonPostRead; // after a successful write call this to read
     bool                    forceRefresh;       // should we send to MQTT after a successful Tx?
-    unsigned long           timestamp;          // when created
+    uint32_t                timestamp;          // when created
     uint8_t                 data[EMS_MAX_TELEGRAM_LENGTH];
 } _EMS_TxTelegram;
 
@@ -119,7 +120,6 @@ typedef struct {
     uint8_t * telegram;  // the full data package
     uint8_t   length;    // length in bytes
 } _EMS_RxTelegram;
-
 
 // default empty Tx
 const _EMS_TxTelegram EMS_TX_TELEGRAM_NEW = {
@@ -241,6 +241,7 @@ typedef struct {
     uint8_t product_id;
     bool    read_supported;
     bool    write_supported;
+    uint8_t hc; // heating circuit 1 or 2
     char    version[10];
     int16_t setpoint_roomTemp; // current set temp
     int16_t curr_roomTemp;     // current room temp
@@ -252,13 +253,11 @@ typedef struct {
     uint8_t day;
     uint8_t month;
     uint8_t year;
-    //lobocobra start here we define additional values we read and send over mqtt
-    float daytemp;           // 0x47 byte 2 
-    float nighttemp;         // 0x47 byte 1
-    float holidaytemp;       // 0x47 byte 3
-    uint8_t heatingtype;     // 0x47 byte 0 bit floor heating = 3 0x47
-    uint8_t circuitcalctemp; // 0x48 byte 14
-    //lobocobra end
+    uint8_t daytemp;
+    uint8_t nighttemp;
+    uint8_t holidaytemp;
+    uint8_t heatingtype;
+    uint8_t circuitcalctemp;
 } _EMS_Thermostat;
 
 // call back function signature for processing telegram types
@@ -270,6 +269,7 @@ typedef struct {
     uint8_t            type;
     const char         typeString[50];
     EMS_processType_cb processType_cb;
+    bool               emsplus;
 } _EMS_Type;
 
 // function definitions
@@ -278,9 +278,11 @@ void        ems_init();
 void        ems_doReadCommand(uint8_t type, uint8_t dest, bool forceRefresh = false);
 void        ems_sendRawTelegram(char * telegram);
 
-void ems_setThermostatTemp(float temp, int temptype=0); //lobocobra added optinal temptype 0=normal 1=night 2=day 3=holiday
+void ems_setThermostatTemp(float temperature, uint8_t temptype = 0);
 void ems_setThermostatMode(uint8_t mode);
+void ems_setThermostatHC(uint8_t hc);
 void ems_setWarmWaterTemp(uint8_t temperature);
+void ems_setFlowTemp(uint8_t temperature);
 void ems_setWarmWaterActivated(bool activated);
 void ems_setWarmTapWaterActivated(bool activated);
 void ems_setPoll(bool b);
@@ -304,6 +306,7 @@ bool             ems_getEmsRefreshed();
 uint8_t          ems_getThermostatModel();
 void             ems_discoverModels();
 bool             ems_getTxCapable();
+uint32_t         ems_getPollFrequency();
 
 void   ems_scanDevices();
 void   ems_printAllTypes();
@@ -320,7 +323,6 @@ void    _debugPrintPackage(const char * prefix, _EMS_RxTelegram * EMS_RxTelegram
 void    _ems_clearTxData();
 int     _ems_findBoilerModel(uint8_t model_id);
 bool    _ems_setModel(uint8_t model_id);
-void    _ems_setThermostatModel(uint8_t thermostat_modelid);
 void    _removeTxQueue();
 void    _ems_readTelegram(uint8_t * telegram, uint8_t length);
 

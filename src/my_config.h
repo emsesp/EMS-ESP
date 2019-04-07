@@ -14,38 +14,31 @@
 #define MQTT_BASE "home" // all MQTT topics are prefix with this string, in the format <MQTT_BASE>/<app name>/<topic>
 
 // MQTT general settings
-#define MQTT_TOPIC_START "start"
-#define MQTT_TOPIC_START_PAYLOAD "start"
 #define MQTT_WILL_TOPIC "status"            // for last will & testament topic name
 #define MQTT_WILL_ONLINE_PAYLOAD "online"   // for last will & testament payload
 #define MQTT_WILL_OFFLINE_PAYLOAD "offline" // for last will & testament payload
 #define MQTT_RETAIN false
 #define MQTT_KEEPALIVE 120 // 2 minutes
 #define MQTT_QOS 1
+#define MQTT_MAX_SIZE 700 // max size of a JSON object. See https://arduinojson.org/v6/assistant/
 
 // MQTT for thermostat
-#define TOPIC_THERMOSTAT_DATA "thermostat_data"         // for sending thermostat values to MQTT
-#define TOPIC_THERMOSTAT_CMD_TEMP "thermostat_cmd_temp" // for received thermostat temp changes via MQTT
-#define TOPIC_THERMOSTAT_CMD_MODE "thermostat_cmd_mode" // for received thermostat mode changes via MQTT
-// lobocobra start
-#define TOPIC_THERMOSTAT_CMD_RC35HC "thermostat_cmd_rc35hc" // for received thermostat mode changes via MQTT
-#define TOPIC_MQTT_CMD_RAW "mqtt_cmd_raw" // receive mqtt cmd
-#define TOPIC_THERMOSTAT_CMD_DAYTEMP "thermostat_cmd_daytemp"
-#define TOPIC_THERMOSTAT_CMD_NIGHTTEMP "thermostat_cmd_nighttemp"
-#define TOPIC_THERMOSTAT_CMD_HOLIDAYTEMP "thermostat_cmd_holidaytemp"
-// lobocobra end
-#define THERMOSTAT_CURRTEMP "thermostat_currtemp"       // current temperature
-#define THERMOSTAT_SELTEMP "thermostat_seltemp"         // selected temperature
-#define THERMOSTAT_MODE "thermostat_mode"               // mode
-// lobocobra start                                      // Text displaced in MQTT
-#define THERMOSTAT_RC35HC "thermostat_rc35hc"           // RC35, which heating circuit is active
-#define THERMOSTAT_daytemp "thermostat_daytemp"         // RC35, current day temperature set
-#define THERMOSTAT_nighttemp "thermostat_nighttemp"     // RC35, current night temperature set
-#define THERMOSTAT_holidaytemp "thermostat_holidaytemp" // RC35, current holiday temperature set
-#define THERMOSTAT_heatingtype "thermostat_heatingtype" // RC35, current what heating type is it 3=floorheating
-#define THERMOSTAT_circuitcalctemp "thermostat_circuitcalctemp" // RC35, calculated heating water
-#define MQTT_RAW "mqtt_raw" // send mqtt answer
-// lobocobra end
+#define TOPIC_THERMOSTAT_DATA "thermostat_data"                    // for sending thermostat values to MQTT
+#define TOPIC_THERMOSTAT_CMD_TEMP "thermostat_cmd_temp"            // for received thermostat temp changes via MQTT
+#define TOPIC_THERMOSTAT_CMD_MODE "thermostat_cmd_mode"            // for received thermostat mode changes via MQTT
+#define TOPIC_THERMOSTAT_CMD_HC "thermostat_cmd_hc"                // for received thermostat hc number changes via MQTT
+#define TOPIC_THERMOSTAT_CMD_DAYTEMP "thermostat_daytemp"          // RC35 specific
+#define TOPIC_THERMOSTAT_CMD_NIGHTTEMP "thermostat_nighttemp"      // RC35 specific
+#define TOPIC_THERMOSTAT_CMD_HOLIDAYTEMP "thermostat_holidayttemp" // RC35 specific
+#define THERMOSTAT_CURRTEMP "thermostat_currtemp"                  // current temperature
+#define THERMOSTAT_SELTEMP "thermostat_seltemp"                    // selected temperature
+#define THERMOSTAT_HC "thermostat_hc"                              // which heating circuit number
+#define THERMOSTAT_MODE "thermostat_mode"                          // mode
+#define THERMOSTAT_DAYTEMP "thermostat_daytemp"                    // RC35 specific
+#define THERMOSTAT_NIGHTTEMP "thermostat_nighttemp"                // RC35 specific
+#define THERMOSTAT_HOLIDAYTEMP "thermostat_holidayttemp"           // RC35 specific
+#define THERMOSTAT_HEATINGTYPE "themrostat_heatingtype"            // RC35 specific (3=floorheating)
+#define THERMOSTAT_CIRCUITCALCTEMP "thermostat_circuitcalctemp"    // RC35 specific
 
 // MQTT for boiler
 #define TOPIC_BOILER_DATA "boiler_data"                // for sending boiler values to MQTT
@@ -85,11 +78,6 @@
 // set this if using an external temperature sensor like a DS18B20
 // D5 is the default on a bbqkees board
 #define EMSESP_DALLAS_GPIO D5
-// lobocobra start
-// RC35 uses heating circuit 2 if you have a floor heating
-// change the heating circuit to Nr. 2
-#define EMSESP_HEATINGCIRCUIT 1
-// lobocobra end
 #define EMSESP_DALLAS_PARASITE false
 
 // By default the EMS bus will be scanned for known devices based on the product ids in ems_devices.h

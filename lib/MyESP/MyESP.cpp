@@ -155,8 +155,6 @@ void MyESP::_wifiCallback(justwifi_messages_t code, char * parameter) {
         // finally if we don't want Serial anymore, turn it off
         if (!_use_serial) {
             myDebug_P(PSTR("Disabling serial port"));
-            Serial.flush();
-            Serial.end();
             SerialAndTelnet.setSerial(NULL);
         } else {
             myDebug_P(PSTR("Using serial port output"));
@@ -231,6 +229,22 @@ void MyESP::_mqttOnMessage(char * topic, char * payload, size_t len) {
         topic = topic_magnitude + 1;
     }
 
+    // check for standard messages
+    // Restart the device
+    if (strcmp(topic, MQTT_TOPIC_RESTART) == 0) {
+        myDebug_P(PSTR("[MQTT] Received restart command"), message);
+        myESP.resetESP();
+        return;
+    }
+
+    // handle response from a start message
+    // for example with HA it sends the system time from the server
+    if (strcmp(topic, MQTT_TOPIC_START) == 0) {
+        myDebug_P(PSTR("[MQTT] Received boottime: %s"), message);
+        myESP.setBoottime(message);
+        return;
+    }
+
     // Send message event to custom service
     (_mqtt_callback)(MQTT_MESSAGE_EVENT, topic, message);
 }
@@ -268,6 +282,13 @@ void MyESP::_mqttOnConnect() {
 
     // say we're alive to the Last Will topic
     mqttClient.publish(_mqttTopic(_mqtt_will_topic), 1, true, _mqtt_will_online_payload);
+
+    // subscribe to general subs
+    mqttSubscribe(MQTT_TOPIC_RESTART);
+
+    // subscribe to a start message and send the first publish
+    myESP.mqttSubscribe(MQTT_TOPIC_START);
+    myESP.mqttPublish(MQTT_TOPIC_START, MQTT_TOPIC_START_PAYLOAD);
 
     // call custom function to handle mqtt receives
     (_mqtt_callback)(MQTT_CONNECT_EVENT, NULL, NULL);
@@ -679,6 +700,19 @@ bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value)
     return ok;
 }
 
+// force the serial on/off
+void MyESP::setUseSerial(bool toggle) {
+    //(void)fs_saveConfig(); // save the setting for next reboot
+
+    if (toggle) {
+        SerialAndTelnet.setSerial(&Serial);
+        _use_serial = true;
+    } else {
+        SerialAndTelnet.setSerial(NULL);
+        _use_serial = false;
+    }
+}
+
 void MyESP::_telnetCommand(char * commandLine) {
     char * str   = commandLine;
     bool   state = false;
@@ -884,9 +918,7 @@ void MyESP::showSystemStats() {
     myDebug_P(PSTR(" [MEM] Max OTA size: %d"), (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000);
     myDebug_P(PSTR(" [MEM] OTA Reserved: %d"), 4 * SPI_FLASH_SEC_SIZE);
     myDebug_P(PSTR(" [MEM] Free Heap: %d"), ESP.getFreeHeap());
-#if defined(ESP8266)
-    myDebug_P(PSTR(" [MEM] Stack: %d"), ESP.getFreeContStack());
-#endif
+
     myDebug_P(PSTR(""));
 }
 
@@ -1155,7 +1187,7 @@ bool MyESP::_fs_loadConfig() {
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, configFile);
     if (error) {
-        Serial.println(F("[FS] Failed to read file"));
+        myDebug_P(PSTR("[FS] Failed to read config file"));
         return false;
     }
 
@@ -1478,7 +1510,7 @@ void MyESP::begin(const char * app_hostname, const char * app_name, const char *
     _eeprom_setup(); // set up eeprom for storing crash data
     _fs_setup();     // SPIFFS setup, do this first to get values
     _wifi_setup();   // WIFI setup
-    _ota_setup();
+    _ota_setup();    // init OTA
 }
 
 /*
@@ -1490,12 +1522,10 @@ void MyESP::loop() {
 
     jw.loop(); // WiFi
 
-    /*
     // do nothing else until we've got a wifi connection
     if (WiFi.getMode() & WIFI_AP) {
         return;
     }
-    */
 
     ArduinoOTA.handle(); // OTA
     _mqttConnect();      // MQTT

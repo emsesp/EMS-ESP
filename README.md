@@ -5,7 +5,7 @@ EMS-ESP is a project to build an electronic controller circuit using an Espressi
 There are 3 parts to this project, first the design of the circuit, secondly the code for the ESP8266 microcontroller firmware with telnet and MQTT support, and lastly an example configuration for Home Assistant to monitor the data and issue direct commands via a MQTT broker.
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/b8880625bdf841d4adb2829732030887)](https://app.codacy.com/app/proddy/EMS-ESP?utm_source=github.com&utm_medium=referral&utm_content=proddy/EMS-ESP&utm_campaign=Badge_Grade_Settings)
-[![version](https://img.shields.io/badge/version-1.6.0-brightgreen.svg)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.7.0-brightgreen.svg)](CHANGELOG.md)
 
 - [EMS-ESP](#ems-esp)
   - [Introduction](#introduction)
@@ -21,6 +21,9 @@ There are 3 parts to this project, first the design of the circuit, secondly the
     - [EMS Polling](#ems-polling)
     - [EMS Broadcasting](#ems-broadcasting)
     - [EMS Reading and Writing](#ems-reading-and-writing)
+  - [EMS Plus](#ems-plus)
+    - [Message layout](#message-layout)
+    - [Message types](#message-types)
   - [The ESP8266 Source Code](#the-esp8266-source-code)
     - [Special EMS Types](#special-ems-types)
     - [Which thermostats are supported?](#which-thermostats-are-supported)
@@ -43,11 +46,11 @@ The original intention for this home project was to build a custom smart thermos
 
 Acknowledgments and kudos to the following people who have open-sourced their projects:
 
- **susisstrolch** - One of the first working versions of the EMS bridge circuit I found designed for specifically for the ESP8266. I borrowed Juergen's [schematic](https://github.com/susisstrolch/EMS-ESP12) and parts of his code ideas for reading telegrams.
+**susisstrolch** - One of the first working versions of the EMS bridge circuit I found designed for specifically for the ESP8266. I borrowed Juergen's [schematic](https://github.com/susisstrolch/EMS-ESP12) and parts of his code ideas for reading telegrams.
 
- **bbqkees** - Kees built a working [circuit](https://shop.hotgoodies.nl/ems/) and his SMD board is available for purchase on his website.
+**bbqkees** - Kees built a working [circuit](https://shop.hotgoodies.nl/ems/) and his SMD board is available for purchase on his website.
 
- **EMS Wiki** - A comprehensive [reference](https://emswiki.thefischer.net/doku.php?id=wiki:ems:telegramme) (in German) for the EMS bus which is a little outdated, not always 100% accurate and sadly no longer maintained.
+**EMS Wiki** - A comprehensive [reference](https://emswiki.thefischer.net/doku.php?id=wiki:ems:telegramme) (in German) for the EMS bus which is a little outdated, not always 100% accurate and sadly no longer maintained.
 
 ## Supported EMS Devices
 
@@ -73,12 +76,12 @@ The code and circuit has been tested with a few ESP8266 development boards such 
 11. **Important**: By default the serial port is enabled and the EMS bus disabled. This is to allow users to configure their ESP via the serial monitor when pluged into a PC/laptop. You must disable serial with `set serial off` to get the EMS transmission working.
 12. Hook up the ESP to the EMS board as follows:
     
-| EMS board | ESP8266 dev board |
-| ----------|------------------ |
-| Ground/G/J2|  GND/G |
-| Rx/J2 | D7 |
-| Tx/J2 | D8 |
-| VC/J2 | 3v3 |
+| EMS board   | ESP8266 dev board |
+| ----------- | ----------------- |
+| Ground/G/J2 | GND/G             |
+| Rx/J2       | D7                |
+| Tx/J2       | D8                |
+| VC/J2       | 3v3               |
 13.  Connect the EMS lines to the ESP. This can be done via the two EMS wires or via the 3.5mm service jack if you have an bbqkees board.
 14.  Reboot the ESP, either by the reset switch or pulling the power.
 15.  The ESP will first perform an autodetect to try and discover the EMS devices attached. If your boiler and thermostat are recognized it will set these types and store them for ever and ever. You can trace the output by telnet'ing to the board `telnet ems-esp.local`. Also use `info` to check the status.
@@ -114,7 +117,7 @@ The schematic used:
 
 ![Schematic](doc/schematics/circuit.png)
 
-*Optionally I've also added 2 0.5A/72V polyfuses between the EMS and the two inductors L1 and L2 for extra protection.*
+_Optionally I've also added 2 0.5A/72V polyfuses between the EMS and the two inductors L1 and L2 for extra protection._
 
 And here's a version using an early prototype board from **bbqkees**:
 
@@ -129,8 +132,8 @@ The EMS circuit will work with both 3.3V and 5V. It's easiest though to power di
 - powering from the 3.5mm service jack (stereo jack) on the boiler. This will give you 8V so you need a buck converter (like a [Pololu D24C22F5](https://www.pololu.com/product/2858)) to step this down to 5V to provide enough power to the ESP8266 (250mA at least)
 - powering direct from the EMS line, which is 15V DC and using a buck converter as described above.
 
-| With Power Circuit                              |
-| ------------------------------------------ |
+| With Power Circuit                                              |
+| --------------------------------------------------------------- |
 | ![Power circuit](doc/schematics/Schematic_EMS-ESP-supercap.png) |
 
 ## Adding external temperature sensors
@@ -143,9 +146,9 @@ Packages are streamed to the EMS "bus" from any other compatible connected devic
 
 A package can be a single byte (see Polling below) or a string of 6 or more bytes making up an actual data telegram. A telegram is always in the format:
 
-``[src] [dest] [type] [offset] [data] [crc] <BRK>``
+`[src] [dest] [type] [offset] [data] [crc] <BRK>`
 
-The first 4 bytes is referenced as the *header* in this document.
+The first 4 bytes is referenced as the _header_ in this document.
 
 ### EMS IDs
 
@@ -196,6 +199,24 @@ Following a write request, the `[dest]` doesn't have the 8th bit set and after t
 
 Every telegram sent is echo'd back to Rx, along the same Bus used for all Rx/Tx transmissions.
 
+## EMS Plus
+
+In this chapter we will report our findings on the EMS plus protocol which differs slighly from EMS 1.0.
+
+### Message layout
+
+| 0           | 1        | 2             | 3            | 4      | 5                   | n....n-1 | n   |
+| ----------- | -------- | ------------- | ------------ | ------ | ------------------- | -------- | --- |
+| transmitter | receiver | ems plus mark | message type | offset | device intended for | data     | cnc |
+| 18          | 00       | FF            | 03           | 01     | A5                  | 28       | 46  |
+
+### Message types
+
+| Message type | Definition      |
+| ------------ | --------------- |
+| 03           | Set temperature |
+| 00           | Status message  |
+
 ## The ESP8266 Source Code
 
 `emsuart.cpp` handles the low level UART read and write logic to the bus. You shouldn't need to touch this. All receive commands from the EMS bus are handled asynchronously using a circular buffer via an interrupt. A separate function processes the buffer and extracts the telegrams.
@@ -223,7 +244,7 @@ Every telegram sent is echo'd back to Rx, along the same Bus used for all Rx/Tx 
 | Boiler (0x08) | 0x15    | UBAMaintenanceSettingsMessage |                                          |
 | Boiler (0x08) | 0x16    | UBAParametersMessage          |                                          |
 
-In `ems.cpp` you can add scheduled calls to specific EMS types in the functions         `ems_getThermostatValues()` and `ems_getBoilerValues()`.
+In `ems.cpp` you can add scheduled calls to specific EMS types in the functions `ems_getThermostatValues()` and `ems_getBoilerValues()`.
 
 ### Which thermostats are supported?
 
@@ -251,12 +272,13 @@ Similarly the thermostat values are also sent as a JSON package with the topic `
 
 These incoming MQTT topics are also handled:
 
-| topic               | ID in my_config.h         | Payload                | Description                              |
-| ------------------- | ------------------------- | ---------------------- | ---------------------------------------- |
-| thermostat_cmd_temp | TOPIC_THERMOSTAT_CMD_TEMP | temperature as a float | sets the thermostat current setpoint     |
-| thermostat_cmd_mode | TOPIC_THERMOSTAT_CMD_MODE | auto, day, night       | sets the thermostat mode                 |
-| wwactivated         | TOPIC_BOILER_WWACTIVATED  | 0 or 1                 | turns boiler warm water on/off (not tap) |
-| boiler_cmd_wwtemp   | TOPIC_BOILER_CMD_WWTEMP   | temperature as a float | sets the boiler wwtemp current setpoint  |
+| topic               | #define in my_config.h    | Payload                      | Description                              |
+| ------------------- | ------------------------- | ---------------------------- | ---------------------------------------- |
+| thermostat_cmd_temp | TOPIC_THERMOSTAT_CMD_TEMP | temperature vlaue as a float | sets the thermostat current setpoint     |
+| thermostat_cmd_mode | TOPIC_THERMOSTAT_CMD_MODE | auto, day, night             | sets the thermostat mode                 |
+| wwactivated         | TOPIC_BOILER_WWACTIVATED  | 0 or 1                       | turns boiler warm water on/off (not tap) |
+| boiler_cmd_wwtemp   | TOPIC_BOILER_CMD_WWTEMP   | temperature as a float       | sets the boiler wwtemp current setpoint  |
+| restart             | MQTT_TOPIC_RESTART        |                              | restarts the ems-esp device              |
 
 If MQTT is not used use 'set mqtt_host' to remove it.
 
@@ -296,6 +318,7 @@ You can find the .yaml configuration files under `doc/ha`. See also this [HA for
 **On Linux (e.g. Ubuntu under Windows 10):**
 
 Make sure Python 2.7 is installed, then...
+
 ```python
 % pip install -U platformio
 % sudo platformio upgrade
@@ -306,7 +329,9 @@ Make sure Python 2.7 is installed, then...
 % cd EMS-ESP
 % cp platformio.ini-example platformio.ini
 ```
+
 edit `platformio.ini` to set `env_default` to your board type, then
+
 ```c
 % platformio run -t upload
 ```
