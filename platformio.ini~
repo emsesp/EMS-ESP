@@ -1,0 +1,56 @@
+[platformio]
+; add here your board, e.g. nodemcuv2, d1_mini, d1_mini_pro
+env_default = d1_mini
+
+[common]
+flash_mode = dout
+;cpu_clock = 160000000L
+cpu_clock =  80000000L
+build_flags = -g -w
+
+; for debug use these...
+build_flags = -g -Wall -Wextra -Werror -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-variable -DCRASH
+
+;wifi_settings =
+; hard code if you prefer. Recommendation is to set from within the app when in Serial or AP mode
+wifi_settings = '-DWIFI_SSID="SusiconStrolch"' '-DWIFI_PASSWORD="2759838837626100"'
+
+lib_deps =
+  CRC32
+  CircularBuffer
+  JustWifi
+  AsyncMqttClient
+  ArduinoJson
+  OneWire
+  EEPROM_rotate
+
+[env:d1_mini]
+board = d1_mini
+platform = espressif8266
+framework = arduino
+lib_deps = ${common.lib_deps}
+build_flags = ${common.build_flags} ${common.wifi_settings}
+board_build.f_cpu = ${common.cpu_clock}
+board_build.flash_mode = ${common.flash_mode}
+upload_speed = 921600
+monitor_speed = 115200
+upload_port = /dev/ttyUSB0
+; for OTA comment out these sections
+upload_protocol = espota
+upload_port = 192.168.254.139
+;upload_port = <add here your ip of the device>
+
+[env:esp12f]
+board = esp12e
+platform = espressif8266
+framework = arduino
+lib_deps = ${common.lib_deps}
+build_flags = ${common.build_flags} ${common.wifi_settings}
+board_build.flash_mode = ${common.flash_mode}
+board_build.f_cpu = ${common.cpu_clock}
+upload_speed = 921600
+upload_port = /dev/esp8266
+monitor_speed = 115200
+; for OTA comment out these sections
+upload_protocol = espota
+upload_port = 192.168.254.82
