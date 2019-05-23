@@ -235,22 +235,18 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
             delayMicroseconds(11 * EMSUART_BIT_TIME);   // burn CPU cycles...
 
         // we got the whole telegram in Rx buffer
-        // on Rx-BRK (bus collision), we simply enable Rx and leave
-        // otherwise, we send the final Tx-BRK in loopback and enable Rx-INT.
-        // worst case, we'll see an additional Rx-BRK...
-        if (!(U0IS & (1 << UIBD))) {
-            // no bus collision - send terminating BRK signal
-            emsuart_loopback(true);
-            USC0(EMSUART_UART) |= (1 << UCBRK);          // set <BRK>
-            
-            while (!(U0IS & (1 << UIBD)))                // wait until BRK detected...
-                delayMicroseconds(EMSUART_BIT_TIME / 8); // ~13µs
-            USC0(EMSUART_UART) &= ~(1 << UCBRK);         // clear <BRK>
-
-            U0IC = (1 << UIBD);         // clear BRK detect IRQ
-            emsuart_loopback(false);    // disable loopback mode
-        }
+        // save the Rx-BRK state 
+        uint32_t break_detect = (U0IS & (1 << UIBD));
+        //and enable Rx-Interrupt again to process the FIFO
         ETS_UART_INTR_ENABLE();     // receive anything from FIFO...
+
+        if (!break_detect) {
+            // no bus collision - send terminating BRK signal
+            // because we already saw the last Tx-char as Rx-echo we don't need to clear the Tx-FIFO
+            USC0(EMSUART_UART) |= (1 << UCBRK);          // set <BRK>
+            delayMicroseconds(12 * EMSUART_BIT_TIME);
+            USC0(EMSUART_UART) &= ~(1 << UCBRK);         // clear <BRK>
+        }
     }
 }
 
