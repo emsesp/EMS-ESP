@@ -108,7 +108,9 @@ void ICACHE_FLASH_ATTR emsuart_init() {
     USD(EMSUART_UART)  = (UART_CLK_FREQ / EMSUART_BAUD);
     USC0(EMSUART_UART) = EMSUART_CONFIG; // 8N1
 
-    emsuart_flush_fifos();
+        uint32_t tmp = ((1 << UCRXRST) | (1 << UCTXRST)); // bit mask
+    USC0(EMSUART_UART) |= (tmp);                      // set bits
+    USC0(EMSUART_UART) &= ~(tmp);                     // clear bits
 
     // conf1 params
     // UCTOE = RX TimeOut enable (default is 1)
@@ -213,8 +215,7 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
         }
         emsuart_tx_brk(); // send <BRK>
     } else {
-        /* smart Tx - take two
-        * changed logic...
+        /* smart Tx - take two - activated via 'set tx_delay 2'
         * we emit the whole telegram, with Rx interrupt disabled, collecting busmaster response in FIFO.
         * after sending the last char we poll the Rx status until either
         * - size(Rx FIFO) == size(Tx-Telegram)
@@ -223,16 +224,22 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
         */
 
         ETS_UART_INTR_DISABLE(); // disable rx interrupt
-        emsuart_flush_fifos();
+        tmp = ((1 << UCRXRST) | (1 << UCTXRST)); // bit mask
+        USC0(EMSUART_UART) |= (tmp);             // set bits
+        USC0(EMSUART_UART) &= ~(tmp);            // clear bits
  
         // throw out the telegram...
         for (uint8_t i = 0; i < len; i++)
             USF(EMSUART_UART) = buf[i]; // send byte
 
-        // wait until we received sizeof(telegram) or RxBRK (== collision detect)
-        while ((((USS(EMSUART_UART) >> USRXC) & 0xFF) < len) ||
-               (U0IS & (1 << UIBD)))
-            delayMicroseconds(11 * EMSUART_BIT_TIME);   // burn CPU cycles...
+        uint8_t waitcount = 100;      // we abort after 100 trials...
+        do {
+            // wait until we received sizeof(telegram) or RxBRK (== collision detect)
+            delay(1);   // 1ms delay (approx. 1char time)
+            if ((--waitcount==0) ||
+                (U0IS & (1 << UIBD)))
+                break;
+        } while (((USS(EMSUART_UART) >> USRXC) & 0xFF) < len);
 
         // we got the whole telegram in Rx buffer
         // save the Rx-BRK state 
@@ -244,10 +251,10 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
             // no bus collision - send terminating BRK signal
             // because we already saw the last Tx-char as Rx-echo we don't need to clear the Tx-FIFO
             USC0(EMSUART_UART) |= (1 << UCBRK);          // set <BRK>
-            delayMicroseconds(12 * EMSUART_BIT_TIME);
+            delayMicroseconds(34 * EMSUART_BIT_TIME);
             USC0(EMSUART_UART) &= ~(1 << UCBRK);         // clear <BRK>
         }
-    }
+    }   // end else
 }
 
 /*
