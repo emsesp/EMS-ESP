@@ -224,10 +224,9 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
         */
 
         ETS_UART_INTR_DISABLE(); // disable rx interrupt
-        tmp = ((1 << UCRXRST) | (1 << UCTXRST)); // bit mask
-        USC0(EMSUART_UART) |= (tmp);             // set bits
-        USC0(EMSUART_UART) &= ~(tmp);            // clear bits
- 
+        USIC(EMSUART_UART) = (1 << UIBD); // INT clear the BREAK detect interrupt
+        emsuart_flush_fifos();
+
         // throw out the telegram...
         for (uint8_t i = 0; i < len; i++)
             USF(EMSUART_UART) = buf[i]; // send byte
@@ -235,18 +234,15 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
         uint8_t waitcount = 100;      // we abort after 100 trials...
         do {
             // wait until we received sizeof(telegram) or RxBRK (== collision detect)
-            delay(1);   // 1ms delay (approx. 1char time)
+            delayMicroseconds(22 * EMSUART_BIT_TIME);   // approx. 2 chars delay
             if ((--waitcount==0) ||
-                (U0IS & (1 << UIBD)))
+                (USIS(EMSUART_UART) & ((1 << UIBD))))
                 break;
         } while (((USS(EMSUART_UART) >> USRXC) & 0xFF) < len);
 
         // we got the whole telegram in Rx buffer
         // save the Rx-BRK state 
-        uint32_t break_detect = (U0IS & (1 << UIBD));
-        //and enable Rx-Interrupt again to process the FIFO
-        ETS_UART_INTR_ENABLE();     // receive anything from FIFO...
-
+        uint32_t break_detect = (USIS(EMSUART_UART) & ((1 << UIBD)));
         if (!break_detect) {
             // no bus collision - send terminating BRK signal
             // because we already saw the last Tx-char as Rx-echo we don't need to clear the Tx-FIFO
@@ -254,6 +250,9 @@ void ICACHE_FLASH_ATTR emsuart_tx_buffer(uint8_t * buf, uint8_t len) {
             delayMicroseconds(34 * EMSUART_BIT_TIME);
             USC0(EMSUART_UART) &= ~(1 << UCBRK);         // clear <BRK>
         }
+
+        emsuart_flush_fifos(); // flush Rx buffer to be sure
+        ETS_UART_INTR_ENABLE();     // receive anything from FIFO...
     }   // end else
 }
 
