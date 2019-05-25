@@ -339,7 +339,7 @@ void showInfo() {
     if (ems_getBusConnected()) {
         myDebug_P(PSTR("  Bus is connected"));
 
-        myDebug_P(PSTR("  Rx: Poll=%d ms, # Rx telegrams read=%d, # CRC errors=%d"), ems_getPollFrequency(), EMS_Sys_Status.emsRxPgks, EMS_Sys_Status.emxCrcErr);
+        myDebug_P(PSTR("  Rx: Poll=%d microsecs, # Rx telegrams read=%d, # CRC errors=%d"), ems_getPollFrequency(), EMS_Sys_Status.emsRxPgks, EMS_Sys_Status.emxCrcErr);
 
         if (ems_getTxCapable()) {
             myDebug_P(PSTR("  Tx: available, Tx delay is %d, # Tx telegrams sent=%d"), ems_getTxDelay(), EMS_Sys_Status.emsTxPkgs);
@@ -1539,7 +1539,7 @@ void WIFICallback() {
     // This is done after we have a WiFi signal to avoid any resource conflicts
 
     if (myESP.getUseSerial()) {
-        myDebug_P(PSTR("Warning! EMS bus disabled when in Serial mode. Use 'set serial off' to start EMS."));
+        myDebug_P(PSTR("Warning! EMS bus communication disabled when Serial mode enabled. Use 'set serial off' to start communication."));
     } else {
         emsuart_init();
         myDebug_P(PSTR("[UART] Opened Rx/Tx connection"));
