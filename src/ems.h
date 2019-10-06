@@ -381,7 +381,9 @@ typedef struct {
     uint8_t hc;                // heating circuit 1,2, 3 or 4
     bool    active;            // true if there is data for this HC
 
-    uint8_t flowTemp;
+    uint16_t flowTemp;
+    uint8_t  pumpMod;
+    uint8_t  valveStatus;
 } _EMS_Mixing_HC;
 
 // Mixer data
