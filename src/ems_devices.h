@@ -140,6 +140,7 @@
 
 // Junkers FR10, FW100 (EMS Plus)
 #define EMS_TYPE_JunkersStatusMessage 0x6F         // is an automatic thermostat broadcast giving us temps
+#define EMS_OFFSET_JunkersStatusMessage_mode 0     // current mode
 #define EMS_OFFSET_JunkersStatusMessage_setpoint 2 // setpoint temp
 #define EMS_OFFSET_JunkersStatusMessage_curr 4     // current temp
 
@@ -151,7 +152,6 @@
 #define EMS_OFFSET_MMPLUSStatusMessage_flow_temp 3    // flow temperature
 #define EMS_OFFSET_MMPLUSStatusMessage_pump_mod 5     // pump modulation
 #define EMS_OFFSET_MMPLUSStatusMessage_valve_status 2 // valve in percent
-
 
 // Known EMS devices
 typedef enum {
@@ -209,7 +209,7 @@ const _Boiler_Device Boiler_Devices[] = {
 };
 
 /*
- * Known Solar Module types, device type 0x30
+ * Known Solar Module types, device id is 0x30
  * format is PRODUCT ID, DESCRIPTION
  */
 const _SolarModule_Device SolarModule_Devices[] = {
@@ -221,9 +221,15 @@ const _SolarModule_Device SolarModule_Devices[] = {
 
 };
 
+/*
+ * Mixing Units
+ * Typically device id is 0x20 or 0x21
+ * format is PRODUCT ID, DESCRIPTION
+ */
 const _Mixing_Device Mixing_Devices[] = {
-    {160, 0x20, "MM100 Mixing Module"},
-    {160, 0x21, "MM100 Mixing Module"},
+    {160, "MM100 Mixing Module"},
+    {69, "MM10 Mixer Module"},
+    {159, "MM50 Mixing Module"},
 };
 
 // Other EMS devices which are not considered boilers, thermostats or solar modules
@@ -231,9 +237,6 @@ const _Mixing_Device Mixing_Devices[] = {
 const _Other_Device Other_Devices[] = {
 
     {71, 0x11, "WM10 Switch Module"},
-
-    {69, 0x21, "MM10 Mixer Module"},
-    {159, 0x21, "MM50 Mixing Module"},
 
     {68, 0x09, "BC10/RFM20 Receiver"},
     {190, 0x09, "BC10 Base Controller"},
