@@ -16,7 +16,7 @@
 #define IRT_MAXBUFFERS 5                                // buffers for circular filling to avoid collisions
 #define IRT_MAXBUFFERSIZE (IRT_MAX_TELEGRAM_LENGTH + 2) // max size of the buffer. IRT packets are max 32 bytes, plus extra 2 for BRKs
 
-#define IRTUART_BIT_TIME 104 // bit time @9600 baud
+#define IRTUART_BIT_TIME 208 // bit time @4800 baud
 
 #define IRTUART_TX_BRK_WAIT 2070 // the BRK from Boiler master is roughly 1.039ms, so accounting for hardware lag using around 2078 (for half-duplex) - 8 (lag)
 #define IRTUART_TX_WAIT_BYTE IRTUART_BIT_TIME * 10 // Time to send one Byte (8 Bits, 1 Start Bit, 1 Stop Bit)

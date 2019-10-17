@@ -62,7 +62,7 @@ static void irtuart_rx_intr_handler(void * para) {
 /*
  * system task triggered on BRK interrupt
  * incoming received messages are always asynchronous
- * The full buffer is sent to the irt_parseTelegram() function in ems.cpp.
+ * The full buffer is sent to the irt_parseTelegram() function in irt.cpp.
  */
 static void ICACHE_FLASH_ATTR irtuart_recvTask(os_event_t * events) {
     _IRTRxBuf * pCurrent = pIRTRxBuf;
@@ -70,21 +70,16 @@ static void ICACHE_FLASH_ATTR irtuart_recvTask(os_event_t * events) {
     uint8_t length       = pCurrent->length;                           // number of bytes including the BRK at the end
     pCurrent->length     = 0;
 
+//    if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
+//        ems_dumpBuffer("irtuart_rx_buffer: ", (uint8_t *)pCurrent->buffer, length); // validate and transmit the IRT buffer, excluding the BRK
+//    }
     if (irtPhantomBreak) {
         irtPhantomBreak = 0;
         length--; // remove phantom break from Rx buffer
     }
-
-    if (length == 2) {
-        RX_PULSE(20);
-        // it's a poll or status code, single byte and ok to send on
-//        irt_parseTelegram((uint8_t *)pCurrent->buffer, 1);
-    } else if ((length > 4) && (length <= IRT_MAXBUFFERSIZE + 1)) {
-        // ignore double BRK at the end, possibly from the Tx loopback
-        // also telegrams with no data value
-        RX_PULSE(40);
-//        irt_parseTelegram((uint8_t *)pCurrent->buffer, length - 1); // transmit IRT buffer, excluding the BRK
-    }
+    // parse mesg
+    RX_PULSE(40);
+    irt_parseTelegram((uint8_t *)pCurrent->buffer, length - 1 + 1); // decode IRT buffer, excluding the BRK
 }
 
 /*

@@ -25,7 +25,7 @@ char * _smallitoa3(uint16_t value, char * buffer);
  */
 void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
     uint32_t    timestamp       = millis();
-    static char output_str[200] = {0};
+    static char output_str[300] = {0};
     static char buffer[16]      = {0};
 
 
@@ -48,6 +48,8 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
     strlcat(output_str, _hextoa(EMS_Sys_Status.emsRxStatus, buffer), sizeof(output_str));
     strlcat(output_str, " ", sizeof(output_str));
     strlcat(output_str, _hextoa(EMS_Sys_Status.emsTxStatus, buffer), sizeof(output_str));
+    strlcat(output_str, " ", sizeof(output_str));
+    strlcat(output_str, _hextoa(length, buffer), sizeof(output_str));
     strlcat(output_str, ": ", sizeof(output_str));
 
 
@@ -69,9 +71,49 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
  * When a telegram is processed we forcefully erase it from the stack to prevent overflow
  */
 void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
-    if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
-        irt_dumpBuffer("irt_parseTelegram: ", telegram, length);
-    }
+
+	if ((length > 2) && (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER)) {
+		irt_dumpBuffer("irt_parseTelegram: ", telegram, length);
+	}
+	// ignore anything that doesn't resemble a proper telegram package
+	// minimal is 5 bytes, excluding CRC at the end (for EMS1.0)
+	if (length <= 4) {
+		// _debugPrintTelegram("Noisy data: ", &EMS_RxTelegram, COLOR_RED);
+		return;
+	}
+
+	uint8_t i, j;
+	uint8_t irt_msg[IRT_MAX_TELEGRAM_LENGTH];
+	if (telegram[0] == 0x01) {
+		i = 1;
+		j = 0;
+		while ((i + 1) < length) {
+			if (telegram[i] == (0xFF - telegram[i+1])) {
+				if (j > 0) {
+					// flush msg
+					irt_dumpBuffer("irt_: ", irt_msg, j);
+				}
+				j = 0;
+				irt_msg[j++] = telegram[i];
+				irt_msg[j++] = telegram[i+1];
+				i+=2;
+			} else if (telegram[i] == telegram[i+1]) {
+				irt_msg[j++] = telegram[i];
+				i += 2;
+			} else {
+				i++;
+			}
+		}
+		if (j > 0) {
+			// flush msg
+			irt_dumpBuffer("irt_: ", irt_msg, j);
+		}
+	}
+
+	static _IRT_RxTelegram IRT_RxTelegram; // create the Rx package
+	IRT_RxTelegram.telegram  = telegram;
+	IRT_RxTelegram.timestamp = millis();
+	IRT_RxTelegram.length    = length;
 #ifdef nuniet
     /*
      * Detect the EMS bus type - Buderus or Junkers - and set emsIDMask accordingly.

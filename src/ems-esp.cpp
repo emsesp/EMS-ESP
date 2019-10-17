@@ -9,6 +9,8 @@
 
 // local libraries
 #include "MyESP.h"
+#include "irt.h"
+#include "irtuart.h"
 #include "ems.h"
 #include "ems_devices.h"
 #include "emsuart.h"
@@ -121,7 +123,7 @@ static const command_t project_cmds[] PROGMEM = {
     {true, "shower_timer <on | off>", "send MQTT notification on all shower durations"},
     {true, "shower_alert <on | off>", "stop hot water to send 3 cold burst warnings after max shower time is exceeded"},
     {true, "publish_time <seconds>", "set frequency for publishing data to MQTT (0=off)"},
-    {true, "tx_mode <n>", "changes Tx logic. 1=ems generic, 2=ems+, 3=Junkers HT3"},
+    {true, "tx_mode <n>", "changes Tx logic. 1=ems generic, 2=ems+, 3=Junkers HT3, 4=old iRT"},
 
     {false, "info", "show current captured on the devices"},
     {false, "log <n | b | t | s | r | j | v>", "set logging mode to none, basic, thermostat only, solar module only, raw, jabber or verbose"},
@@ -1345,12 +1347,12 @@ bool SetListCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, co
         // tx_mode
         if ((strcmp(setting, "tx_mode") == 0) && (wc == 2)) {
             uint8_t mode = atoi(value);
-            if ((mode >= 1) && (mode <= 3)) { // see ems.h for definitions
+            if ((mode >= 1) && (mode <= 4)) { // see ems.h for definitions
                 EMSESP_Settings.tx_mode = mode;
                 ems_setTxMode(mode);
                 ok = true;
             } else {
-                myDebug_P(PSTR("Error. Usage: set tx_mode <1 | 2 | 3>"));
+                myDebug_P(PSTR("Error. Usage: set tx_mode <1 | 2 | 3 | 4>"));
             }
         }
     }
@@ -1598,12 +1600,14 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
 // so we can disable the EMS to avoid any noise
 void OTACallback_pre() {
     emsuart_stop();
+    irtuart_stop();
 }
 
 // OTA callback when the OTA process finishes
 // so we can re-enable the UART
 void OTACallback_post() {
     emsuart_start();
+    irtuart_start();
 }
 
 
@@ -2119,8 +2123,13 @@ void setup() {
         Serial.println("Note: Serial output will now be disabled. Please use Telnet.");
         Serial.flush();
         myESP.setUseSerial(false);
-        emsuart_init(); // start EMS bus transmissions
-        myDebug_P(PSTR("[UART] Opened Rx/Tx connection"));
+        if (EMSESP_Settings.tx_mode == 4) {
+				irtuart_init(); // start IRT bus transmissions
+				myDebug_P(PSTR("[UART] Opened Rx/Tx connection (iRT)"));
+        } else {
+				emsuart_init(); // start EMS bus transmissions
+				myDebug_P(PSTR("[UART] Opened Rx/Tx connection"));
+        }
         if (!EMSESP_Settings.listen_mode) {
             // go and find the boiler and thermostat types, if not in listen mode
             ems_discoverModels();
