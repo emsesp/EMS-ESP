@@ -86,7 +86,9 @@
 
 // The Rx receive package
 typedef struct {
-    uint32_t  timestamp;    // timestamp from millis()
+	uint32_t		timestamp;			// timestamp from millis()
+	uint8_t		section_count;		// msg section counter
+	uint8_t		device_nr;			// device number (should be 0)
     uint8_t * telegram;     // the full data package
     uint8_t   data_length;  // length in bytes of the data
     uint8_t   length;       // full length of the complete telegram

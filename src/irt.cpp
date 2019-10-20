@@ -6,19 +6,77 @@
  * Paul Derbyshire - https://github.com/proddy/EMS-ESP
  */
 
+#include <stdio.h>
 #include "irt.h"
 #include "MyESP.h"
 //#include "ems_devices.h"
 #include "irtuart.h"
-#include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
+//#include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
 
 // MyESP class for logging to telnet and serial
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
 
+extern _EMS_Boiler EMS_Boiler;
+
 char * _hextoa(uint8_t value, char * buffer);
 char * _smallitoa(uint8_t value, char * buffer);
 char * _smallitoa3(uint16_t value, char * buffer);
+
+
+#define MAX_KNOWN_MSG_LEN 16
+typedef struct {
+	uint8_t			length;
+	uint8_t			data[MAX_KNOWN_MSG_LEN];
+	uint8_t			mask[MAX_KNOWN_MSG_LEN];
+}ty_known_msg;
+
+
+const ty_known_msg known_msg[] = {
+
+	{	.length = 5, .data = {0x81, 0xC3, 0x79, 0xE3, 0x51}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+
+	/* last byte is response from boiler, looks like status ? */
+	{	.length = 5, .data = {0x82, 0xC3, 0x79, 0xE0, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x82, 0xF3, 0x04, 0x6D, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x82, 0x4A, 0x0A, 0x3E, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x82, 0x28, 0x2B, 0x7E, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x82, 0x6B, 0xB8, 0x86, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+	{	.length = 5, .data = {0x8A, 0xC3, 0x79, 0xE8, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x8A, 0xA1, 0x98, 0x83, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x8A, 0x5B, 0x5D, 0x51, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x8A, 0x18, 0x71, 0x67, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x8A, 0x96, 0xAE, 0x35, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+
+
+	{	.length = 5, .data = {0x90, 0xAE, 0x5F, 0xB0, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0x62, 0x54, 0x1D, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0xC6, 0x8F, 0x0B, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0xF9, 0x05, 0x6F, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0x32, 0xE3, 0x53, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0x90, 0xE0, 0x02, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0xE6, 0xD0, 0x2E, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0x40, 0x5A, 0x61, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0x90, 0xC3, 0x79, 0xF2, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+
+	/* last byte means ???? */
+	{	.length = 5, .data = {0xA3, 0xC3, 0x79, 0xC1, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA3, 0x48, 0xBF, 0xFD, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA3, 0x1C, 0xED, 0x04, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA3, 0x15, 0x5B, 0xFC, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA3, 0x07, 0xD3, 0xCA, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+	/* last byte reports water temp */
+	{	.length = 5, .data = {0xA4, 0xC3, 0x79, 0xC6, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA4, 0x73, 0x72, 0x93, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA4, 0x7D, 0xAC, 0xDC, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA4, 0x5D, 0x17, 0x42, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0xA4, 0xCB, 0x67, 0xAE, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+
+	{ 	.length = 0, .data = {0x00}, .mask ={0x00} }
+};
 
 /**
  * dump a UART Tx or Rx buffer to console...
@@ -64,6 +122,143 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
     myDebug(output_str);
 }
 
+/*
+ * Check message agains the list of messages we know, or choice to ignore
+ */
+void irt_logRawMessage(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* check against the known message list */
+	uint8_t i, j, found, found2;
+	i=0;
+	found = 0;
+	while ((found == 0) && (known_msg[i].length != 0)) {
+		if (known_msg[i].length == length) {
+			found2 = 1;
+			for (j=0; ((j<length) && (found2)); j++) {
+				if ((data[j] & known_msg[i].mask[j]) == known_msg[i].data[j]) {
+					// match
+				} else {
+					found2 = 0;
+				}
+			}
+			found = found2;
+		}
+		i++;
+	}
+	// message was found, do not log
+	if (found) return;
+
+	irt_dumpBuffer("irt_new: ", data, length);
+}
+uint8_t irt_handle_0x82(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* 82 4A 0A 3E 00 */
+	/* 82 ?? ?? ?? ss Status 0x00 -> 0x04 -> 0x84*/
+	if (length != 5) return 10;
+//	printf("82 msg %d(0x%02x)\n", data[4], data[4]);
+	return 0;
+}
+
+uint8_t irt_handle_0xA3(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* A3 07 D3 CA 53 */
+	/* A3 ?? ?? ?? !! Burner status from boiler ??*/
+	if (length != 5) return 10;
+//	printf("A3 msg %d(0x%02x)\n", data[4], data[4]);
+	return 0;
+}
+
+uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* A4 5D 17 42 19 */
+	/* A4 ?? ?? ?? ww */
+	if (length != 5) return 10;
+//	printf("Water temp %d(0x%02x)\n", data[4], data[4]);
+	EMS_Boiler.curFlowTemp = (data[4] * 10);
+	return 0;
+}
+
+
+uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	if (length < 1) return 10;
+	EMS_Sys_Status.emsRxPgks++;
+	if (data[0] != 0x83) return 1;
+	irt_logRawMessage(msg, data, length);
+
+	switch (data[0]) {
+	case 0x82: return irt_handle_0x82(msg, data, length); break;
+	case 0xA3: return irt_handle_0xA3(msg, data, length); break;
+	case 0xA4: return irt_handle_0xA4(msg, data, length); break;
+	}
+	return 0;
+}
+
+uint8_t irt_parseSection(_IRT_RxTelegram *msg, uint8_t *section, uint8_t length)
+{
+	// parse a section of the data
+//	irt_dumpBuffer("irt_sec: ", section, length);
+	switch (msg->section_count) {
+	case 0:
+		// start of msg should be 01 01 FE
+		// Poll from boiler (first 01)
+		// reply from thermostat (second 01)
+		// inverse reply from boiler (last fe)
+		if ((length < 2) || (section[0] != 0x01) || (section[1] != 0x01)/* || (section[2] != 0xFE)*/) {
+			// Invalid device or static noise ?
+			irt_dumpBuffer("irt_unk_start: ", section, length);
+			return 10;
+		} else {
+			// valid start
+			msg->section_count++;
+			msg->device_nr = section[1];
+		}
+		break;
+	case 1:
+		// second message is always from thermostat to boiler
+		// it always start with 90
+		if ((length != 5) || (section[0] != 0x90) || (section[4] != 0xCF) /* || (section[5] != 0x30) */) {
+			// invalid start msg
+			irt_dumpBuffer("irt_unk_start: ", section, length);
+			return 10;
+		} else {
+			/* mark the bus as in-sync */
+			EMS_Sys_Status.emsRxTimestamp  = msg->timestamp; // timestamp of last read
+			EMS_Sys_Status.emsBusConnected = true;
+			EMS_Sys_Status.emsIDMask = 0x00;
+			EMS_Boiler.device_id = EMS_ID_BOILER;
+			EMS_Sys_Status.emsPollFrequency = 500000; // poll in micro secs
+			EMS_Sys_Status.emsTxCapable = true;
+			msg->section_count++;
+		}
+		irt_handleMsg(msg, section, length);
+		break;
+	default:
+		// we, for now, assume the first byte is some sort of msg type ?
+		irt_handleMsg(msg, section, length);
+
+//		if (length >= 6) {
+//			switch (section[0]) {
+//			case 0x73:
+//			case 0x82:
+//			case 0x83:
+//			case 0xA3:
+//			case 0xA4:
+//				irt_dumpBuffer("irt_real_msg: ", section, length);
+//				break;
+//			}
+//		}
+		break;
+	}
+	return 0;
+}
+
+void irt_setupNewMsg(_IRT_RxTelegram *msg)
+{
+	memset(msg, 0, sizeof(_IRT_RxTelegram));
+	msg->timestamp = millis();
+	msg->section_count = 0;
+}
 /**
  * Entry point triggered by an interrupt in irtuart.cpp
  * length is the number of all the telegram bytes
@@ -71,6 +266,9 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
  * When a telegram is processed we forcefully erase it from the stack to prevent overflow
  */
 void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
+
+	/* the last byte should be the break (0x00). If it is not 0x00 leave it */
+	if ((length > 1) && (telegram[length -1]) == 0x00) length--;
 
 	if ((length > 2) && (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER)) {
 		irt_dumpBuffer("irt_parseTelegram: ", telegram, length);
@@ -82,39 +280,44 @@ void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
 		return;
 	}
 
-	uint8_t i, j;
-	uint8_t irt_msg[IRT_MAX_TELEGRAM_LENGTH];
-	if (telegram[0] == 0x01) {
-		i = 1;
-		j = 0;
-		while ((i + 1) < length) {
-			if (telegram[i] == (0xFF - telegram[i+1])) {
-				if (j > 0) {
-					// flush msg
-					irt_dumpBuffer("irt_: ", irt_msg, j);
-				}
+	uint8_t i, j, ret;
+	uint8_t irt_buffer[IRT_MAX_TELEGRAM_LENGTH];
+	_IRT_RxTelegram irtMsg;
+	irt_setupNewMsg(&irtMsg);
+
+	i = 1;
+	j = 0;
+	irt_buffer[j++] = telegram[0];
+	ret = 0;
+	while ((i + 1) < length) {
+		if (telegram[i] == (0xFF - telegram[i+1])) {
+			irt_buffer[j++] = telegram[i];
+			//irt_buffer[j++] = telegram[i+1];
+			if (j > 0) {
+				// flush msg
+				ret = irt_parseSection(&irtMsg, irt_buffer, j);
 				j = 0;
-				irt_msg[j++] = telegram[i];
-				irt_msg[j++] = telegram[i+1];
-				i+=2;
-			} else if (telegram[i] == telegram[i+1]) {
-				irt_msg[j++] = telegram[i];
-				i += 2;
-			} else {
-				i++;
+				if (ret) break;
 			}
-		}
-		if (j > 0) {
-			// flush msg
-			irt_dumpBuffer("irt_: ", irt_msg, j);
+			j = 0;
+			i+=2;
+		} else if (telegram[i] == telegram[i+1]) {
+			irt_buffer[j++] = telegram[i];
+			i += 2;
+		} else {
+			i++;
 		}
 	}
+	if (j > 0) {
+		// flush msg
+		ret = irt_parseSection(&irtMsg, irt_buffer, j);
+	}
+#ifdef nuniet
 
 	static _IRT_RxTelegram IRT_RxTelegram; // create the Rx package
 	IRT_RxTelegram.telegram  = telegram;
 	IRT_RxTelegram.timestamp = millis();
 	IRT_RxTelegram.length    = length;
-#ifdef nuniet
     /*
      * Detect the EMS bus type - Buderus or Junkers - and set emsIDMask accordingly.
      *  we wait for the first valid telegram and look at the SourceID.
