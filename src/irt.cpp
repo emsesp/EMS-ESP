@@ -34,6 +34,12 @@ typedef struct {
 
 const ty_known_msg known_msg[] = {
 
+	{	.length = 12, .data = {0x73, 0x52, 0x25, 0x43, 0x78, 0x01, 0xFF, 0xAD, 0x01, 0x51, 0xF6, 0x50}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 12, .data = {0x73, 0x52, 0x25, 0x43, 0x78, 0x04, 0x00, 0x70, 0x04, 0x00, 0x4D, 0x29}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 12, .data = {0x73, 0x52, 0x25, 0x43, 0x78, 0x05, 0x04, 0x62, 0x05, 0x04, 0xE2, 0xAE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	/* status set from thermostat ?? */
+	{	.length = 12, .data = {0x73, 0x52, 0x25, 0x43, 0x78, 0x07, 0xFF, 0xA1, 0x07, 0x00, 0xD0, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x00} },
+
 	{	.length = 5, .data = {0x81, 0xC3, 0x79, 0xE3, 0x51}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
 
 	/* last byte is response from boiler, looks like status ? */
@@ -42,6 +48,11 @@ const ty_known_msg known_msg[] = {
 	{	.length = 5, .data = {0x82, 0x4A, 0x0A, 0x3E, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
 	{	.length = 5, .data = {0x82, 0x28, 0x2B, 0x7E, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
 	{	.length = 5, .data = {0x82, 0x6B, 0xB8, 0x86, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+	{	.length = 5, .data = {0x83, 0xC3, 0x79, 0xE1, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x85, 0xC3, 0x79, 0xE7, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+	{	.length = 5, .data = {0x86, 0xC3, 0x79, 0xE4, 0xE9}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+
 
 	{	.length = 5, .data = {0x8A, 0xC3, 0x79, 0xE8, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
 	{	.length = 5, .data = {0x8A, 0xA1, 0x98, 0x83, 0xFE}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
@@ -60,6 +71,10 @@ const ty_known_msg known_msg[] = {
 	{	.length = 5, .data = {0x90, 0x40, 0x5A, 0x61, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
 	{	.length = 5, .data = {0x90, 0xC3, 0x79, 0xF2, 0xCF}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
 
+	/* last bytes is 0x00 or 0xFF (pump on off ??)*/
+	{	.length = 5, .data = {0x93, 0x73, 0x0E, 0x4D, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+
 	/* last byte means ???? */
 	{	.length = 5, .data = {0xA3, 0xC3, 0x79, 0xC1, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
 	{	.length = 5, .data = {0xA3, 0x48, 0xBF, 0xFD, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
@@ -74,6 +89,11 @@ const ty_known_msg known_msg[] = {
 	{	.length = 5, .data = {0xA4, 0x5D, 0x17, 0x42, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
 	{	.length = 5, .data = {0xA4, 0xCB, 0x67, 0xAE, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
 
+	/* last bytes is 0x00, 1 2 3 4 5 (burner status ??)*/
+	{	.length = 5, .data = {0xC9, 0xC3, 0x79, 0xAB, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0x00} },
+
+	{	.length = 5, .data = {0xF0, 0x01, 0xCD, 0xED, 0x00}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
+	{	.length = 5, .data = {0xF0, 0x01, 0xD8, 0xB9, 0x05}, .mask = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF} },
 
 	{ 	.length = 0, .data = {0x00}, .mask ={0x00} }
 };
@@ -150,12 +170,82 @@ void irt_logRawMessage(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 
 	irt_dumpBuffer("irt_new: ", data, length);
 }
+uint8_t global_status[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint8_t global_has_changed = 0;
+
+void irt_update_status(uint8_t msg_id, uint8_t sub_msg_id, uint8_t value)
+{
+	uint8_t sel_reg = 0xFF;
+
+	switch (msg_id) {
+	case 0x73:
+		if (sub_msg_id == 0) {
+			sel_reg = 0;
+		} else {
+			sel_reg = 1;
+		}
+		break;
+	case 0x82:
+		sel_reg = 2;
+		break;
+	case 0x83: sel_reg = 3; break;
+	case 0x85: sel_reg = 4; break;
+	case 0x93: sel_reg = 5; break;
+	case 0xA3: sel_reg = 6; break;
+	case 0xA4: sel_reg = 7; break;
+	case 0xC9: sel_reg = 8; break;
+	}
+	if (sel_reg < 20) {
+		if (global_status[sel_reg] != value) {
+			// update
+			global_status[sel_reg] = value;
+			global_has_changed = 1;
+		}
+	}
+}
+uint8_t irt_handle_0x73(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* 73 52 25 43 78 07 FF A1 07 00 D0 6C */
+	/* 73 52 25 43 78 07 FF A1 07 ss D0 ss*/
+	if (length != 12) return 10;
+	if (data[5] == 0x07) {
+//		printf("73 msg 0x%02x 0x%02x\n", data[9], data[11]);
+		irt_update_status(data[0], 0, data[9]);
+		irt_update_status(data[0], 1, data[11]);
+	}
+	return 0;
+}
+
+
 uint8_t irt_handle_0x82(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* 82 4A 0A 3E 00 */
 	/* 82 ?? ?? ?? ss Status 0x00 -> 0x04 -> 0x84*/
 	if (length != 5) return 10;
+	irt_update_status(data[0], 0, data[4]);
 //	printf("82 msg %d(0x%02x)\n", data[4], data[4]);
+	return 0;
+}
+
+uint8_t irt_handle_0x83(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	if (length != 5) return 10;
+	irt_update_status(data[0], 0, data[4]);
+
+	return 0;
+}
+uint8_t irt_handle_0x85(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	if (length != 5) return 10;
+	irt_update_status(data[0], 0, data[4]);
+
+	return 0;
+}
+uint8_t irt_handle_0x93(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	if (length != 5) return 10;
+	irt_update_status(data[0], 0, data[4]);
+
 	return 0;
 }
 
@@ -165,6 +255,8 @@ uint8_t irt_handle_0xA3(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A3 ?? ?? ?? !! Burner status from boiler ??*/
 	if (length != 5) return 10;
 //	printf("A3 msg %d(0x%02x)\n", data[4], data[4]);
+	irt_update_status(data[0], 0, data[4]);
+
 	return 0;
 }
 
@@ -174,22 +266,36 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A4 ?? ?? ?? ww */
 	if (length != 5) return 10;
 //	printf("Water temp %d(0x%02x)\n", data[4], data[4]);
+	irt_update_status(data[0], 0, data[4]);
+
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
 	return 0;
 }
 
+uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	if (length != 5) return 10;
+	irt_update_status(data[0], 0, data[4]);
+
+	return 0;
+}
 
 uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	if (length < 1) return 10;
 	EMS_Sys_Status.emsRxPgks++;
-	if (data[0] != 0x83) return 1;
+//	if (data[0] != 0xc9) return 1;
 	irt_logRawMessage(msg, data, length);
 
 	switch (data[0]) {
+	case 0x73: return irt_handle_0x73(msg, data, length); break;
 	case 0x82: return irt_handle_0x82(msg, data, length); break;
+	case 0x83: return irt_handle_0x83(msg, data, length); break;
+	case 0x85: return irt_handle_0x85(msg, data, length); break;
+	case 0x93: return irt_handle_0x93(msg, data, length); break;
 	case 0xA3: return irt_handle_0xA3(msg, data, length); break;
 	case 0xA4: return irt_handle_0xA4(msg, data, length); break;
+	case 0xC9: return irt_handle_0xC9(msg, data, length); break;
 	}
 	return 0;
 }
@@ -217,7 +323,7 @@ uint8_t irt_parseSection(_IRT_RxTelegram *msg, uint8_t *section, uint8_t length)
 	case 1:
 		// second message is always from thermostat to boiler
 		// it always start with 90
-		if ((length != 5) || (section[0] != 0x90) || (section[4] != 0xCF) /* || (section[5] != 0x30) */) {
+		if ((length != 5) || (section[0] != 0x90)/* || (section[4] != 0xCF)  || (section[5] != 0x30) */) {
 			// invalid start msg
 			irt_dumpBuffer("irt_unk_start: ", section, length);
 			return 10;
@@ -311,6 +417,16 @@ void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
 	if (j > 0) {
 		// flush msg
 		ret = irt_parseSection(&irtMsg, irt_buffer, j);
+	}
+	char temp[100];
+	if (global_has_changed) {
+		snprintf(temp, sizeof(temp),	/*"73: %02X %02X 82: %02X 83: %02X 85: %02X 93: %02X A3: %02X A4: %02X C9: %02X"*/
+												"%02X %02X %02X %02X %02X %02X %02X %02X %02X",
+					global_status[0], global_status[1], global_status[2], global_status[3],
+					global_status[4], global_status[5], global_status[6], global_status[7],
+					global_status[8]);
+		myDebug(temp);
+		global_has_changed = 0;
 	}
 #ifdef nuniet
 
