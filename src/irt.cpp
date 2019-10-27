@@ -107,6 +107,7 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length) {
     static char output_str[300] = {0};
     static char buffer[16]      = {0};
 
+	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_NONE) return;
 
     strlcpy(output_str, "(", sizeof(output_str));
     strlcat(output_str, COLOR_CYAN, sizeof(output_str));
@@ -490,6 +491,7 @@ void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
 		// flush msg
 		ret = irt_parseSection(&irtMsg, irt_buffer, j);
 	}
+#ifdef include_later
 	char temp[100];
 	if (global_has_changed) {
 		snprintf(temp, sizeof(temp),	/*"73: %02X %02X 82: %02X 83: %02X 85: %02X 93: %02X A3: %02X A4: %02X C9: %02X"*/
@@ -500,6 +502,7 @@ void irt_parseTelegram(uint8_t * telegram, uint8_t length) {
 		myDebug(temp);
 		global_has_changed = 0;
 	}
+#endif
 #ifdef nuniet
 
 	static _IRT_RxTelegram IRT_RxTelegram; // create the Rx package
