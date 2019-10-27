@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include "irt.h"
+#include "ems_devices.h"
 #include "MyESP.h"
 //#include "ems_devices.h"
 #include "irtuart.h"
@@ -209,19 +210,79 @@ uint8_t irt_handle_0x73(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* 73 52 25 43 78 07 FF A1 07 ss D0 ss*/
 	if (length != 12) return 10;
 	if (data[5] == 0x07) {
+		EMS_Thermostat.model_id        = EMS_MODEL_RC10;
+		EMS_Thermostat.device_id       = 0x01;
+		EMS_Thermostat.write_supported = EMS_THERMOSTAT_WRITE_NO;
+		EMS_Thermostat.product_id      = 0x01;
+		strlcpy(EMS_Thermostat.version, "1.0", sizeof(EMS_Thermostat.version));
 //		printf("73 msg 0x%02x 0x%02x\n", data[9], data[11]);
 		irt_update_status(data[0], 0, data[9]);
 		irt_update_status(data[0], 1, data[11]);
 	}
 	return 0;
 }
+/*
+    // UBAParameterWW
+    EMS_Boiler.wWActivated   = EMS_VALUE_INT_NOTSET; // Warm Water activated
+    EMS_Boiler.wWSelTemp     = EMS_VALUE_INT_NOTSET; // Warm Water selected temperature
+    EMS_Boiler.wWCircPump    = EMS_VALUE_INT_NOTSET; // Warm Water circulation pump available
+    EMS_Boiler.wWDesiredTemp = EMS_VALUE_INT_NOTSET; // Warm Water desired temperature to prevent infection
+    EMS_Boiler.wWComfort     = EMS_VALUE_INT_NOTSET;
 
+    // UBAMonitorFast
+    EMS_Boiler.selFlowTemp = EMS_VALUE_INT_NOTSET;    // Selected flow temperature
+    EMS_Boiler.curFlowTemp = EMS_VALUE_USHORT_NOTSET; // Current flow temperature
+    EMS_Boiler.retTemp     = EMS_VALUE_USHORT_NOTSET; // Return temperature
+    EMS_Boiler.burnGas     = EMS_VALUE_INT_NOTSET;    // Gas on/off
+    EMS_Boiler.fanWork     = EMS_VALUE_INT_NOTSET;    // Fan on/off
+    EMS_Boiler.ignWork     = EMS_VALUE_INT_NOTSET;    // Ignition on/off
+    EMS_Boiler.heatPmp     = EMS_VALUE_INT_NOTSET;    // Boiler pump on/off
+    EMS_Boiler.wWHeat      = EMS_VALUE_INT_NOTSET;    // 3-way valve on WW
+    EMS_Boiler.wWCirc      = EMS_VALUE_INT_NOTSET;    // Circulation on/off
+   */
 
 uint8_t irt_handle_0x82(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* 82 4A 0A 3E 00 */
-	/* 82 ?? ?? ?? ss Status 0x00 -> 0x04 -> 0x84*/
+	/* 82 ?? ?? ?? ss Status 0x00 -> 0x04 -> 0x84
+	Burner status:
+	bit 7: 0x80 - Burner on
+	bit 6: 0x40 - ??
+	bit 5: 0x20 - Warm Water
+	bit 4: 0x10 - 3-way valve (0 - cv / 1 - ww)
+	bit 3: 0x08 - ??
+	bit 2: 0x04 - central heating on
+	bit 1: 0x02 - ??
+	bit 0: 0x01 - Warm Water
+
+	*/
 	if (length != 5) return 10;
+	if (data[4] & 0x80) { // burner on
+		EMS_Boiler.burnGas = 1;
+		EMS_Boiler.fanWork = 1;
+	} else {
+		EMS_Boiler.burnGas = 0;
+		EMS_Boiler.fanWork = 0;
+	}
+	if (data[4] & 0x20) { // warm water
+		EMS_Boiler.wWActivated = 1;
+		EMS_Boiler.tapwaterActive = 1;
+	} else {
+		EMS_Boiler.wWActivated = 0;
+		EMS_Boiler.tapwaterActive = 0;
+	}
+	if (data[4] & 0x10) { // 3-way valve (0 - cv / 1 - ww)
+		EMS_Boiler.wWHeat = 1;
+	} else {
+		EMS_Boiler.wWHeat = 0;
+	}
+	if (data[4] & 0x04) { // central heating on
+		EMS_Boiler.heatingActive = 1;
+	} else {
+		EMS_Boiler.heatingActive = 0;
+	}
+
+
 	irt_update_status(data[0], 0, data[4]);
 //	printf("82 msg %d(0x%02x)\n", data[4], data[4]);
 	return 0;
@@ -243,7 +304,18 @@ uint8_t irt_handle_0x85(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 }
 uint8_t irt_handle_0x93(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
+	/* pump on and off
+	93 ?? ?? ?? 00 - pump on
+	93 ?? ?? ?? FF - pump off
+	*/
+
 	if (length != 5) return 10;
+
+	if (data[4] == 0xFF) {
+		EMS_Boiler.heatPmp = 0;
+	} else {
+		EMS_Boiler.heatPmp = 1;
+	}
 	irt_update_status(data[0], 0, data[4]);
 
 	return 0;
