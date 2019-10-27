@@ -211,11 +211,15 @@ uint8_t irt_handle_0x73(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* 73 52 25 43 78 07 FF A1 07 ss D0 ss*/
 	if (length != 12) return 10;
 	if (data[5] == 0x07) {
-		EMS_Thermostat.model_id        = EMS_MODEL_RC10;
+		EMS_Thermostat.model_id        = EMS_MODEL_FR10;
 		EMS_Thermostat.device_id       = 0x01;
 		EMS_Thermostat.write_supported = EMS_THERMOSTAT_WRITE_NO;
 		EMS_Thermostat.product_id      = 0x01;
 		strlcpy(EMS_Thermostat.version, "1.0", sizeof(EMS_Thermostat.version));
+		uint8_t hc = 0;
+		EMS_Thermostat.hc[hc].active = true;
+		EMS_Thermostat.hc[hc].setpoint_roomTemp = data[9];
+
 //		printf("73 msg 0x%02x 0x%02x\n", data[9], data[11]);
 		irt_update_status(data[0], 0, data[9]);
 		irt_update_status(data[0], 1, data[11]);
@@ -325,8 +329,9 @@ uint8_t irt_handle_0x93(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 uint8_t irt_handle_0xA3(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* A3 07 D3 CA 53 */
-	/* A3 ?? ?? ?? !! Burner status from boiler ??*/
+	/* A3 ?? ?? ?? !! Flame current ??*/
 	if (length != 5) return 10;
+	EMS_Boiler.flameCurr = data[4];
 //	printf("A3 msg %d(0x%02x)\n", data[4], data[4]);
 	irt_update_status(data[0], 0, data[4]);
 
