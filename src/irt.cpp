@@ -369,8 +369,8 @@ uint8_t irt_handle_0x8A(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	 *
 	 * 8A C3 79 E8 tt
 	 *
-	 * tt 0x9A - 15kOhm resistor
-	 * tt 0x67 - 7kOhm resistor
+	 * tt 0x9A - 15.38kOhm resistor
+	 * tt 0x67 - 6.93kOhm resistor
 	 */
 
 	return 0;
@@ -449,7 +449,7 @@ char irt_getDisplayCode2(uint8_t status) {
 		case 4: return 'L'; break;
 		case 5: return '5'; break; // ??
 		case 6: return 'U'; break;
-		case 7: return '7'; break; // ??
+		case 7: return 'y'; break; // ??
 	}
 	return '?';
 }
@@ -494,6 +494,13 @@ uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	return 0;
 }
 
+uint8_t irt_handle_0xF0(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* extra msgs */
+
+	return 0;
+}
+
 uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* messages are 4 or 5 bytes */
@@ -505,7 +512,7 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 
 	irt_update_status(msg, data, length);
 
-//	if (data[0] != 0x04) return 0;
+//	if (data[0] != 0xF0) return 0;
 	irt_logRawMessage(msg, data, length);
 
 
@@ -545,6 +552,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 		break;
 	case 0xC9:
 		return irt_handle_0xC9(msg, data, length);
+		break;
+	case 0xF0:
+		return irt_handle_0xF0(msg, data, length);
 		break;
 	}
 	return 0;
@@ -634,7 +644,11 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 	}
 	// ignore anything that doesn't resemble a proper telegram package
 	if (length <= 3) {
-		EMS_Sys_Status.emxCrcErr++;
+		/* single byte is the boiler polling */
+		if (length != 1) {
+			EMS_Sys_Status.emxCrcErr++;
+			irt_dumpBuffer("irt_crcErr1: ", telegram, length);
+		}
 		return;
 	}
 
@@ -644,7 +658,12 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 	if ((telegram[0] == 0x01) && (telegram[1] == 0x01) && (telegram[2] == 0xFE)) {
 		// this is a message for device 01
 	} else {
-		// this is a message for another device
+		// this is a message for another device ?
+		if (telegram[0] > 0x03) {
+			EMS_Sys_Status.emxCrcErr++;
+			irt_dumpBuffer("irt_crcErr2: ", telegram, length);
+		}
+
 		if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
 			irt_dumpBuffer("irt_otherTelegram: ", telegram, length);
 		}
@@ -673,12 +692,15 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 		} else {
 			// should we drop the whole packet ??
 			EMS_Sys_Status.emxCrcErr++;
+			irt_dumpBuffer("irt_crcErr3: ", telegram, length);
 			i++;
 		}
 	}
 	// no data ?
 	if (j < 1)
 		return;
+
+//	irt_dumpBuffer("irt_fullTelegram: ", irt_buffer, j);
 
 	/*
 	 * Any message with the high bit set is a 'cmd id' followed

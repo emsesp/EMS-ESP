@@ -8,6 +8,7 @@
 #include "irtuart.h"
 #include "irt.h"
 #include <user_interface.h>
+#include "ems.h"
 
 _IRTRxBuf * pIRTRxBuf;
 _IRTRxBuf * paIRTRxBuf[IRT_MAXBUFFERS];
@@ -16,6 +17,7 @@ uint8_t     irtPhantomBreak = 0;
 
 os_event_t irtRecvTaskQueue[IRTUART_recvTaskQueueLen]; // our Rx queue
 
+extern _EMSESP_Settings EMSESP_Settings;
 //
 // Main interrupt handler
 // Important: do not use ICACHE_FLASH_ATTR !
@@ -44,7 +46,7 @@ static void irtuart_rx_intr_handler(void * para) {
 //    GPIO_L(RX_MARK_MASK);
 
     // BREAK detection = End of IRT data block
-    if (USIS(IRTUART_UART) & ((1 << UIBD))) {
+    if ((USIS(IRTUART_UART) & ((1 << UIBD))) || (length >= IRT_MAX_TELEGRAM_LENGTH)) {
         ETS_UART_INTR_DISABLE();          // disable all interrupts and clear them
         USIC(IRTUART_UART) = (1 << UIBD); // INT clear the BREAK detect interrupt
 
@@ -113,8 +115,11 @@ void ICACHE_FLASH_ATTR irtuart_init() {
 
     // set 9600, 8 bits, no parity check, 1 stop bit
     USD(IRTUART_UART)  = (UART_CLK_FREQ / IRTUART_BAUD);
-    USC0(IRTUART_UART) = IRTUART_CONFIG; // 8N1
-
+    if (EMSESP_Settings.tx_mode == 5) {
+		USC0(IRTUART_UART) = IRTUART_CONFIG_ACTIVE; // 8N1
+    } else {
+		USC0(IRTUART_UART) = IRTUART_CONFIG_PASSIF; // 8N1
+    }
     irtuart_flush_fifos();
 
     // conf1 params

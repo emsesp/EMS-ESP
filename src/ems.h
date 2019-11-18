@@ -1,6 +1,6 @@
 /*
  * Header file for ems.cpp
- * 
+ *
  * Paul Derbyshire - https://github.com/proddy/EMS-ESP
  *
  * See ChangeLog.md for history
@@ -460,3 +460,27 @@ extern _EMS_Other       EMS_Other;
 extern _EMS_Mixing      EMS_Mixing;
 
 extern std::list<_Generic_Device> Devices;
+
+typedef struct {
+    uint32_t timestamp;      // for internal timings, via millis()
+    uint8_t  dallas_sensors; // count of dallas sensors
+
+    // custom params
+    bool     shower_timer;    // true if we want to report back on shower times
+    bool     shower_alert;    // true if we want the alert of cold water
+    bool     led;             // LED on/off
+    bool     listen_mode;     // stop automatic Tx on/off
+    uint16_t publish_time;    // frequency of MQTT publish in seconds
+    uint8_t  led_gpio;        // pin for LED
+    uint8_t  dallas_gpio;     // pin for attaching external dallas temperature sensors
+    bool     dallas_parasite; // on/off is using parasite
+    uint8_t  tx_mode;         // TX mode 1,2 or 3
+} _EMSESP_Settings;
+
+typedef struct {
+    bool     showerOn;
+    uint32_t timerStart;    // ms
+    uint32_t timerPause;    // ms
+    uint32_t duration;      // ms
+    bool     doingColdShot; // true if we've just sent a jolt of cold water
+} _EMSESP_Shower;
