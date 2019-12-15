@@ -2064,10 +2064,18 @@ void _process_Version(_EMS_RxTelegram * EMS_RxTelegram) {
         // its a known thermostat, add to list
         _addDevice(EMS_MODELTYPE_THERMOSTAT, EMS_RxTelegram->src, product_id, version, i);
 
-        // if we don't have a thermostat set, use this one. it will pick the first one.
-        if (((EMS_Thermostat.device_id == EMS_ID_NONE) || (EMS_Thermostat.model_id == EMS_MODEL_NONE)
+        // if we don't have a thermostat set, use this one. it will pick the first one. but it will
+        // repick if the current one is not writable and the new one is.
+        // if (((EMS_Thermostat.device_id == EMS_ID_NONE) || (EMS_Thermostat.model_id == EMS_MODEL_NONE)
+        //      || (EMS_Thermostat.device_id == Thermostat_Devices[i].device_id))
+        //     && EMS_Thermostat.product_id == EMS_ID_NONE) {
+        if ((((EMS_Thermostat.device_id == EMS_ID_NONE)
+             || (EMS_Thermostat.model_id == EMS_MODEL_NONE)
              || (EMS_Thermostat.device_id == Thermostat_Devices[i].device_id))
-            && EMS_Thermostat.product_id == EMS_ID_NONE) {
+            && (EMS_Thermostat.product_id == EMS_ID_NONE))
+            || ((EMS_Thermostat.product_id != EMS_ID_NONE)
+             && Thermostat_Devices[i].write_supported
+             && !EMS_Thermostat.write_supported)) {
             /*
             myDebug_P(PSTR("* Setting Thermostat to %s (DeviceID:0x%02X ProductID:%d Version:%s)"),
                       Thermostat_Devices[i].model_string,
