@@ -1729,13 +1729,17 @@ void _process_Version(_EMS_RxTelegram * EMS_RxTelegram) {
         strlcpy(EMS_Boiler.version, version, sizeof(EMS_Boiler.version));
         ems_getBoilerValues(); // get Boiler values that we would usually have to wait for
     } else if (type == EMS_DEVICE_TYPE_THERMOSTAT) {
-        EMS_Thermostat.device_id       = device_id;
-        EMS_Thermostat.device_flags    = (flags & 0x7F); // remove 7th bit
-        EMS_Thermostat.write_supported = (flags & EMS_DEVICE_FLAG_NO_WRITE) == 0;
-        EMS_Thermostat.product_id      = product_id;
-        EMS_Thermostat.device_desc_p   = device_desc_p;
-        strlcpy(EMS_Thermostat.version, version, sizeof(EMS_Thermostat.version));
-        ems_getThermostatValues(); // get Thermostat values
+        if (EMS_Thermostat.device_id == EMS_ID_NONE || !EMS_Thermostat.write_supported) {
+            // Set thermostat device if no thermostat was set before, or if the previously
+            // detected thermostat is not writeable (let's hope the current one is).
+            EMS_Thermostat.device_id       = device_id;
+            EMS_Thermostat.device_flags    = (flags & 0x7F); // remove 7th bit
+            EMS_Thermostat.write_supported = (flags & EMS_DEVICE_FLAG_NO_WRITE) == 0;
+            EMS_Thermostat.product_id      = product_id;
+            EMS_Thermostat.device_desc_p   = device_desc_p;
+            strlcpy(EMS_Thermostat.version, version, sizeof(EMS_Thermostat.version));
+            ems_getThermostatValues(); // get Thermostat values
+        }
     } else if (type == EMS_DEVICE_TYPE_SOLAR) {
         EMS_SolarModule.device_id     = device_id;
         EMS_SolarModule.product_id    = product_id;
