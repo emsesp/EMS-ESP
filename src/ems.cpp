@@ -2494,6 +2494,11 @@ void ems_setThermostatMode(uint8_t mode, uint8_t hc_num) {
         return;
     }
 
+    if (mode > 2 ) {
+        myDebug_P(PSTR("Invalid mode"));
+        return;
+    }
+
     uint8_t model     = ems_getThermostatModel();
     uint8_t device_id = EMS_Thermostat.device_id;
     uint8_t set_mode;
@@ -2509,13 +2514,25 @@ void ems_setThermostatMode(uint8_t mode, uint8_t hc_num) {
         set_mode = mode;
     }
 
-    // 0=off, 1=manual, 2=auto
-    if (mode == 0) {
-        myDebug_P(PSTR("Setting thermostat mode to off for heating circuit %d"), hc_num);
-    } else if (set_mode == 1) {
-        myDebug_P(PSTR("Setting thermostat mode to manual for heating circuit %d"), hc_num);
-    } else if (set_mode == 2) {
-        myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
+    // RC35 has different settings
+    if (model == EMS_DEVICE_FLAG_RC35) {
+        // 0=night, 1=day, 2=auto
+        if (mode == 0) {
+            myDebug_P(PSTR("Setting thermostat mode to night for heating circuit %d"), hc_num);
+        } else if (set_mode == 1) {
+            myDebug_P(PSTR("Setting thermostat mode to day for heating circuit %d"), hc_num);
+        } else if (set_mode == 2) {
+            myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
+        }
+    } else {
+        // 0=off, 1=manual, 2=auto
+        if (mode == 0) {
+            myDebug_P(PSTR("Setting thermostat mode to off for heating circuit %d"), hc_num);
+        } else if (set_mode == 1) {
+            myDebug_P(PSTR("Setting thermostat mode to manual for heating circuit %d"), hc_num);
+        } else if (set_mode == 2) {
+            myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
+        }
     }
 
     _EMS_TxTelegram EMS_TxTelegram = EMS_TX_TELEGRAM_NEW; // create new Tx

@@ -1323,7 +1323,7 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
             if (wc == 4) {
                 hc = _readIntNumber(); // next parameter is the heating circuit
             }
-            ems_setThermostatTemp(_readFloatNumber(), hc);
+            ems_setThermostatTemp(_readFloatNumber(), hc, _getThermostatMode(hc)-3);
             ok = true;
         } else if (strcmp(second_cmd, "mode") == 0) {
             if (wc == 4) {
@@ -1623,7 +1623,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
     hc = _hasHCspecified(TOPIC_THERMOSTAT_CMD_TEMP_HA, topic);
     if (hc && EMS_Thermostat.hc[hc - 1].active) {
         float f = strtof((char *)message, 0);
-        ems_setThermostatTemp(f, hc);
+        ems_setThermostatTemp(f, hc, _getThermostatMode(hc)-3);
         publishEMSValues(true); // publish back immediately
         return;
     }
@@ -1656,7 +1656,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         hc = _hasHCspecified(TOPIC_THERMOSTAT_CMD_TEMP, command);
         if (hc && EMS_Thermostat.hc[hc - 1].active) {
             float f = doc["data"];
-            ems_setThermostatTemp(f, hc);
+            ems_setThermostatTemp(f, hc, _getThermostatMode(hc)-3);
             publishEMSValues(true); // publish back immediately
             return;
         }
