@@ -117,7 +117,7 @@ static const command_t project_cmds[] PROGMEM = {
     {false, "send XX ...", "send raw telegram data to EMS bus (XX are hex values)"},
     {false, "thermostat read <type ID>", "send read request to the thermostat for heating circuit hc 1-4"},
     {false, "thermostat temp [hc] <degrees>", "set current thermostat temperature"},
-    {false, "thermostat mode [hc] <mode>", "set mode (0=off, 1=manual, 2=auto) for heating circuit hc 1-4"},
+    {false, "thermostat mode [hc] <mode>", "set mode (0=off/night, 1=manual/day, 2=auto) for heating circuit hc 1-4"},
     {false, "boiler read <type ID>", "send read request to boiler"},
     {false, "boiler wwtemp <degrees>", "set boiler warm water temperature"},
     {false, "boiler wwactive <on | off>", "set boiler warm water on/off"},
