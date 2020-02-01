@@ -1432,9 +1432,12 @@ void _process_RC30Set(_EMS_RxTelegram * EMS_RxTelegram) {
 int8_t _getHeatingCircuit(_EMS_RxTelegram * EMS_RxTelegram) {
     // check to see we have an active HC. Assuming first byte must have some bit status set.
     // see https://github.com/proddy/EMS-ESP/issues/238
+    // and reverting on 1/2/2020 with https://github.com/proddy/EMS-ESP/issues/305#issuecomment-581006130
+    /*
     if (EMS_RxTelegram->data[0] == 0x00) {
         return -1;
     }
+    */
 
     // ignore telegrams that have no data, or only a single byte
     if (EMS_RxTelegram->data_length <= 1) {
@@ -1831,12 +1834,12 @@ void _process_Version(_EMS_RxTelegram * EMS_RxTelegram) {
         i++;
     }
 
-    // not a boiler
+    // not a boiler, continue...
     i                   = 0;
     uint8_t found_index = 0;
     bool    typeFound   = false;
     while (i < _EMS_Devices_max) {
-        if (EMS_Devices[i].product_id == product_id) {
+        if ((EMS_Devices[i].product_id == product_id) && (EMS_Devices[i].type != EMS_DEVICE_TYPE_BOILER)) {
             // we have a matching product id
             typeFound   = true;
             found_index = i;
