@@ -2401,8 +2401,13 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
             break;
         default:
         case 0: // automatic selection, if no type is defined, we use the standard code
-            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
-
+            if (EMS_Thermostat.hc[hc_num - 1].mode == 0) {
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
+            } else if (EMS_Thermostat.hc[hc_num - 1].mode == 1) {
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
+            } else {
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
+            }
             /* commented out for https://github.com/proddy/EMS-ESP/issues/310
             if (EMS_Thermostat.hc[hc_num - 1].day_mode == 0) {
                 EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
