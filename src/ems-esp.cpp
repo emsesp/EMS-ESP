@@ -121,6 +121,7 @@ static const command_t project_cmds[] PROGMEM = {
     {false, "boiler read <type ID>", "send read request to boiler"},
     {false, "boiler wwtemp <degrees>", "set boiler warm water temperature"},
     {false, "boiler wwactive <on | off>", "set boiler warm water on/off"},
+    {false, "boiler wwonetime <on | off>", "set boiler warm water onetime on/off"},
     {false, "boiler tapwater <on | off>", "set boiler warm tap water on/off"},
     {false, "boiler flowtemp <degrees>", "set boiler flow temperature"},
     {false, "boiler comfort <hot | eco | intelligent>", "set boiler warm water comfort setting"}
@@ -514,13 +515,18 @@ void showInfo() {
     // Dallas external temp sensors
     if (EMSESP_Settings.dallas_sensors) {
         myDebug_P(PSTR("")); // newline
-        char buffer[128] = {0};
-        char valuestr[8] = {0}; // for formatting temp
+        char buffer[128]  = {0};
+        char buffer2[128] = {0};
+        char valuestr[8]  = {0}; // for formatting temp
         myDebug_P(PSTR("%sExternal temperature sensors:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
         for (uint8_t i = 0; i < EMSESP_Settings.dallas_sensors; i++) {
             float sensorValue = ds18.getValue(i);
             if (sensorValue != DS18_DISCONNECTED) {
-                myDebug_P(PSTR("  Sensor #%d %s: %s C"), i + 1, ds18.getDeviceString(buffer, i), _float_to_char(valuestr, sensorValue));
+                myDebug_P(PSTR("  Sensor #%d type:%s id:%s temperature: %s C"),
+                          i + 1,
+                          ds18.getDeviceType(buffer, i),
+                          ds18.getDeviceID(buffer2, i),
+                          _float_to_char(valuestr, sensorValue));
             }
         }
     }
@@ -532,9 +538,10 @@ void showInfo() {
 void scanDallas() {
     EMSESP_Settings.dallas_sensors = ds18.scan();
     if (EMSESP_Settings.dallas_sensors) {
-        char buffer[128] = {0};
+        char buffer[128];
+        char buffer2[128];
         for (uint8_t i = 0; i < EMSESP_Settings.dallas_sensors; i++) {
-            myDebug_P(PSTR("External temperature sensor %s found"), ds18.getDeviceString(buffer, i));
+            myDebug_P(PSTR("External temperature sensor type:%s id:%s found"), ds18.getDeviceType(buffer, i), ds18.getDeviceID(buffer2, i));
         }
     }
 }
@@ -542,7 +549,7 @@ void scanDallas() {
 // send all dallas sensor values as a JSON package to MQTT
 void publishSensorValues() {
     // don't send if MQTT is connected
-    if (!myESP.isMQTTConnected()) {
+    if (!myESP.isMQTTConnected() || (!EMSESP_Settings.publish_time)) {
         return;
     }
 
@@ -550,19 +557,17 @@ void publishSensorValues() {
         return; // no sensors attached
     }
 
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<400> doc;
     JsonObject              sensors = doc.to<JsonObject>();
 
-    bool hasdata  = false;
-    char label[8] = {0};
-
+    bool hasdata     = false;
+    char buffer[128] = {0};
     // see if the sensor values have changed, if so send it on
     for (uint8_t i = 0; i < EMSESP_Settings.dallas_sensors; i++) {
         float sensorValue = ds18.getValue(i);
         if (sensorValue != DS18_DISCONNECTED) {
-            sprintf(label, PAYLOAD_EXTERNAL_SENSORS, (i + 1));
-            sensors[label] = sensorValue;
-            hasdata        = true;
+            sensors[ds18.getDeviceID(buffer, i)] = sensorValue;
+            hasdata                              = true;
         }
     }
 
@@ -570,7 +575,7 @@ void publishSensorValues() {
         return; // nothing to send
     }
 
-    char data[200] = {0};
+    char data[400] = {0};
     serializeJson(doc, data, sizeof(data));
     myDebugLog("Publishing external sensor data via MQTT");
     myESP.mqttPublish(TOPIC_EXTERNAL_SENSORS, data);
@@ -580,7 +585,7 @@ void publishSensorValues() {
 // a json object is created for each device type
 void publishEMSValues(bool force) {
     // don't send if MQTT is not connected or EMS bus is not connected
-    if (!myESP.isMQTTConnected() || (!ems_getBusConnected())) {
+    if (!myESP.isMQTTConnected() || (!ems_getBusConnected()) || (!EMSESP_Settings.publish_time)) {
         return;
     }
 
@@ -914,6 +919,11 @@ bool do_publishShowerData() {
 
 // call PublishValues with forcing forcing
 void do_publishValues() {
+    if (!EMSESP_Settings.publish_time) {
+        myDebugLog("publish_time is set to 0. Publishing disabled.");
+        return;
+    }
+
     myDebugLog("Starting scheduled MQTT publish...");
     publishEMSValues(false);
     publishSensorValues();
@@ -1000,11 +1010,6 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
         EMSESP_Settings.shower_timer    = settings["shower_timer"];
         EMSESP_Settings.shower_alert    = settings["shower_alert"];
         EMSESP_Settings.publish_time    = settings["publish_time"] | DEFAULT_PUBLISHTIME;
-
-        // can't be 0 which could be the case coming from earlier builds < 1.9.5b12
-        if (EMSESP_Settings.publish_time == 0) {
-            EMSESP_Settings.publish_time = DEFAULT_PUBLISHTIME;
-        }
 
         EMSESP_Settings.listen_mode = settings["listen_mode"];
         ems_setTxDisabled(EMSESP_Settings.listen_mode);
@@ -1132,11 +1137,9 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
         // publish_time
         if ((strcmp(setting, "publish_time") == 0) && (wc == 2)) {
             int16_t val = atoi(value);
-            if (val > 0) {
+            if (val >= 0) {
                 EMSESP_Settings.publish_time = atoi(value);
                 ok                           = true;
-            } else {
-                myDebug_P(PSTR("Error. time must be at least 1 second"));
             }
         }
 
@@ -1164,8 +1167,11 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
                         myDebug_P(PSTR(" %d = %s"), (it)->product_id, device_string);
                     }
                 }
+                myDebug_P("");
                 myDebug_P(PSTR("Usage: set master_thermostat <product id>"));
-                ok = true;
+                ems_setMasterThermostat(0);            // default value
+                EMSESP_Settings.master_thermostat = 0; // back to default
+                ok                                = true;
             } else if (wc == 2) {
                 uint8_t pid                       = atoi(value);
                 EMSESP_Settings.master_thermostat = pid;
@@ -1187,12 +1193,17 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
         myDebug_P(PSTR("  listen_mode=%s"), EMSESP_Settings.listen_mode ? "on" : "off");
         myDebug_P(PSTR("  shower_timer=%s"), EMSESP_Settings.shower_timer ? "on" : "off");
         myDebug_P(PSTR("  shower_alert=%s"), EMSESP_Settings.shower_alert ? "on" : "off");
-        myDebug_P(PSTR("  publish_time=%d"), EMSESP_Settings.publish_time);
+
+        if (EMSESP_Settings.publish_time) {
+            myDebug_P(PSTR("  publish_time=%d"), EMSESP_Settings.publish_time);
+        } else {
+            myDebug_P(PSTR("  publish_time=0 (no MQTT publishing)"));
+        }
 
         if (EMSESP_Settings.master_thermostat) {
             myDebug_P(PSTR("  master_thermostat=%d"), EMSESP_Settings.master_thermostat);
         } else {
-            myDebug_P(PSTR("  master_thermostat=0 (using first one detected)"), EMSESP_Settings.master_thermostat);
+            myDebug_P(PSTR("  master_thermostat=0 (using first one detected)"));
         }
     }
 
@@ -1390,6 +1401,15 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
                 ok = true;
             } else if (strcmp(third_cmd, "off") == 0) {
                 ems_setWarmWaterActivated(false);
+                ok = true;
+            }
+        } else if (strcmp(second_cmd, "wwonetime") == 0) {
+            char * third_cmd = _readWord();
+            if (strcmp(third_cmd, "on") == 0) {
+                ems_setWarmWaterOnetime(true);
+                ok = true;
+            } else if (strcmp(third_cmd, "off") == 0) {
+                ems_setWarmWaterOnetime(false);
                 ok = true;
             }
         }
