@@ -1469,8 +1469,9 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             myESP.mqttSubscribe(topic_s);
         }
         // also subscribe without the HC appended to the end of the topic
-        myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_TEMP_HA);
-        myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_MODE_HA);
+        // commented out by MDvP, useless, defaults to hc1
+        //myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_TEMP_HA);
+        //myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_MODE_HA);
 
         // generic incoming MQTT command for Thermostat
         // this is used for example for setting daytemp, nighttemp, holidaytemp

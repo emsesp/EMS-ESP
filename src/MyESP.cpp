@@ -770,6 +770,7 @@ void MyESP::_printSetCommands() {
     myDebug_P(PSTR("  set mqtt_keepalive [seconds]"));
     myDebug_P(PSTR("  set mqtt_retain [on | off]"));
     myDebug_P(PSTR("  set ntp_enabled <on | off>"));
+    myDebug_P(PSTR("  set ntp_server [server]"));
     myDebug_P(PSTR("  set ntp_interval [minutes]"));
     myDebug_P(PSTR("  set ntp_timezone [n]"));
     myDebug_P(PSTR("  set serial <on | off>"));
@@ -839,6 +840,7 @@ void MyESP::_printSetCommands() {
 #endif
 
     myDebug_P(PSTR("  ntp_enabled=%s"), (_ntp_enabled) ? "on" : "off");
+    myDebug_P(PSTR("  ntp_server=%s"), _ntp_server);
     myDebug_P(PSTR("  ntp_interval=%d"), _ntp_interval);
     myDebug_P(PSTR("  ntp_timezone=%d"), _ntp_timezone);
 
@@ -936,6 +938,8 @@ bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value)
         save_config = fs_setSettingValue(&_mqtt_heartbeat, value, false);
     } else if (strcmp(setting, "ntp_enabled") == 0) {
         save_config = fs_setSettingValue(&_ntp_enabled, value, false);
+    } else if (strcmp(setting, "ntp_server") == 0) {
+        save_config = fs_setSettingValue(&_ntp_server, value, "");
     } else if (strcmp(setting, "ntp_interval") == 0) {
         save_config = fs_setSettingValue(&_ntp_interval, value, NTP_INTERVAL_DEFAULT);
     } else if (strcmp(setting, "ntp_timezone") == 0) {
