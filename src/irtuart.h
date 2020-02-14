@@ -18,7 +18,8 @@
 //#define IRTUART_BAUD 9600   // uart baud rate for the IRT circuit
 
 #define IRT_MAXBUFFERS 5                                // buffers for circular filling to avoid collisions
-#define IRT_MAXBUFFERSIZE (IRT_MAX_TELEGRAM_LENGTH + 2) // max size of the buffer. IRT packets are max 32 bytes, plus extra 2 for BRKs
+#define IRT_MAXBUFFERSIZE (IRT_MAX_TELEGRAM_LENGTH + 2) // max size of the rx buffer. IRT packets are max 32 bytes, plus extra 2 for BRKs
+#define IRT_MAXTXBUFFERSIZE (IRT_MAXBUFFERSIZE / 2)		// max size of tx buffer
 
 #define IRTUART_BIT_TIME 208 // bit time @4800 baud
 
@@ -28,6 +29,9 @@
 #define IRTUART_TX_WAIT_GAP IRTUART_BIT_TIME * 7   // Gap between to Bytes
 #define IRTUART_TX_LAG 8
 
+#define IRTUART_TX_MSG_TIMEOUT_MS 4000	// if a message is still waiting after 4s abort
+
+
 #define IRTUART_recvTaskPrio 1
 #define IRTUART_recvTaskQueueLen 64
 
@@ -36,7 +40,26 @@ typedef struct {
     uint8_t buffer[IRT_MAXBUFFERSIZE];
 } _IRTRxBuf;
 
+typedef struct {
+	uint8_t	valid;
+	uint8_t	state;
+	uint8_t	address;
+	unsigned long	start_time;
+
+	uint8_t	tx_bytes;
+	uint8_t	rx_bytes;
+
+	uint8_t	pos;
+	uint8_t	len;
+	uint8_t	buffer[IRT_MAXTXBUFFERSIZE];
+
+} _IRTTxBuf;
+
 void ICACHE_FLASH_ATTR irtuart_init();
 void ICACHE_FLASH_ATTR irtuart_stop();
 void ICACHE_FLASH_ATTR irtuart_start();
 _EMS_TX_STATUS ICACHE_FLASH_ATTR irtuart_tx_buffer(uint8_t * buf, uint8_t len);
+
+uint16_t ICACHE_FLASH_ATTR irtuart_check_tx(uint8_t reset_if_done);
+uint16_t ICACHE_FLASH_ATTR irtuart_send_tx_buffer(uint8_t address, uint8_t *telegram, uint8_t len);
+

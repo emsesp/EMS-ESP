@@ -1,6 +1,6 @@
 /*
  * MyESP - my ESP helper class to handle WiFi, MQTT, Telnet, Web and other utils
- * 
+ *
  * Paul Derbyshire - first revision: December 2018
  *
  * with ideas borrowed from Espurna https://github.com/xoseperez/espurna

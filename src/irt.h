@@ -39,6 +39,7 @@
 
 #define IRT_MIN_TELEGRAM_LENGTH 6  // minimal length for a validation telegram, including CRC
 #define IRT_MAX_TELEGRAM_LENGTH 64 // max length of a telegram, for Rx and Tx.
+#define IRT_MAX_SINGLE_TELEGRAM 5 // Max length of a single telegram
 
 // default values for null values
 #define IRT_VALUE_INT_ON 1             // boolean true
@@ -84,6 +85,24 @@
 #define IRT_TX_SUCCESS 0x01 // IRT single byte after a Tx Write indicating a success
 #define IRT_TX_ERROR 0x04   // IRT single byte after a Tx Write indicating an error
 
+
+// status/counters since last power on
+typedef struct {
+	unsigned long		last_send_check;			// last timestamp when the send buffer where checked
+	unsigned long		send_interval;				// minimum interval between checks
+	uint8_t				poll_step;					// the status poll is send in several steps
+	uint8_t				my_address;					// address used to identify myself
+} _IRT_Sys_Status;
+
+#define IRT_MAX_SUB_MSGS 5 // max 5 messages in a single go
+#define IRT_MAX_SUB_MSG_LEN 3 // max 3 bytes in a message
+// The Tx send package
+typedef struct {
+	uint8_t						address;													// address of sender
+	uint8_t						msg_in_use;												// number of sub msg's in telegram
+	uint8_t						data[IRT_MAX_SUB_MSGS][IRT_MAX_SUB_MSG_LEN];	// data of msgs
+} _IRT_TxTelegram;
+
 // The Rx receive package
 typedef struct {
 	uint32_t		timestamp;			// timestamp from millis()
@@ -104,3 +123,10 @@ typedef struct {
 // function definitions
 extern void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length);
 extern void irt_parseTelegram(uint8_t * telegram, uint8_t len);
+
+void irt_init();
+void irt_stop();
+void irt_start();
+void irt_loop();
+void irt_sendRawTelegram(char * telegram);
+

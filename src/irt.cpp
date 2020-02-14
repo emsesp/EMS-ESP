@@ -12,11 +12,17 @@
 #include "MyESP.h"
 //#include "ems_devices.h"
 #include "irtuart.h"
-//#include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
+#include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
 
 // MyESP class for logging to telnet and serial
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
+
+extern _EMSESP_Settings EMSESP_Settings;
+
+_IRT_Sys_Status IRT_Sys_Status; // EMS Status
+
+CircularBuffer<_IRT_TxTelegram, IRT_TX_TELEGRAM_QUEUE_MAX> IRT_TxQueue; // FIFO queue for Tx send buffer
 
 extern _EMS_Boiler EMS_Boiler;
 
@@ -152,7 +158,7 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 		strlcat(output_str, _hextoa(telegram[i], buffer), sizeof(output_str));
 		strlcat(output_str, " ", sizeof(output_str));
 	}
-#ifdef INCLUDE_ASCII
+//#ifdef INCLUDE_ASCII
 	// Added ASCII
 	strlcat(output_str, " - \"", sizeof(output_str));
 	char dump_text[2];
@@ -166,7 +172,7 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 		}
 	}
 	strlcat(output_str, "\"", sizeof(output_str));
-#endif // INCLUDE_ASCII
+//#endif // INCLUDE_ASCII
 
 	strlcat(output_str, COLOR_RESET, sizeof(output_str));
 
@@ -486,7 +492,7 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
 	return 0;
 }
-
+#include <limits.h>
 uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* diff temp between in and out ??/ */
@@ -501,6 +507,57 @@ uint8_t irt_handle_0xF0(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	return 0;
 }
 
+/*
+ Modified version of: https://stackoverflow.com/questions/776508/best-practices-for-circular-shift-rotate-operations-in-c
+ */
+static inline uint8_t rotl8 (uint8_t n, unsigned int c)
+{
+  const unsigned int mask = (CHAR_BIT*sizeof(n) - 1);  // assumes width is a power of 2.
+
+  // assert ( (c<=mask) &&"rotate by type width or more");
+  c &= mask;
+  return (n<<c) | (n>>( (-c)&mask ));
+}
+uint8_t irt_check_checksum(uint8_t *data, uint8_t length)
+{
+	/* check if if a sub-packet has the right length
+	 * and the checksum is correct.
+	 * checksum calculation is done by xoring the three
+	 * bytes. The second byte is shifted 1 bit the the left and
+	 * the third byte is shifted 2 bits to the left before
+	 * xoring the bytes.
+	 * Depending on the high bit of the second byte and the 2 high bits
+	 * of the third byte an additional xor is applied to the output.
+	 **/
+
+
+	if ((length < 4) || (length > 5)) return 0;
+
+	uint8_t check = 0;
+	check = data[0];
+	check ^= rotl8(data[1], 1);
+	check ^= rotl8(data[2], 2);
+
+	switch (((data[1] >> 5) & 0x04) | ((data[2] >> 6) & 0x03)) {
+	case 1:
+	case 4:
+		check = check ^ 0x18;
+		break;
+	case 2:
+	case 7:
+		check = check ^ 0x30;
+		break;
+	case 3:
+	case 6:
+		check = check ^ 0x28;
+		break;
+	}
+
+	if (check == data[3]) return 1;
+	return 0;
+}
+
+
 uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* messages are 4 or 5 bytes */
@@ -508,13 +565,19 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 		return 10;
 	if ((data[0] & 0x80) && (length < 5))
 		return 10;
+
+	if (irt_check_checksum(data, length) != 1) {
+		// Drop buffer on crc error
+		EMS_Sys_Status.emxCrcErr++;
+		irt_dumpBuffer("irt_crcErr4: ", data, length);
+		return 11;
+	}
+
 	EMS_Sys_Status.emsRxPgks++;
 
 	irt_update_status(msg, data, length);
 
-//	if (data[0] != 0xF0) return 0;
 	irt_logRawMessage(msg, data, length);
-
 
 	switch (data[0]) {
 	case 0x07:
@@ -559,66 +622,7 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	}
 	return 0;
 }
-#ifdef junk
-uint8_t irt_parseSection(_IRT_RxTelegram *msg, uint8_t *section, uint8_t length)
-{
-	// parse a section of the data
-//	irt_dumpBuffer("irt_sec: ", section, length);
-	switch (msg->section_count) {
-	case 0:
-		// start of msg should be 01 01 FE
-		// Poll from boiler (first 01)
-		// reply from thermostat (second 01)
-		// inverse reply from boiler (last fe)
-		if ((length < 2) || (section[0] != 0x01) || (section[1] != 0x01)/* || (section[2] != 0xFE)*/) {
-			// Invalid device or static noise ?
-			irt_dumpBuffer("irt_unk_start: ", section, length);
-			return 10;
-		} else {
-			// valid start
-			msg->section_count++;
-			msg->device_nr = section[1];
-		}
-		break;
-	case 1:
-		// second message is always from thermostat to boiler
-		// it always start with 90
-		if ((length != 5) || (section[0] != 0x90)/* || (section[4] != 0xCF)  || (section[5] != 0x30) */) {
-			// invalid start msg
-			irt_dumpBuffer("irt_unk_start: ", section, length);
-			return 10;
-		} else {
-			/* mark the bus as in-sync */
-			EMS_Sys_Status.emsRxTimestamp  = msg->timestamp; // timestamp of last read
-			EMS_Sys_Status.emsBusConnected = true;
-			EMS_Sys_Status.emsIDMask = 0x00;
-			EMS_Boiler.device_id = EMS_ID_BOILER;
-			EMS_Sys_Status.emsPollFrequency = 500000; // poll in micro secs
-			EMS_Sys_Status.emsTxCapable = true;
-			msg->section_count++;
-		}
-		irt_handleMsg(msg, section, length);
-		break;
-	default:
-		// we, for now, assume the first byte is some sort of msg type ?
-		irt_handleMsg(msg, section, length);
 
-//		if (length >= 6) {
-//			switch (section[0]) {
-//			case 0x73:
-//			case 0x82:
-//			case 0x83:
-//			case 0xA3:
-//			case 0xA4:
-//				irt_dumpBuffer("irt_real_msg: ", section, length);
-//				break;
-//			}
-//		}
-		break;
-	}
-	return 0;
-}
-#endif // junk
 
 void irt_setupNewMsg(_IRT_RxTelegram *msg)
 {
@@ -642,6 +646,7 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
 		irt_dumpBuffer("irt_rawTelegram: ", telegram, length);
 	}
+//	return;
 	// ignore anything that doesn't resemble a proper telegram package
 	if (length <= 3) {
 		/* single byte is the boiler polling */
@@ -651,7 +656,9 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 		}
 		return;
 	}
-
+//	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_RAW) {
+//		irt_dumpBuffer("irt_raw2Telegram: ", telegram, length);
+//	}
 	// for now we just listen to device 01
 	// the message should start with:
 	// 01 01 FE
@@ -690,10 +697,11 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 			irt_buffer[j++] = telegram[i];
 			i += 2;
 		} else {
-			// should we drop the whole packet ??
+			// Drop buffer on crc error
 			EMS_Sys_Status.emxCrcErr++;
 			irt_dumpBuffer("irt_crcErr3: ", telegram, length);
 			i++;
+			return;
 		}
 	}
 	// no data ?
@@ -721,38 +729,6 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 		}
 	}
 
-#ifdef junk
-
-	i = 1;
-	j = 0;
-	irt_buffer[j++] = telegram[0];
-	ret = 0;
-	while ((i + 1) < length) {
-		if (telegram[i] == (0xFF - telegram[i+1])) {
-			irt_buffer[j++] = telegram[i];
-			//irt_buffer[j++] = telegram[i+1];
-			if (j > 0) {
-				// flush msg
-				ret = irt_parseSection(&irtMsg, irt_buffer, j);
-				j = 0;
-				if (ret)
-					break;
-			}
-			j = 0;
-			i+=2;
-		} else if (telegram[i] == telegram[i+1]) {
-			irt_buffer[j++] = telegram[i];
-			i += 2;
-		} else {
-			i++;
-		}
-	}
-	if (j > 0) {
-		// flush msg
-		ret = irt_parseSection(&irtMsg, irt_buffer, j);
-	}
-#endif
-//#ifdef include_later
 	if ((global_has_changed) && (EMS_Sys_Status.emsLogging != EMS_SYS_LOGGING_NONE)) {
 		char temp[10];
 		char out_text[200];
@@ -774,156 +750,290 @@ void irt_parseTelegram(uint8_t *telegram, uint8_t length)
 		global_has_changed = 0;
 //		if (global_status[0] > 0) showInfo();
 	}
-//#endif
-#ifdef nuniet
 
-	static _IRT_RxTelegram IRT_RxTelegram; // create the Rx package
-	IRT_RxTelegram.telegram  = telegram;
-	IRT_RxTelegram.timestamp = millis();
-	IRT_RxTelegram.length    = length;
-	/*
-	 * Detect the EMS bus type - Buderus or Junkers - and set emsIDMask accordingly.
-	 *  we wait for the first valid telegram and look at the SourceID.
-	 *  If Bit 7 is set we have a Buderus, otherwise a Junkers
-	 */
-	if (EMS_Sys_Status.emsTxStatus == EMS_TX_REV_DETECT) {
-		if ((length >= 5) && (telegram[length - 1] == _crcCalculator(telegram, length))) {
-			EMS_Sys_Status.emsTxStatus   = EMS_TX_STATUS_IDLE;
-			EMS_Sys_Status.emsIDMask     = telegram[0] & 0x80;
-			EMS_Sys_Status.emsPollAck[0] = EMS_ID_ME ^ EMS_Sys_Status.emsIDMask;
-		} else
-			return; // ignore the whole telegram Rx Telegram while in DETECT mode
+}
+
+
+uint8_t irt_calc_checksum(uint8_t *data)
+{
+	/* calculate output checksum
+	 * checksum calculation is done by xoring the three
+	 * bytes. The second byte is shifted 1 bit the the left and
+	 * the third byte is shifted 2 bits to the left before
+	 * xoring the bytes.
+	 * Depending on the high bit of the second byte and the 2 high bits
+	 * of the third byte an additional xor is applied to the output.
+	 **/
+
+
+	uint8_t check = 0;
+	check = data[0];
+	check ^= rotl8(data[1], 1);
+	check ^= rotl8(data[2], 2);
+
+	switch (((data[1] >> 5) & 0x04) | ((data[2] >> 6) & 0x03)) {
+	case 1:
+	case 4:
+		check = check ^ 0x18;
+		break;
+	case 2:
+	case 7:
+		check = check ^ 0x30;
+		break;
+	case 3:
+	case 6:
+		check = check ^ 0x28;
+		break;
+	}
+	return check;
+}
+
+
+void irt_check_send_queue()
+{
+	uint16_t status;
+
+	status = irtuart_check_tx(1);
+	if (status > 0x01FF) myDebug("Failed transmitting telegram, status0 0x%04x", status);
+	if ((status & 0xFF00) == 0x0100) {
+		// still busy transmitting
+		return;
+	}
+	if ((status & 0xFF00) == 0x0300) {
+		myDebug("Failed transmitting telegram, status1 %d", (status & 0xFF));
+		// the transmission has failed, but we are ready to send a new packet
 	}
 
-	/*
-	 * It may happen that we where interrupted (for instance by WIFI activity) and the
-	 * buffer isn't valid anymore, so we must not answer at all...
-	 */
-	if (EMS_Sys_Status.emsRxStatus != EMS_RX_STATUS_IDLE) {
-		if (EMS_Sys_Status.emsLogging > EMS_SYS_LOGGING_NONE) {
-			myDebug_P(PSTR("** Warning, we missed the bus - Rx non-idle!"));
-		}
+	// check if we have something in the queue to send
+	if (IRT_TxQueue.isEmpty()) {
 		return;
 	}
 
-	/*
-	 * check if we just received a single byte
-	 * it could well be a Poll request from the boiler for us, which will have a value of 0x8B (0x0B | 0x80)
-	 * or either a return code like 0x01 or 0x04 from the last Write command
-	 */
-	if (length == 1) {
-		uint8_t         value                  = telegram[0]; // 1st byte of data package
-		static uint32_t _last_emsPollFrequency = 0;
-
-		// check first for a Poll for us
-		if ((value ^ 0x80 ^ EMS_Sys_Status.emsIDMask) == EMS_ID_ME) {
-			uint32_t timenow_microsecs      = micros();
-			EMS_Sys_Status.emsPollFrequency = (timenow_microsecs - _last_emsPollFrequency);
-			_last_emsPollFrequency          = timenow_microsecs;
-
-			// do we have something to send thats waiting in the Tx queue?
-			// if so send it if the Queue is not in a wait state
-			if ((!EMS_TxQueue.isEmpty()) && (EMS_Sys_Status.emsTxStatus == EMS_TX_STATUS_IDLE)) {
-				_ems_sendTelegram(); // perform the read/write command immediately
-			} else {
-				// nothing to send so just send a poll acknowledgement back
-				if (EMS_Sys_Status.emsPollEnabled) {
-					ems_tx_pollAck();
-				}
-			}
-		} else if (EMS_Sys_Status.emsTxStatus == EMS_TX_STATUS_WAIT) {
-			// this may be a single byte 01 (success) or 04 (error) from a recent write command?
-			if (value == EMS_TX_SUCCESS) {
-				EMS_Sys_Status.emsTxPkgs++;
-				// got a success 01. Send a validate to check the value of the last write
-				ems_tx_pollAck();  // send a poll to free the EMS bus
-				_createValidate(); // create a validate Tx request (if needed)
-			} else if (value == EMS_TX_ERROR) {
-				// last write failed (04), delete it from queue and dont bother to retry
-				if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_VERBOSE) {
-					myDebug_P(PSTR("-> Error: Write command failed from host"));
-				}
-				ems_tx_pollAck(); // send a poll to free the EMS bus
-				_removeTxQueue(); // remove from queue
-			}
-		}
-
-		return; // all done here
-	}
-
-	// ignore anything that doesn't resemble a proper telegram package
-	// minimal is 5 bytes, excluding CRC at the end (for EMS1.0)
-	if (length <= 4) {
-		// _debugPrintTelegram("Noisy data: ", &EMS_RxTelegram, COLOR_RED);
+	// if we're preventing all outbound traffic, quit
+	if (ems_getTxDisabled()) {
+		IRT_TxQueue.shift(); // remove from queue
 		return;
 	}
 
-	static _EMS_RxTelegram EMS_RxTelegram; // create the Rx package
-	EMS_RxTelegram.telegram  = telegram;
-	EMS_RxTelegram.timestamp = millis();
-	EMS_RxTelegram.length    = length;
+	// get the first in the queue, which is at the head
+	// we don't remove from the queue yet
+	_IRT_TxTelegram IRT_TxTelegram = IRT_TxQueue.first();
 
-	EMS_RxTelegram.src    = telegram[0] & 0x7F; // removing 8th bit as we deal with both reads and writes here
-	EMS_RxTelegram.dest   = telegram[1] & 0x7F; // remove 8th bit (don't care if read or write)
-	EMS_RxTelegram.offset = telegram[3];        // offset is always 4th byte
 
-	// determing if its normal ems or ems plus, check for marker
-	if (telegram[2] >= 0xF0) {
-		// its EMS plus / EMS 2.0
-		EMS_RxTelegram.emsplus      = true;
-		EMS_RxTelegram.emsplus_type = telegram[2]; // 0xFF, 0xF7 or 0xF9
+	if (IRT_TxTelegram.msg_in_use < 1) { // no messages in buffer
+		IRT_TxQueue.shift(); // remove from queue
+		return;
+	}
+	if (IRT_TxTelegram.msg_in_use > IRT_MAX_SUB_MSGS) { // to many messages in buffer
+		IRT_TxQueue.shift(); // remove from queue
+		return;
+	}
 
-		if (EMS_RxTelegram.emsplus_type == 0xFF) {
-			EMS_RxTelegram.type = (telegram[4] << 8) + telegram[5]; // is a long in bytes 5 & 6
-			EMS_RxTelegram.data = telegram + 6;
-
-			if (length <= 7) {
-				EMS_RxTelegram.data_length = 0; // special broadcast on ems+ have no data values
-			} else {
-				EMS_RxTelegram.data_length = length - 7; // remove 6 byte header plus CRC
-			}
-		} else {
-			// its F9 or F7
-			uint8_t shift       = (telegram[4] != 0xFF); // true (1) if byte 4 is not 0xFF, then telegram is 1 byte longer
-			EMS_RxTelegram.type = (telegram[5 + shift] << 8) + telegram[6 + shift];
-			EMS_RxTelegram.data = telegram + 6 + shift; // there is a special byte after the typeID which we ignore for now
-			if (length <= (9 + shift)) {
-				EMS_RxTelegram.data_length = 0; // special broadcast on ems+ have no data values
-			} else {
-				EMS_RxTelegram.data_length = length - (9 + shift);
-			}
+	// convert sub messages to single
+	// buffer, out buffer is big enough
+	// to hold all 5 msgs
+	uint8_t out_buffer[IRT_MAXTXBUFFERSIZE];
+	uint8_t pos;
+	uint8_t i;
+	pos = 0;
+	for (i=0; i<IRT_TxTelegram.msg_in_use; i++) {
+		// copy first 3 bytes
+		out_buffer[pos++] = IRT_TxTelegram.data[i][0];
+		out_buffer[pos++] = IRT_TxTelegram.data[i][1];
+		out_buffer[pos++] = IRT_TxTelegram.data[i][2];
+		// add checksum
+		out_buffer[pos++] = irt_calc_checksum(&IRT_TxTelegram.data[i][0]);
+		// add two fill bytes on status request
+		if (IRT_TxTelegram.data[i][0] & 0x80) {
+			// message with response
+			out_buffer[pos++] = 0;
+			out_buffer[pos++] = 0;
 		}
+	}
+	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
+		irt_dumpBuffer("irt_tx: ", out_buffer, pos);
+	}
+	// send msg to irq for transmittion
+	status = irtuart_send_tx_buffer(IRT_TxTelegram.address, out_buffer, pos);
+
+	IRT_TxQueue.shift(); // remove from queue
+
+	if ((status & 0xFF00) == 0x0200) {
+		myDebug("Failed transmitting telegram, status2 %d", (status & 0xFF));
+	}
+
+}
+
+void irt_init_telegram(_IRT_TxTelegram *IRT_Tx, uint8_t address)
+{
+	memset(IRT_Tx, 0, sizeof(_IRT_TxTelegram));
+	IRT_Tx->msg_in_use = 0;
+	IRT_Tx->address = address;
+}
+
+uint8_t irt_add_sub_msg(_IRT_TxTelegram *IRT_Tx, uint8_t cmd, uint8_t data1, uint8_t data2, uint8_t nr_of_data)
+{
+	uint8_t i;
+	if (IRT_Tx->msg_in_use >= IRT_MAX_SUB_MSGS) return 0;
+
+	i = IRT_Tx->msg_in_use;
+	IRT_Tx->data[i][0] = cmd;
+	if (nr_of_data > 0) {
+		IRT_Tx->data[i][1] = data1;
 	} else {
-		// Normal EMS 1.0
-		EMS_RxTelegram.emsplus     = false;
-		EMS_RxTelegram.type        = telegram[2]; // 3rd byte
-		EMS_RxTelegram.data        = telegram + 4;
-		EMS_RxTelegram.data_length = length - 5; // remove 4 bytes header plus CRC
+		IRT_Tx->data[i][1] = 0xA5;
 	}
-
-	// if we are in raw logging mode then just print out the telegram as it is
-	// but still continue to process it
-	if ((EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_RAW)) {
-		_debugPrintTelegram("", &EMS_RxTelegram, COLOR_WHITE, true);
+	if (nr_of_data > 1) {
+		IRT_Tx->data[i][2] = data2;
+	} else {
+		IRT_Tx->data[i][2] = 0xF0;
 	}
+	IRT_Tx->msg_in_use++;
+	return 1;
+}
 
-	// Assume at this point we have something that vaguely resembles a telegram in the format [src] [dest] [type] [offset] [data] [crc]
-	// validate the CRC, if it's bad ignore it
-	if (telegram[length - 1] != _crcCalculator(telegram, length)) {
-		LA_PULSE(200);
-		EMS_Sys_Status.emxCrcErr++;
-		if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_VERBOSE) {
-			_debugPrintTelegram("Corrupt telegram: ", &EMS_RxTelegram, COLOR_RED, true);
-		}
+void irt_send_next_poll_to_boiler()
+{
+	_IRT_TxTelegram IRT_Tx;
+
+	// only poll in tx_mode 5
+	if (EMSESP_Settings.tx_mode != 5) return;
+
+	IRT_Sys_Status.poll_step++;
+
+	// prepare the next batch of status poll messages
+	switch (IRT_Sys_Status.poll_step) {
+	case 1:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x82, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xA3, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xA4, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x8A, 0, 0, 0);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 2:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x81, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x86, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x85, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x83, 0, 0, 0);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 3:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x05, 0x04, 0, 1);
+		irt_add_sub_msg(&IRT_Tx, 0x07, 0x45, 0, 1);
+		irt_add_sub_msg(&IRT_Tx, 0x93, 0, 0, 0);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	default:
+		IRT_Sys_Status.poll_step = 0;
+		break;
+	}
+}
+
+void irt_loop()
+{
+	unsigned long now_millis = millis();
+
+	if ((now_millis - IRT_Sys_Status.last_send_check) >= IRT_Sys_Status.send_interval) {
+
+		irt_send_next_poll_to_boiler();
+
+		IRT_Sys_Status.last_send_check = now_millis;
+	}
+	// check send buffers
+	irt_check_send_queue();
+}
+
+void irt_sendRawTelegram(char *telegram)
+{
+	_IRT_TxTelegram IRT_Tx;
+	size_t i, j, len;
+	char conv[4];
+	uint8_t bin_conv;
+	uint8_t address;
+	uint8_t state;
+	uint8_t cmd, data_len, data1, data2;
+
+	len = strlen(telegram);
+	if (len < 4) {
+		myDebug("send raw telegram: send 1 90 80 F001");
 		return;
 	}
 
-	// here we know its a valid incoming telegram of at least 6 bytes
-	// we use this to see if we always have a connection to the boiler, in case of drop outs
-	EMS_Sys_Status.emsRxTimestamp  = EMS_RxTelegram.timestamp; // timestamp of last read
-	EMS_Sys_Status.emsBusConnected = true;
+	j = 0;
+	conv[0] = conv[1] = 0;
+	address = 1;
+	state = 0;
+	cmd = 0;
+	data1 = 0;
+	data2 = 0;
+	data_len = 0;
+	for (i=0; i<=len; i++) {
+		if (telegram[i] > ' ') {
+			conv[j++] = telegram[i];
+		}
+		if (((telegram[i] <= ' ') && (j > 0)) || (j >= 2)) {
+			conv[2] = 0;
+			bin_conv = (uint8_t)strtol(conv, 0, 16);
+			if (state == 0) {
+				address = bin_conv;
+				irt_init_telegram(&IRT_Tx, address);
+				state = 1;
+			} else {
+				switch (state) {
+				case 1:
+					cmd = bin_conv;
+					data_len = 0;
+					state = 2;
+					break;
+				case 2:
+					data1 = bin_conv;
+					data_len = 1;
+					state = 3;
+					break;
+				case 3:
+					data2 = bin_conv;
+					data_len = 2;
+					state = 4;
+					break;
+				}
+			}
+			conv[0] = conv[1] = 0;
+			j = 0;
+		}
+		if ((state > 1) && (telegram[i] <= ' ')) {
+			irt_add_sub_msg(&IRT_Tx, cmd, data1, data2, data_len);
+			state = 1;
+		}
+	}
+	if (state >= 1)	IRT_TxQueue.push(IRT_Tx);
 
-	// now lets process it and see what to do next
-	_processType(&EMS_RxTelegram);
-#endif
+
+
+}
+
+void irt_init()
+{
+	// init of irt, setup uart
+	irtuart_init();
+
+	IRT_Sys_Status.last_send_check = millis();
+	IRT_Sys_Status.send_interval = 2000; // ini milliseconds
+	IRT_Sys_Status.poll_step = 0;
+	IRT_Sys_Status.my_address = 1;
+}
+
+void irt_start()
+{
+	// called if OTA update is done
+	irtuart_start();
+}
+void irt_stop()
+{
+	// called before OTA update starts
+	irtuart_stop();
 }
