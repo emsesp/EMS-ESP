@@ -8,6 +8,7 @@
  */
 
 #include "MyESP.h"
+#include "irt.h"
 
 #ifdef CRASH
 EEPROM_Rotate EEPROMr;
@@ -939,7 +940,21 @@ void MyESP::_telnetCommand(char * commandLine) {
 
         return;
     }
+    // command to set water temp
+    if (strcmp(ptrToCommandName, "set_water") == 0) {
+        if (wc == 1) {
+				irt_set_water_temp(0, nullptr, nullptr);
+        } else if (wc == 2) { // set <something>
+            char * setting = _telnet_readWord(false);
+            irt_set_water_temp(wc - 1, setting, nullptr);
+        } else { // set <something> <values...>
+            char * setting = _telnet_readWord(false);
+            char * value   = _telnet_readWord(true); // allow strange characters
+            irt_set_water_temp(wc - 1, setting, value);
+        }
 
+        return;
+    }
     // help command
     if ((strcmp(ptrToCommandName, "help") == 0) && (wc == 1)) {
         _consoleShowHelp();

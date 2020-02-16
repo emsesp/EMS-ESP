@@ -92,6 +92,7 @@ typedef struct {
 	unsigned long		send_interval;				// minimum interval between checks
 	uint8_t				poll_step;					// the status poll is send in several steps
 	uint8_t				my_address;					// address used to identify myself
+	uint8_t				req_water_temp;			// requested water temperature
 } _IRT_Sys_Status;
 
 #define IRT_MAX_SUB_MSGS 5 // max 5 messages in a single go
@@ -129,4 +130,5 @@ void irt_stop();
 void irt_start();
 void irt_loop();
 void irt_sendRawTelegram(char * telegram);
+void irt_set_water_temp(uint8_t wc, const char *setting, const char *value);
 

@@ -237,7 +237,12 @@ void irt_update_status(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	global_status_inuse[data[0]] = 1;
 
 }
-
+void irt_update_single_status(uint8_t cmd, uint8_t data)
+{
+	if (global_status[cmd] != data) global_has_changed = 1;
+	global_status[cmd] = data;
+	global_status_inuse[cmd] = 1;
+}
 
 uint8_t irt_handle_0x05(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
@@ -287,6 +292,9 @@ uint8_t irt_handle_0x78(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/*  0  1  2  3  */
 	/* 78 07 FF A1 */
 	/* 78 07 FF A1 */
+
+	irt_update_single_status(0x10 + (data[1] & 0x0F), data[2]);
+
 	return 0;
 }
 /*
@@ -492,6 +500,14 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
 	return 0;
 }
+uint8_t irt_handle_0xA6(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* A6 A5 F0 1E 1C */
+	/* A6 ?? ?? cc ww */
+	EMS_Boiler.retTemp = (data[4] * 10);
+	return 0;
+}
+
 #include <limits.h>
 uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
@@ -503,6 +519,8 @@ uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 uint8_t irt_handle_0xF0(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* extra msgs */
+
+	irt_update_single_status(0xE0 + (data[2] & 0x0F), data[4]);
 
 	return 0;
 }
@@ -612,6 +630,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 		break;
 	case 0xA4:
 		return irt_handle_0xA4(msg, data, length);
+		break;
+	case 0xA6:
+		return irt_handle_0xA6(msg, data, length);
 		break;
 	case 0xC9:
 		return irt_handle_0xC9(msg, data, length);
@@ -794,7 +815,7 @@ void irt_check_send_queue()
 	uint16_t status;
 
 	status = irtuart_check_tx(1);
-	if (status > 0x01FF) myDebug("Failed transmitting telegram, status0 0x%04x", status);
+//	if (status > 0x01FF) myDebug("Failed transmitting telegram, status0 0x%04x", status);
 	if ((status & 0xFF00) == 0x0100) {
 		// still busy transmitting
 		return;
@@ -901,9 +922,28 @@ void irt_send_next_poll_to_boiler()
 
 	IRT_Sys_Status.poll_step++;
 
+	uint16_t burner_power = 0;
+	uint8_t water_temp = 0x35; // default
+	if ((IRT_Sys_Status.req_water_temp > 20) && (IRT_Sys_Status.req_water_temp < 90)) {
+		// boiler will start if power is bigger then 0x50
+		// we have valid temp range of 20 till 90
+		// this translates to a power index of 0x50 till 0xFF
+		// power = 0x50 + (temp - 20) * 2,5)
+
+		burner_power = (IRT_Sys_Status.req_water_temp - 20) * 5;
+		burner_power = burner_power / 2;
+		burner_power = 0x50 + burner_power;
+		water_temp = IRT_Sys_Status.req_water_temp;
+	}
+
 	// prepare the next batch of status poll messages
 	switch (IRT_Sys_Status.poll_step) {
 	case 1:
+	case 3:
+	case 5:
+	case 7:
+	case 9:
+	case 11:
 		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
 		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0x82, 0, 0, 0);
@@ -921,13 +961,54 @@ void irt_send_next_poll_to_boiler()
 		irt_add_sub_msg(&IRT_Tx, 0x83, 0, 0, 0);
 		IRT_TxQueue.push(IRT_Tx);
 		break;
-	case 3:
+	case 4:
 		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
-		irt_add_sub_msg(&IRT_Tx, 0x05, 0x04, 0, 1);
-		irt_add_sub_msg(&IRT_Tx, 0x07, 0x45, 0, 1);
-		irt_add_sub_msg(&IRT_Tx, 0x93, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x78, 0x01, 0xFF, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x01, water_temp, 0xF6, 2); // set max cv water temp
 		IRT_TxQueue.push(IRT_Tx);
 		break;
+	case 6:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x78, 0x07, 0xFF, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x07, (uint8_t)burner_power, 0xD0, 2); // set burner power
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 8:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x78, 0x04, 0x00, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x04, 0x00, 0x4D, 2);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 10:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x78, 0x05, 0x04, 2);
+		irt_add_sub_msg(&IRT_Tx, 0x05, 0x04, 0xE2, 2);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 12:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0x93, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xC9, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xF0, 0x01, 0xCD, 2);
+		irt_add_sub_msg(&IRT_Tx, 0xF0, 0x01, 0xD8, 2);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+	case 13:
+		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
+		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xA6, 0, 0, 0);
+		IRT_TxQueue.push(IRT_Tx);
+		break;
+
 	default:
 		IRT_Sys_Status.poll_step = 0;
 		break;
@@ -948,6 +1029,22 @@ void irt_loop()
 	irt_check_send_queue();
 }
 
+void irt_set_water_temp(uint8_t wc, const char *setting, const char *value)
+{
+//	int sel_test = 0;
+//	uint8_t ovr_len = 0;
+	myDebug("Irt set water temp, wc %d\n", wc);
+
+	if ((wc > 0) && (setting != NULL)) {
+		uint8_t water_temp;
+		water_temp = atoi(setting);
+		IRT_Sys_Status.req_water_temp = water_temp;
+		myDebug("Water temp set to %d (%02x)", water_temp, water_temp);
+	}
+//	if ((wc > 1) && (value != NULL)) {
+//		ovr_len = atoi(value);
+//	}
+}
 void irt_sendRawTelegram(char *telegram)
 {
 	_IRT_TxTelegram IRT_Tx;
@@ -1022,9 +1119,10 @@ void irt_init()
 	irtuart_init();
 
 	IRT_Sys_Status.last_send_check = millis();
-	IRT_Sys_Status.send_interval = 2000; // ini milliseconds
+	IRT_Sys_Status.send_interval = 5000; // ini milliseconds
 	IRT_Sys_Status.poll_step = 0;
 	IRT_Sys_Status.my_address = 1;
+	IRT_Sys_Status.req_water_temp = 0;
 }
 
 void irt_start()
