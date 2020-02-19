@@ -502,12 +502,21 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 }
 uint8_t irt_handle_0xA6(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
+	// return temp
 	/* A6 A5 F0 1E 1C */
 	/* A6 ?? ?? cc ww */
 	EMS_Boiler.retTemp = (data[4] * 10);
 	return 0;
 }
 
+uint8_t irt_handle_0xA8(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	// warm water temp
+	/* A8 A5 F0 10 41 */
+	/* A8 ?? ?? cc ww */
+	EMS_Boiler.wWCurTmp = (data[4] * 10);
+	return 0;
+}
 #include <limits.h>
 uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
@@ -633,6 +642,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 		break;
 	case 0xA6:
 		return irt_handle_0xA6(msg, data, length);
+		break;
+	case 0xA8:
+		return irt_handle_0xA8(msg, data, length);
 		break;
 	case 0xC9:
 		return irt_handle_0xC9(msg, data, length);
