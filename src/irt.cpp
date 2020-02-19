@@ -158,7 +158,7 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 		strlcat(output_str, _hextoa(telegram[i], buffer), sizeof(output_str));
 		strlcat(output_str, " ", sizeof(output_str));
 	}
-//#ifdef INCLUDE_ASCII
+#ifdef INCLUDE_ASCII
 	// Added ASCII
 	strlcat(output_str, " - \"", sizeof(output_str));
 	char dump_text[2];
@@ -172,7 +172,7 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 		}
 	}
 	strlcat(output_str, "\"", sizeof(output_str));
-//#endif // INCLUDE_ASCII
+#endif // INCLUDE_ASCII
 
 	strlcat(output_str, COLOR_RESET, sizeof(output_str));
 
@@ -1004,8 +1004,10 @@ void irt_send_next_poll_to_boiler()
 		break;
 	case 13:
 		irt_init_telegram(&IRT_Tx, IRT_Sys_Status.my_address);
-		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0xA6, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xA8, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xAA, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xAB, 0, 0, 0);
 		IRT_TxQueue.push(IRT_Tx);
 		break;
 
@@ -1119,7 +1121,7 @@ void irt_init()
 	irtuart_init();
 
 	IRT_Sys_Status.last_send_check = millis();
-	IRT_Sys_Status.send_interval = 5000; // ini milliseconds
+	IRT_Sys_Status.send_interval = 4000; // in milliseconds
 	IRT_Sys_Status.poll_step = 0;
 	IRT_Sys_Status.my_address = 1;
 	IRT_Sys_Status.req_water_temp = 0;
