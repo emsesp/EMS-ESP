@@ -879,8 +879,9 @@ char * MyESP::_telnet_readWord(bool allow_all_chars) {
 // wc is word count, number of parameters after the 'set' command
 bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value) {
     bool save_config        = false;
-    bool save_custom_config = false;
     bool restart            = false;
+
+    MYESP_FSACTION_t save_custom_config = MYESP_FSACTION_ERR; // default
 
     // check for our internal commands first
     if (strcmp(setting, "erase") == 0) {
@@ -945,13 +946,14 @@ bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value)
         // finally check for any custom commands
         if (_fs_setlist_callback_f) {
             save_custom_config = (_fs_setlist_callback_f)(MYESP_FSACTION_SET, wc, setting, value);
+            restart = (save_custom_config == MYESP_FSACTION_RESTART);
         }
     }
 
     bool ok = false;
 
     // if we were able to recognize the set command, continue
-    if ((save_config || save_custom_config)) {
+    if ((save_config || save_custom_config != MYESP_FSACTION_ERR)) {
         // check for 2 params
         if (value == nullptr) {
             myDebug_P(PSTR("%s has been reset to its default value."), setting);
@@ -967,7 +969,7 @@ bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value)
     }
 
     // and see if we need to also save for custom config
-    if (save_custom_config) {
+    if (save_custom_config != MYESP_FSACTION_ERR) {
         ok = _fs_createCustomConfig();
     }
 
@@ -1490,11 +1492,12 @@ void MyESP::_heartbeatCheck(bool force) {
 
         //rootHeartbeat["version"]         = _app_version;
         //rootHeartbeat["IP"]              = WiFi.localIP().toString();
-        rootHeartbeat["rssid"]   = getWifiQuality();
-        rootHeartbeat["load"]    = getSystemLoadAverage();
-        rootHeartbeat["uptime"]  = _getUptime();
-        rootHeartbeat["freemem"] = mem_available;
-        //rootHeartbeat["MQTTdisconnects"] = _getSystemDropoutCounter();
+        rootHeartbeat["rssid"]            = getWifiQuality();
+        rootHeartbeat["load"]             = getSystemLoadAverage();
+        rootHeartbeat["uptime"]           = _getUptime();
+        rootHeartbeat["freemem"]          = mem_available;
+        rootHeartbeat["tcpdrops"]         = _getSystemDropoutCounter();
+        rootHeartbeat["mqttpublishfails"] = _mqtt_publish_fails;
 
         char data[300] = {0};
         serializeJson(doc, data, sizeof(data));

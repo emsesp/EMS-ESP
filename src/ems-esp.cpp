@@ -19,7 +19,7 @@
 // Dallas external temp sensors
 #include "ds18.h"
 DS18 ds18;
-#define DS18_MQTT_PAYLOAD_MAXSIZE 400
+#define DS18_MQTT_PAYLOAD_MAXSIZE 600
 
 // public libraries
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
@@ -115,7 +115,7 @@ static const command_t project_cmds[] PROGMEM = {
 
     {false, "publish", "publish all values to MQTT"},
     {false, "refresh", "fetch values from the EMS devices"},
-    {false, "devices [scan [deep]]", "list, ask Master or perform deep scan of EMS devices"},
+    {false, "devices [scan] | [scan deep] | [save]", "list detected devices, quick scan or deep scan and save as known devices"},
     {false, "queue", "show current Tx queue"},
     {false, "send XX ...", "send raw telegram data to EMS bus (XX are hex values)"},
     {false, "thermostat read <type ID>", "send read request to the thermostat for heating circuit hc 1-4"},
@@ -581,6 +581,7 @@ void publishSensorValues() {
 
     bool hasdata     = false;
     char buffer[128] = {0}; // temp string buffer
+
     // see if the sensor values have changed, if so send it on
     for (uint8_t i = 0; i < EMSESP_Settings.dallas_sensors; i++) {
         float sensorValue = ds18.getValue(i);
@@ -597,12 +598,26 @@ void publishSensorValues() {
         }
     }
 
+    /* test code - https://github.com/proddy/EMS-ESP/issues/326
+    float sensorValue = 23.43;
+    hasdata           = true;
+    char sensorID[10]; // sensor{1-n}
+    for (uint8_t i = 0; i < 10; i++) {
+        strlcpy(sensorID, PAYLOAD_EXTERNAL_SENSOR_NUM, sizeof(sensorID));
+        strlcat(sensorID, _int_to_char(buffer, i + 1), sizeof(sensorID));
+        JsonObject dataSensor                    = sensors.createNestedObject(sensorID);
+        dataSensor[PAYLOAD_EXTERNAL_SENSOR_ID]   = "28D45A79A2190310";
+        dataSensor[PAYLOAD_EXTERNAL_SENSOR_TEMP] = sensorValue;
+    }
+    */
+
     if (!hasdata) {
         return; // nothing to send
     }
 
     char data[DS18_MQTT_PAYLOAD_MAXSIZE] = {0};
     serializeJson(doc, data, sizeof(data));
+
     myDebugLog("Publishing external sensor data via MQTT");
     myESP.mqttPublish(TOPIC_EXTERNAL_SENSORS, data);
 }
@@ -1080,18 +1095,18 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
 // callback for custom settings when showing Stored Settings with the 'set' command
 // wc is number of arguments after the 'set' command
 // returns true if the setting was recognized and changed and should be saved back to SPIFFs
-bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, const char * value) {
-    bool ok = false;
+MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, const char * value) {
+    MYESP_FSACTION_t ok = MYESP_FSACTION_ERR;
 
     if (action == MYESP_FSACTION_SET) {
         // led
         if ((strcmp(setting, "led") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
                 EMSESP_Settings.led = true;
-                ok                  = true;
+                ok                  = MYESP_FSACTION_RESTART;
             } else if (strcmp(value, "off") == 0) {
                 EMSESP_Settings.led = false;
-                ok                  = true;
+                ok                  = MYESP_FSACTION_RESTART;
                 // let's make sure LED is really off - For onboard high=off
                 digitalWrite(EMSESP_Settings.led_gpio, (EMSESP_Settings.led_gpio == LED_BUILTIN) ? HIGH : LOW);
             } else {
@@ -1103,12 +1118,12 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
         if ((strcmp(setting, "listen_mode") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
                 EMSESP_Settings.listen_mode = true;
-                ok                          = true;
+                ok                          = MYESP_FSACTION_OK;
                 myDebug_P(PSTR("* in listen mode. All Tx is disabled."));
                 ems_setTxDisabled(true);
             } else if (strcmp(value, "off") == 0) {
                 EMSESP_Settings.listen_mode = false;
-                ok                          = true;
+                ok                          = MYESP_FSACTION_OK;
                 ems_setTxDisabled(false);
                 myDebug_P(PSTR("* out of listen mode. Tx is now enabled."));
             } else {
@@ -1122,23 +1137,23 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
             // reset pin
             pinMode(EMSESP_Settings.led_gpio, OUTPUT);
             digitalWrite(EMSESP_Settings.led_gpio, (EMSESP_Settings.led_gpio == LED_BUILTIN) ? HIGH : LOW); // light off. For onboard high=off
-            ok = true;
+            ok = MYESP_FSACTION_OK;
         }
 
         // dallas_gpio
         if ((strcmp(setting, "dallas_gpio") == 0) && (wc == 2)) {
             EMSESP_Settings.dallas_gpio = atoi(value);
-            ok                          = true;
+            ok                          = MYESP_FSACTION_RESTART;
         }
 
         // dallas_parasite
         if ((strcmp(setting, "dallas_parasite") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
                 EMSESP_Settings.dallas_parasite = true;
-                ok                              = true;
+                ok                              = MYESP_FSACTION_RESTART;
             } else if (strcmp(value, "off") == 0) {
                 EMSESP_Settings.dallas_parasite = false;
-                ok                              = true;
+                ok                              = MYESP_FSACTION_RESTART;
             } else {
                 myDebug_P(PSTR("Error. Usage: set dallas_parasite <on | off>"));
             }
@@ -1148,10 +1163,10 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
         if ((strcmp(setting, "shower_timer") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
                 EMSESP_Settings.shower_timer = true;
-                ok                           = do_publishShowerData();
+                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
             } else if (strcmp(value, "off") == 0) {
                 EMSESP_Settings.shower_timer = false;
-                ok                           = do_publishShowerData();
+                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
             } else {
                 myDebug_P(PSTR("Error. Usage: set shower_timer <on | off>"));
             }
@@ -1161,19 +1176,23 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
         if ((strcmp(setting, "shower_alert") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
                 EMSESP_Settings.shower_alert = true;
-                ok                           = do_publishShowerData();
+                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
             } else if (strcmp(value, "off") == 0) {
                 EMSESP_Settings.shower_alert = false;
-                ok                           = do_publishShowerData();
+                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
             } else {
                 myDebug_P(PSTR("Error. Usage: set shower_alert <on | off>"));
             }
         }
 
         // publish_time
-        if ((strcmp(setting, "publish_time") == 0) && (wc == 2)) {
-            EMSESP_Settings.publish_time = atoi(value);
-            ok                           = true;
+        if (strcmp(setting, "publish_time") == 0) {
+            if (wc == 1) {
+                EMSESP_Settings.publish_time = 0;
+            } else {
+                EMSESP_Settings.publish_time = atoi(value);
+            }
+            ok = MYESP_FSACTION_RESTART;
         }
 
         // tx_mode
@@ -1182,7 +1201,7 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
             if ((mode >= 1) && (mode <= 3)) { // see ems.h for definitions
                 EMSESP_Settings.tx_mode = mode;
                 ems_setTxMode(mode);
-                ok = true;
+                ok = MYESP_FSACTION_RESTART;
             } else {
                 myDebug_P(PSTR("Error. Usage: set tx_mode <1 | 2 | 3>"));
             }
@@ -1194,7 +1213,7 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
             if ((id == 0x0B) || (id == 0x0D) || (id == 0x0A) || (id == 0x0F) || (id == 0x12)) {
                 EMSESP_Settings.bus_id = id;
                 ems_setEMSbusid(id);
-                ok = true;
+                ok = MYESP_FSACTION_RESTART;
             } else {
                 myDebug_P(PSTR("Error. Usage: set bus_id <ID>, with ID=0B, 0D, 0A, 0F or 12"));
             }
@@ -1216,15 +1235,15 @@ bool SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, 
                 myDebug_P(PSTR("Usage: set master_thermostat <product id>"));
                 ems_setMasterThermostat(0);            // default value
                 EMSESP_Settings.master_thermostat = 0; // back to default
-                ok                                = true;
+                ok                                = MYESP_FSACTION_OK;
             } else if (wc == 2) {
                 uint8_t pid                       = atoi(value);
                 EMSESP_Settings.master_thermostat = pid;
                 ems_setMasterThermostat(pid);
-                // force a scan
-                ems_clearDeviceList();
+                // force a scan again to detect and set the thermostat
+                Devices.clear();
                 ems_doReadCommand(EMS_TYPE_UBADevices, EMS_Boiler.device_id);
-                ok = true;
+                ok = MYESP_FSACTION_OK;
             }
         }
     }
@@ -1361,7 +1380,7 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
                 // just scan use UBA 0x07 telegram
                 myDebug_P(PSTR("Requesting EMS bus master for its device list and scanning for external sensors..."));
                 scanDallas();
-                ems_clearDeviceList();
+                Devices.clear(); // init the device map
                 ems_doReadCommand(EMS_TYPE_UBADevices, EMS_Boiler.device_id);
                 return;
             }
@@ -1370,7 +1389,7 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
             char * third_cmd = _readWord();
             if (strcmp(third_cmd, "deep") == 0) {
                 myDebug_P(PSTR("Started deep scan of EMS bus for our known devices. This can take up to 10 seconds..."));
-                ems_clearDeviceList();
+                Devices.clear(); // init the device map
                 ems_scanDevices();
                 return;
             }
@@ -2204,7 +2223,6 @@ void setup() {
         myDebug_P(PSTR("[UART] Rx/Tx connection established"));
         startupEMSscan();
     }
-
 
     // enable regular checks to fetch data and publish using Tx (unless listen_mode is enabled)
     if (!EMSESP_Settings.listen_mode) {
