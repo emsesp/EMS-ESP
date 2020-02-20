@@ -2490,11 +2490,14 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
     EMS_TxQueue.push(EMS_TxTelegram);
  
     char s[10] = {0};
-    myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
-              _float_to_char(s, temperature),
-              hc_num,
-              temptype);
-
+    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
+                  _float_to_char(s, temperature),
+                  hc_num,
+                 temptype);
+    } else {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d"), _float_to_char(s, temperature), hc_num);
+    }
 }
 
 /**
