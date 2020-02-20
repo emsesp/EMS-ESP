@@ -13,7 +13,7 @@ env:
     #   - BUILDER_TOTAL_THREADS=4
     - BUILDER_TOTAL_THREADS=1
     - OWNER=${TRAVIS_REPO_SLUG%/*}
-    - DEV=${OWNER/proddy/dev}
+    - DEV=${OWNER/Victor-Mo/dev}
     - BRANCH=${TRAVIS_BRANCH/dev/}
     - TAG=${DEV}${BRANCH:+_}${BRANCH}
 

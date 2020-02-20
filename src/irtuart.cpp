@@ -28,7 +28,7 @@ extern _EMSESP_Settings EMSESP_Settings;
 // Main interrupt handler
 // Important: do not use ICACHE_FLASH_ATTR !
 //
-
+/*
 uint8_t add_debug_to_buf(uint8_t *buffer, uint8_t in_length, const char *text)
 {
 	return in_length;
@@ -44,7 +44,7 @@ uint8_t add_debug_to_buf(uint8_t *buffer, uint8_t in_length, const char *text)
 
 	return i;
 }
-
+*/
 static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buffer, uint8_t in_length)
 {
 	/* for each incoming byte, test if we need to send anything */
@@ -56,8 +56,8 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 
 	if (pTx->state > 90) return out_length;
 
+	// check if all data has been send
 	if (pTx->pos >= pTx->len) {
-		out_length = add_debug_to_buf(buffer, out_length, "98");
 		pTx->valid = 2; /* done */
 		pTx->state = 98;
 		return out_length;
@@ -67,18 +67,13 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 		/* check for the 'break' 0 byte or the address */
 		if ((rx == 0) || (rx == pTx->address)) {
 			pTx->state = 2; // break byte
-//			length = add_debug_to_buf(uart_buffer, length, "2");
 			if (rx == pTx->address) pTx->state = 3;
 		} else {
-			// not our time slot
-//			length = add_debug_to_buf(uart_buffer, length, "3");
+			// not our time slot, wait for break
 			pTx->state = 0;
-//			length = add_debug_to_buf(uart_buffer, length, "0");
 		}
 	} else if (pTx->state == 2) {
-//		length = add_debug_to_buf(uart_buffer, length, "4");
 		if (rx == pTx->address) {
-//			out_length = add_debug_to_buf(buffer, out_length, "5");
 			pTx->state = 3;
 		} else {
 			// not our slot
@@ -86,25 +81,19 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 		}
 	} else if (pTx->state == 4) {
 		/* we just send our address, we should receive the echo */
-//		out_length = add_debug_to_buf(buffer, out_length, "7");
 		if (rx == pTx->address) {
-//			out_length = add_debug_to_buf(buffer, out_length, "8");
 			pTx->state = 5;
 		} else {
 			// something went wrong, abort
-			out_length = add_debug_to_buf(buffer, out_length, "99");
 			pTx->valid = 3; // error
 			pTx->state = 99;
 		}
 	} else if (pTx->state == 5) {
-		/* check for inverse from boiler */
-//		out_length = add_debug_to_buf(buffer, out_length, "9");
+		/* check for inverse address from boiler */
 		if (rx == (0xFF - pTx->address)) {
-//			out_length = add_debug_to_buf(buffer, out_length, "10");
 			pTx->state = 10; // start tx
 		} else {
 			// something went wrong, abort
-			out_length = add_debug_to_buf(buffer, out_length, "99");
 			pTx->valid = 3; // error
 			pTx->state = 99;
 		}
@@ -137,14 +126,12 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 			}
 		} else {
 			// something went wrong, abort
-			out_length = add_debug_to_buf(buffer, out_length, "99");
 			pTx->valid = 3; // error
 			pTx->state = 99;
 		}
 	}
 
 	if (pTx->state == 10) {
-//		out_length = add_debug_to_buf(buffer, out_length, "20");
 		/* start first msg byte */
 		if (pTx->pos < pTx->len) {
 			if (pTx->buffer[pTx->pos] & 0x80) {
@@ -154,10 +141,8 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 				pTx->tx_bytes = 4;
 				pTx->rx_bytes = 0;
 			}
-//			out_length = add_debug_to_buf(buffer, out_length, "21");
 			pTx->state = 11;
 		} else {
-			out_length = add_debug_to_buf(buffer, out_length, "30");
 			pTx->valid = 2; /* done */
 			pTx->state = 20; /* done */
 		}
@@ -168,7 +153,6 @@ static uint8_t irtuart_tx_received_byte(_IRTTxBuf *pTx, uint8_t rx, uint8_t *buf
 			pTx->state = 13;
 		} else {
 			// something went wrong, abort
-			out_length = add_debug_to_buf(buffer, out_length, "99");
 			pTx->valid = 3; // error
 			pTx->state = 99;
 		}
@@ -197,7 +181,6 @@ static void irtuart_rx_intr_handler(void * para) {
 	/* If we have valid transmit buffer, detect break before processing data */
 	if ((pIRTTxBuf) && (pIRTTxBuf->valid == 1)) {
 		if ( (pIRTTxBuf->state < 20) && ((now_millis - pIRTTxBuf->start_time) >= IRTUART_TX_MSG_TIMEOUT_MS) ) {
-			length = add_debug_to_buf(uart_buffer, length, "97");
 			pIRTTxBuf->state = 97; // abort on timeout
 			pIRTTxBuf->valid = 3; // exit
 		}
@@ -225,7 +208,6 @@ static void irtuart_rx_intr_handler(void * para) {
 	}
 	if ((pIRTTxBuf) && (pIRTTxBuf->valid == 1)) {
 		if (pIRTTxBuf->state == 3) {
-//			length = add_debug_to_buf(uart_buffer, length, "6");
 
 			/* send own address, to let the boiler know we want to transmit */
 			USF(IRTUART_UART) = pIRTTxBuf->address;
@@ -374,137 +356,13 @@ void ICACHE_FLASH_ATTR irtuart_tx_brk() {
     // To create a 11-bit <BRK> we set TXD_BRK bit so the break signal will
     // automatically be sent when the tx fifo is empty
     tmp = (1 << UCBRK);
-//    GPIO_H(TX_MARK_MASK);
     USC0(IRTUART_UART) |= (tmp); // set bit
 
-    if (EMS_Sys_Status.emsTxMode == IRT_TXMODE_IRTPLUS) { // IRT+ mode
-        delayMicroseconds(IRTUART_TX_BRK_WAIT);
-    } else if (EMS_Sys_Status.emsTxMode == IRT_TXMODE_HT3) {     // junkers mode
-        delayMicroseconds(IRTUART_TX_WAIT_BRK - IRTUART_TX_LAG); // 1144 (11 Bits)
-    }
+    delayMicroseconds(IRTUART_TX_BRK_WAIT);
 
     USC0(IRTUART_UART) &= ~(tmp); // clear bit
-//    GPIO_L(TX_MARK_MASK);
 }
 
-/*
- * Send to Tx, ending with a <BRK>
- */
-_EMS_TX_STATUS ICACHE_FLASH_ATTR irtuart_tx_buffer(uint8_t * buf, uint8_t len) {
-    _EMS_TX_STATUS result = EMS_TX_STATUS_OK;
-
-    if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_JABBER) {
-        ems_dumpBuffer("irtuart_tx_buffer: ", buf, len); // validate and transmit the IRT buffer, excluding the BRK
-    }
-
-    if (len) {
-//        LA_PULSE(50);
-
-        if (EMS_Sys_Status.emsTxMode == IRT_TXMODE_IRTPLUS) { // With extra tx delay for IRT+
-            for (uint8_t i = 0; i < len; i++) {
-//                TX_PULSE(IRTUART_BIT_TIME / 4);
-                USF(IRTUART_UART) = buf[i];
-                delayMicroseconds(IRTUART_TX_BRK_WAIT); // https://github.com/proddy/EMS-ESP/issues/23#
-            }
-            irtuart_tx_brk();                       // send <BRK>
-        } else if (EMS_Sys_Status.emsTxMode == IRT_TXMODE_HT3) { // Junkers logic by @philrich
-            for (uint8_t i = 0; i < len; i++) {
-//                TX_PULSE(IRTUART_BIT_TIME / 4);
-                USF(IRTUART_UART) = buf[i];
-
-                // just to be safe wait for tx fifo empty (needed?)
-                while (((USS(IRTUART_UART) >> USTXC) & 0xff) != 0)
-                    ;
-
-                // wait until bits are sent on wire
-                delayMicroseconds(IRTUART_TX_WAIT_BYTE - IRTUART_TX_LAG + IRTUART_TX_WAIT_GAP);
-            }
-            irtuart_tx_brk(); // send <BRK>
-        } else if (EMS_Sys_Status.emsTxMode == IRT_TXMODE_DEFAULT) {
-            /*
-        * based on code from https://github.com/proddy/EMS-ESP/issues/103 by @susisstrolch
-        * we emit the whole telegram, with Rx interrupt disabled, collecting busmaster response in FIFO.
-        * after sending the last char we poll the Rx status until either
-        * - size(Rx FIFO) == size(Tx-Telegram)
-        * - <BRK> is detected
-        * At end of receive we re-enable Rx-INT and send a Tx-BRK in loopback mode.
-        *
-        * IRT-Bus error handling
-        * 1. Busmaster stops echoing on Tx w/o permission
-        * 2. Busmaster cancel telegram by sending a BRK
-        *
-        * Case 1. is handled by a watchdog counter which is reset on each
-        * Tx attempt. The timeout should be 20x IRTUART_BIT_TIME plus
-        * some smart guess for processing time on targeted IRT device.
-        * We set EMS_Sys_Status.irtTxStatus to IRT_TX_WTD_TIMEOUT and return
-        *
-        * Case 2. is handled via a BRK chk during transmission.
-        * We set EMS_Sys_Status.irtTxStatus to IRT_TX_BRK_DETECT and return
-        *
-        */
-
-// shorter busy poll...
-#define IRTUART_BUSY_WAIT (IRTUART_BIT_TIME / 8)
-#define IRT_TX_TO_CHARS (2 + 20)
-#define IRT_TX_TO_COUNT ((IRT_TX_TO_CHARS)*10 * 8)
-            uint16_t wdc = IRT_TX_TO_COUNT;
-            ETS_UART_INTR_DISABLE(); // disable rx interrupt
-
-            // clear Rx status register
-            USC0(IRTUART_UART) |= (1 << UCRXRST); // reset uart rx fifo
-            irtuart_flush_fifos();
-
-            // throw out the telegram...
-            for (uint8_t i = 0; i < len && result == EMS_TX_STATUS_OK;) {
-//                GPIO_H(TX_MARK_MASK);
-
-                wdc                     = IRT_TX_TO_COUNT;
-                volatile uint8_t _usrxc = (USS(IRTUART_UART) >> USRXC) & 0xFF;
-                USF(IRTUART_UART)       = buf[i++]; // send each Tx byte
-                // wait for echo from busmaster
-//                GPIO_L(TX_MARK_MASK);
-                while (((USS(IRTUART_UART) >> USRXC) & 0xFF) == _usrxc) {
-                    delayMicroseconds(IRTUART_BUSY_WAIT); // burn CPU cycles...
-                    if (--wdc == 0) {
-                        EMS_Sys_Status.emsTxStatus = result = EMS_TX_WTD_TIMEOUT;
-                        break;
-                    }
-                    if (USIR(IRTUART_UART) & (1 << UIBD)) {
-                        USIC(IRTUART_UART)         = (1 << UIBD); // clear BRK detect IRQ
-                        EMS_Sys_Status.emsTxStatus = result = EMS_TX_BRK_DETECT;
-                    }
-                }
-            }
-
-            // we got the whole telegram in the Rx buffer
-            // on Rx-BRK (bus collision), we simply enable Rx and leave it
-            // otherwise we send the final Tx-BRK in the loopback and re=enable Rx-INT.
-            // worst case, we'll see an additional Rx-BRK...
-            if (result != EMS_TX_STATUS_OK) {
-//                LA_PULSE(200); // mark Tx error
-            } else {
-                // neither bus collision nor timeout - send terminating BRK signal
-//                GPIO_H(TX_MARK_MASK);
-                if (!(USIS(IRTUART_UART) & (1 << UIBD))) {
-                    // no bus collision - send terminating BRK signal
-                    USC0(IRTUART_UART) |= (1 << UCLBE) | (1 << UCBRK); // enable loopback & set <BRK>
-
-                    // wait until BRK detected...
-                    while (!(USIR(IRTUART_UART) & (1 << UIBD))) {
-                        // delayMicroseconds(IRTUART_BUSY_WAIT);
-                        delayMicroseconds(IRTUART_BIT_TIME);
-                    }
-
-                    USC0(IRTUART_UART) &= ~((1 << UCBRK) | (1 << UCLBE)); // disable loopback & clear <BRK>
-                    USIC(IRTUART_UART) = (1 << UIBD);                     // clear BRK detect IRQ
-                }
-//                GPIO_L(TX_MARK_MASK);
-            }
-            ETS_UART_INTR_ENABLE(); // receive anything from FIFO...
-        }
-    }
-    return result;
-}
 /*
  * check if we are not transmitting, busy transmitting
  * or have a complete buffer
@@ -580,81 +438,4 @@ uint16_t ICACHE_FLASH_ATTR irtuart_send_tx_buffer(uint8_t address, uint8_t *tele
 	pIRTTxBuf->valid = 1;
 
 	return 0x0100;
-}
-
-void _irtRunTest(uint8_t wc, const char *setting, const char *value)
-{
-	int sel_test = 0;
-	myDebug("Irt test, wc %d\n", wc);
-
-	if ((wc > 0) && (setting != NULL)) {
-		sel_test = atoi(setting);
-	}
-	if (pIRTTxBuf == NULL) {
-		myDebug("Irt test, wc %d, test %d\n", wc, sel_test);
-	} else {
-		myDebug("Irt test, wc %d, test %d, state %d pos %d len %d\n", wc, sel_test, pIRTTxBuf->state, pIRTTxBuf->pos, pIRTTxBuf->len);
-	}
-// (00:24:24.892) ems_parseTelegram: 00 05: 01 01 FE 90 90 00 00 31 31 54 54 CF 30 82 82 63 63 16 16 1C 1C 00 FF A3 A3 7A 7A 96 96 3D 3D 06 F9 A4 A4 2D 2D 0C 0C CE CE 1C E3 8A 8A D1 D1 A4 A4 93 93 FE 01 00
-
-	if (sel_test == 1) {
-		myDebug("Irt test, buffer %x\n", (int)pIRTTxBuf);
-		if (pIRTTxBuf == NULL) {
-			myDebug("Irt test, no valid transmit buffer");
-		} else {
-			myDebug("Irt test, start test 1");
-//			pIRTTxBuf->state = 0;
-//			pIRTTxBuf->start_time = millis();
-//			pIRTTxBuf->valid = 0;
-//			pIRTTxBuf->address = 2;
-
-			size_t i,j,len = 0;
-			char temp_buf[4];
-			uint8_t out_buf[IRT_MAXTXBUFFERSIZE];
-			if ((wc > 1) && (value)) len = strlen(value);
-			if (len > 0) len--;
-			j = 0;
-			for (i=0; i<len; i+=2) {
-				temp_buf[0] = value[i];
-				temp_buf[1] = value[i+1];
-				temp_buf[2] = 0;
-				if (j < IRT_MAXTXBUFFERSIZE) {
-					out_buf[j++] = (uint8_t)strtol(temp_buf, 0, 16);
-				}
-			}
-			uint16_t status;
-
-			status = irtuart_send_tx_buffer(2, out_buf, j);
-			myDebug("Irt test, status: %04x", status);
-
-//			uint8_t test_msg[] = {0xA4, 0x5D, 0x17, 0x00};
-//			uint8_t test_msg[] = {0x90, 0x00, 0x31, 0x54, 0x00, 0x00, 0x90, 0x00, 0x31, 0x54, 0x00, 0x00};
-//			uint8_t test_msg[] = {0x90, 0x00, 0x31, 0x54, 0x00, 0x00, 0x07, 0xCF, 0xD0, 0x6C};
-//			memcpy(pIRTTxBuf->buffer, test_msg, sizeof(test_msg));
-
-//			pIRTTxBuf->tx_bytes = 0;
-//			pIRTTxBuf->rx_bytes = 0;
-
-//			pIRTTxBuf->pos = 0;
-//			pIRTTxBuf->len = sizeof(test_msg);
-//			pIRTTxBuf->len = j;
-
-//			pIRTTxBuf->start_time = millis();
-//			pIRTTxBuf->state = 0;
-//			if (len > 0) pIRTTxBuf->valid = 1;
-
-			myDebug("Irt test, start %d test 1 pos %d len %d", pIRTTxBuf->valid, pIRTTxBuf->pos, pIRTTxBuf->len);
-
-		}
-	}
-
-
-//	myDebug("Irt test, state %d\n", pIRTTxBuf->state);
-/*
-	if (wc == 1) {
-		pIRTTxBuf->state = 0;
-
-		pIRTTxBuf->valid = 1;
-		pIRTTxBuf->address = 2;
-	}*/
 }
