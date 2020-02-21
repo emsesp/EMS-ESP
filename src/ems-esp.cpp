@@ -933,7 +933,7 @@ void publishEMSValues(bool force) {
 }
 
 // Publish shower data
-bool do_publishShowerData() {
+void do_publishShowerData() {
     StaticJsonDocument<200> doc;
     JsonObject              rootShower = doc.to<JsonObject>();
     rootShower[TOPIC_SHOWER_TIMER]     = EMSESP_Settings.shower_timer ? "1" : "0";
@@ -956,24 +956,20 @@ bool do_publishShowerData() {
     myDebugLog("Publishing shower data via MQTT");
 
     // Publish MQTT forcing retain to be off
-    return (myESP.mqttPublish(TOPIC_SHOWER_DATA, data, false));
+    myESP.mqttPublish(TOPIC_SHOWER_DATA, data, false);
 }
 
 // call PublishValues with forcing forcing
 void do_publishValues() {
     if (EMSESP_Settings.publish_time == -1) {
-        myDebugLog("publish_time is set to -1. Publishing disabled.");
-        return;
-    }
-
-    // automatic mode
-    if (EMSESP_Settings.publish_time == 0) {
+        myDebugLog("Publishing is disabled.");
         return;
     }
 
     myDebugLog("Starting scheduled MQTT publish...");
     publishEMSValues(false);
     publishSensorValues();
+    myESP.heartbeatCheck(true);
 }
 
 // callback to light up the LED, called via Ticker every second
@@ -1165,11 +1161,13 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char
         // shower timer
         if ((strcmp(setting, "shower_timer") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
+                do_publishShowerData();
                 EMSESP_Settings.shower_timer = true;
-                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
+                ok                           = MYESP_FSACTION_OK;
             } else if (strcmp(value, "off") == 0) {
+                do_publishShowerData();
                 EMSESP_Settings.shower_timer = false;
-                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
+                ok                           = MYESP_FSACTION_OK;
             } else {
                 myDebug_P(PSTR("Error. Usage: set shower_timer <on | off>"));
             }
@@ -1178,11 +1176,13 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char
         // shower alert
         if ((strcmp(setting, "shower_alert") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
+                do_publishShowerData();
                 EMSESP_Settings.shower_alert = true;
-                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
+                ok                           = MYESP_FSACTION_OK;
             } else if (strcmp(value, "off") == 0) {
+                do_publishShowerData();
                 EMSESP_Settings.shower_alert = false;
-                ok                           = do_publishShowerData() ? MYESP_FSACTION_OK : MYESP_FSACTION_ERR;
+                ok                           = MYESP_FSACTION_OK;
             } else {
                 myDebug_P(PSTR("Error. Usage: set shower_alert <on | off>"));
             }
@@ -1371,7 +1371,6 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
 
     if (strcmp(first_cmd, "devices") == 0) {
         if (wc == 1) {
-            // print
             ems_printDevices();
             return;
         }
