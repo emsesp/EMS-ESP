@@ -2543,7 +2543,7 @@ void ems_setThermostatMode(uint8_t mode, uint8_t hc_num) {
     }
 
     // RC35 has different settings
-    if (model == EMS_DEVICE_FLAG_RC35) {
+    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
         // 0=night, 1=day, 2=auto
         if (mode == 0) {
             myDebug_P(PSTR("Setting thermostat mode to night for heating circuit %d"), hc_num);

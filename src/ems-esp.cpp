@@ -19,7 +19,7 @@
 // Dallas external temp sensors
 #include "ds18.h"
 DS18 ds18;
-#define DS18_MQTT_PAYLOAD_MAXSIZE 600
+#define DS18_MQTT_PAYLOAD_MAXSIZE 400
 
 // public libraries
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
@@ -572,7 +572,7 @@ void publishSensorValues() {
     }
 
     // each payload per sensor is 30 bytes so calculate if we have enough space
-    if ((EMSESP_Settings.dallas_sensors * 50) > DS18_MQTT_PAYLOAD_MAXSIZE) {
+    if ((EMSESP_Settings.dallas_sensors * 30) > DS18_MQTT_PAYLOAD_MAXSIZE) {
         myDebug("Error: too many Dallas sensors for MQTT payload");
     }
 
@@ -586,15 +586,18 @@ void publishSensorValues() {
     for (uint8_t i = 0; i < EMSESP_Settings.dallas_sensors; i++) {
         float sensorValue = ds18.getValue(i);
         if (sensorValue != DS18_DISCONNECTED) {
+            sensors[ds18.getDeviceID(buffer, i)] = sensorValue;  // json {id:value}
             hasdata = true;
             // create a nested object
             // https://github.com/proddy/EMS-ESP/issues/327
+/*
             char sensorID[10]; // sensor{1-n}
             strlcpy(sensorID, PAYLOAD_EXTERNAL_SENSOR_NUM, sizeof(sensorID));
             strlcat(sensorID, _int_to_char(buffer, i + 1), sizeof(sensorID));
             JsonObject dataSensor                    = sensors.createNestedObject(sensorID);
             dataSensor[PAYLOAD_EXTERNAL_SENSOR_ID]   = ds18.getDeviceID(buffer, i);
             dataSensor[PAYLOAD_EXTERNAL_SENSOR_TEMP] = sensorValue;
+*/
         }
     }
 
