@@ -99,7 +99,7 @@ extern struct rst_info resetInfo;
 #define MQTT_MAX_PAYLOAD_SIZE 700           // max size of a JSON object. See https://arduinojson.org/v6/assistant/
 #define MQTT_MAX_PAYLOAD_SIZE_LARGE 2000    // max size of a large JSON object, like for sending MQTT log
 #define MQTT_QUEUE_MAX_SIZE 20              // Size of the MQTT queue
-#define MQTT_PUBLISH_WAIT 1000              // every 2 seconds check MQTT queue
+#define MQTT_PUBLISH_WAIT 100              // every 0.1 seconds check MQTT queue
 
 // Internal MQTT events
 #define MQTT_CONNECT_EVENT 0
