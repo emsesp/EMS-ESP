@@ -97,7 +97,7 @@ extern struct rst_info resetInfo;
 #define MQTT_WILL_TOPIC "status"            // for last will & testament topic name
 #define MQTT_MAX_TOPIC_SIZE 50              // max length of MQTT topic
 #define MQTT_QUEUE_MAX_SIZE 50              // Size of the MQTT queue
-#define MQTT_PUBLISH_WAIT 750               // time in ms before sending MQTT messages
+#define MQTT_PUBLISH_WAIT 250               // time in ms before sending MQTT messages
 #define MQTT_PUBLISH_MAX_RETRY 4            // max retries for giving up on publishing
 #define MYESP_JSON_MAXSIZE_LARGE 2000       // for large Dynamic json files - https://arduinojson.org/v6/assistant/
 #define MYESP_JSON_MAXSIZE_MEDIUM 800       // for medium Dynamic json files - https://arduinojson.org/v6/assistant/
