@@ -283,7 +283,7 @@ void ICACHE_FLASH_ATTR irtuart_init() {
 
     // set 4800, 8 bits, no parity check, 1 stop bit
     USD(IRTUART_UART)  = (UART_CLK_FREQ / IRTUART_BAUD);
-    if (EMSESP_Settings.tx_mode == 5) {
+    if ((EMSESP_Settings.tx_mode == 5) || (EMSESP_Settings.tx_mode == 6) ) {
 		USC0(IRTUART_UART) = IRTUART_CONFIG_ACTIVE; // 8N1
     } else {
 		USC0(IRTUART_UART) = IRTUART_CONFIG_PASSIF; // 8N1

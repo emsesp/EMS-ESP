@@ -1161,12 +1161,12 @@ bool SetListCallback(MYESP_FSACTION action, uint8_t wc, const char * setting, co
         // tx_mode
         if ((strcmp(setting, "tx_mode") == 0) && (wc == 2)) {
             uint8_t mode = atoi(value);
-            if ((mode >= 1) && (mode <= 5)) { // see ems.h for definitions
+            if ((mode >= 1) && (mode <= 6)) { // see ems.h for definitions
                 EMSESP_Settings.tx_mode = mode;
                 ems_setTxMode(mode);
                 ok = true;
             } else {
-                myDebug_P(PSTR("Error. Usage: set tx_mode <1 | 2 | 3 | 4 | 5>"));
+                myDebug_P(PSTR("Error. Usage: set tx_mode <1 | 2 | 3 | 4 | 5 | 6>"));
             }
         }
     }
@@ -1969,7 +1969,7 @@ void setup() {
         Serial.println("Note: Serial output will now be disabled. Please use Telnet.");
         Serial.flush();
         myESP.setUseSerial(false);
-        if ((EMSESP_Settings.tx_mode == 4) || (EMSESP_Settings.tx_mode == 5)) {
+        if ((EMSESP_Settings.tx_mode == 4) || (EMSESP_Settings.tx_mode == 5) || (EMSESP_Settings.tx_mode == 6)) {
 				irt_init(); // start IRT bus transmissions
 				myDebug_P(PSTR("[UART] Opened Rx/Tx connection (iRT)"));
         } else {
