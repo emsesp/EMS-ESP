@@ -632,7 +632,7 @@ void publishSensorValues() {
 
 // publish Boiler data via MQTT
 void publishEMSValues_boiler() {
-    const size_t        capacity = JSON_OBJECT_SIZE(36); // must recalculate if more objects addded https://arduinojson.org/v6/assistant/
+    const size_t        capacity = JSON_OBJECT_SIZE(41); // must recalculate if more objects addded https://arduinojson.org/v6/assistant/
     DynamicJsonDocument doc(capacity);
     JsonObject          rootBoiler = doc.to<JsonObject>();
 
@@ -1669,8 +1669,8 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             myESP.mqttSubscribe(topic_s);
         }
         // also subscribe without the HC appended to the end of the topic
-        myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_TEMP_HA);
-        myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_MODE_HA);
+        //myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_TEMP_HA);
+        //myESP.mqttSubscribe(TOPIC_THERMOSTAT_CMD_MODE_HA);
 
         // generic incoming MQTT command for Thermostat
         // this is used for example for setting daytemp, nighttemp, holidaytemp
