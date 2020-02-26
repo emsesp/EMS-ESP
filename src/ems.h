@@ -390,13 +390,15 @@ typedef struct {
     char         version[10];
     int16_t      collectorTemp;          // collector temp
     int16_t      bottomTemp;             // bottom temp
+    int16_t      bottomTemp2;            // bottom temp
     uint8_t      pumpModulation;         // modulation solar pump
     uint8_t      pump;                   // pump active
+    uint8_t      valveStatus;            // valve status (VS2)
     int16_t      setpoint_maxBottomTemp; // setpoint for maximum collector temp
     uint16_t     EnergyLastHour;
     uint16_t     EnergyToday;
     uint16_t     EnergyTotal;
-    uint32_t     pumpWorkMin; // Total solar pump operating time
+    uint32_t     pumpWorkMin;            // Total solar pump operating time
 } _EMS_SolarModule;
 
 // heating circuit

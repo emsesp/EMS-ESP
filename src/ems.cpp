@@ -195,8 +195,10 @@ void ems_init() {
     // Solar Module values
     EMS_SolarModule.collectorTemp          = EMS_VALUE_SHORT_NOTSET; // collector temp from SM10/SM100/SM200
     EMS_SolarModule.bottomTemp             = EMS_VALUE_SHORT_NOTSET; // bottom temp from SM10/SM100/SM200
+    EMS_SolarModule.bottomTemp2            = EMS_VALUE_SHORT_NOTSET; // bottom temp 2 from SM200
     EMS_SolarModule.pumpModulation         = EMS_VALUE_INT_NOTSET;   // modulation solar pump SM10/SM100/SM200
     EMS_SolarModule.pump                   = EMS_VALUE_BOOL_NOTSET;  // pump active
+    EMS_SolarModule.valveStatus            = EMS_VALUE_BOOL_NOTSET;  // Status of 3-way-valve SM200
     EMS_SolarModule.EnergyLastHour         = EMS_VALUE_USHORT_NOTSET;
     EMS_SolarModule.EnergyToday            = EMS_VALUE_USHORT_NOTSET;
     EMS_SolarModule.EnergyTotal            = EMS_VALUE_USHORT_NOTSET;
@@ -204,7 +206,7 @@ void ems_init() {
     EMS_SolarModule.product_id             = EMS_ID_NONE;
     EMS_SolarModule.pumpWorkMin            = EMS_VALUE_LONG_NOTSET;
     EMS_SolarModule.setpoint_maxBottomTemp = EMS_VALUE_SHORT_NOTSET;
-
+ 
     // Other EMS devices values
     EMS_HeatPump.HPModulation = EMS_VALUE_INT_NOTSET;
     EMS_HeatPump.HPSpeed      = EMS_VALUE_INT_NOTSET;
@@ -1502,6 +1504,7 @@ void _process_SM10Monitor(_EMS_RxTelegram * EMS_RxTelegram) {
 void _process_SM100Monitor(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_SolarModule.collectorTemp, 0); // is *10
     _setValue(EMS_RxTelegram, &EMS_SolarModule.bottomTemp, 2);    // is *10
+    _setValue(EMS_RxTelegram, &EMS_SolarModule.bottomTemp2, 16);  // is *10
 }
 
 /*
@@ -1517,7 +1520,8 @@ void _process_SM100Status(_EMS_RxTelegram * EMS_RxTelegram) {
  * SM100Status2 - type 0x026A EMS+ for pump on/off at offset 0x0A
  */
 void _process_SM100Status2(_EMS_RxTelegram * EMS_RxTelegram) {
-    _setValue(EMS_RxTelegram, &EMS_SolarModule.pump, 10, 2); // 03=off 04=on
+    _setValue(EMS_RxTelegram, &EMS_SolarModule.pump, 10, 2);       // 03=off 04=on
+    _setValue(EMS_RxTelegram, &EMS_SolarModule.valveStatus, 4, 2); // 03=off 04=on
 }
 
 /*

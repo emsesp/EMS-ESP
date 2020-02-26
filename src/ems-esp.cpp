@@ -385,8 +385,14 @@ void showInfo() {
         myDebug_P(PSTR("  Solar module: %s"), ems_getDeviceDescription(EMS_DEVICE_TYPE_SOLAR, buffer_type));
         _renderShortValue("Collector temperature", "C", EMS_SolarModule.collectorTemp);
         _renderShortValue("Bottom temperature", "C", EMS_SolarModule.bottomTemp);
+        if (EMS_SolarModule.bottomTemp2 <= EMS_VALUE_SHORT_NOTSET) {
+            _renderShortValue("Bottom temperature2", "C", EMS_SolarModule.bottomTemp2);
+        }
         _renderIntValue("Pump modulation", "%", EMS_SolarModule.pumpModulation);
         _renderBoolValue("Pump active", EMS_SolarModule.pump);
+        if (EMS_SolarModule.valveStatus != EMS_VALUE_BOOL_NOTSET) {
+            _renderBoolValue("Valve active", EMS_SolarModule.valveStatus);
+        }
         if (EMS_SolarModule.pumpWorkMin != EMS_VALUE_LONG_NOTSET) {
             myDebug_P(PSTR("  Pump working time: %d days %d hours %d minutes"),
                       EMS_SolarModule.pumpWorkMin / 1440,
@@ -934,6 +940,9 @@ void publishEMSValues_solar() {
     if (EMS_SolarModule.bottomTemp > EMS_VALUE_SHORT_NOTSET) {
         rootSM[SM_BOTTOMTEMP] = (float)EMS_SolarModule.bottomTemp / 10;
     }
+    if (EMS_SolarModule.bottomTemp2 > EMS_VALUE_SHORT_NOTSET) {
+        rootSM[SM_BOTTOMTEMP2] = (float)EMS_SolarModule.bottomTemp2 / 10;
+    }
     if (EMS_SolarModule.pumpModulation != EMS_VALUE_INT_NOTSET) {
         rootSM[SM_PUMPMODULATION] = EMS_SolarModule.pumpModulation;
     }
@@ -952,6 +961,10 @@ void publishEMSValues_solar() {
     }
     if (EMS_SolarModule.EnergyTotal < EMS_VALUE_USHORT_NOTSET) {
         rootSM[SM_ENERGYTOTAL] = (float)EMS_SolarModule.EnergyTotal / 10;
+    }
+    if (EMS_SolarModule.valveStatus != EMS_VALUE_BOOL_NOTSET) {
+        char s[20];
+        rootSM[SM_VALVE] = _bool_to_char(s, EMS_SolarModule.valveStatus);
     }
 
     myDebugLog("Publishing solar module data via MQTT");

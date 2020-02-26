@@ -62,8 +62,10 @@
 #define TOPIC_SM_DATA "sm_data"            // topic name
 #define SM_COLLECTORTEMP "collectortemp"   // collector temp
 #define SM_BOTTOMTEMP "bottomtemp"         // bottom temp
+#define SM_BOTTOMTEMP2 "bottomtemp2"       // bottom temp 2. cylinder
 #define SM_PUMPMODULATION "pumpmodulation" // pump modulation
 #define SM_PUMP "pump"                     // pump active
+#define SM_VALVE "valve"                   // valve active
 #define SM_ENERGYLASTHOUR "energylasthour" // energy last hour
 #define SM_ENERGYTODAY "energytoday"       // energy today
 #define SM_ENERGYTOTAL "energytotal"       // energy total
