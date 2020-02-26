@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include "irt.h"
-#include "ems_devices.h"
+//#include "ems_devices.h"
 #include "MyESP.h"
 #include "irtuart.h"
 #include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
@@ -17,13 +17,19 @@
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
 
-extern _EMSESP_Settings EMSESP_Settings;
+const uint32_t EMS_BUS_TIMEOUT        = 15000;   // timeout in ms before recognizing the ems bus is offline (15 seconds)
 
-_IRT_Sys_Status IRT_Sys_Status; // EMS Status
+extern _EMSESP_Settings EMSESP_Settings;
+_EMS_Boiler EMS_Boiler;
+_EMS_Thermostat  EMS_Thermostat;
+// for storing all detected EMS devices
+std::list<_Generic_Device> Devices;
+
+_IRT_Sys_Status IRT_Sys_Status; // iRT Status
+_EMS_Sys_Status EMS_Sys_Status; // EMS Status
 
 CircularBuffer<_IRT_TxTelegram, IRT_TX_TELEGRAM_QUEUE_MAX> IRT_TxQueue; // FIFO queue for Tx send buffer
 
-extern _EMS_Boiler EMS_Boiler;
 
 char * _hextoa(uint8_t value, char * buffer);
 char * _smallitoa(uint8_t value, char * buffer);
@@ -57,10 +63,10 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 	strlcat(output_str, prefix, sizeof(output_str));
 
 	// show some EMS_Sys_Status entries
-	strlcat(output_str, _hextoa(EMS_Sys_Status.emsRxStatus, buffer), sizeof(output_str));
-	strlcat(output_str, " ", sizeof(output_str));
-	strlcat(output_str, _hextoa(EMS_Sys_Status.emsTxStatus, buffer), sizeof(output_str));
-	strlcat(output_str, " ", sizeof(output_str));
+//	strlcat(output_str, _hextoa(EMS_Sys_Status.emsRxStatus, buffer), sizeof(output_str));
+//	strlcat(output_str, " ", sizeof(output_str));
+//	strlcat(output_str, _hextoa(EMS_Sys_Status.emsTxStatus, buffer), sizeof(output_str));
+//	strlcat(output_str, " ", sizeof(output_str));
 	strlcat(output_str, _hextoa(length, buffer), sizeof(output_str));
 	strlcat(output_str, ": ", sizeof(output_str));
 
@@ -151,10 +157,11 @@ uint8_t irt_handle_0x07(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	EMS_Thermostat.write_supported = EMS_THERMOSTAT_WRITE_NO;
 	EMS_Thermostat.product_id      = 0x01;
 	strlcpy(EMS_Thermostat.version, "1.0", sizeof(EMS_Thermostat.version));
-	uint8_t hc = 0;
-	EMS_Thermostat.hc[hc].active = true;
-	EMS_Thermostat.hc[hc].setpoint_roomTemp = (data[1] * 3);
+//	uint8_t hc = 0;
+//	EMS_Thermostat.hc[hc].active = true;
+//	EMS_Thermostat.hc[hc].setpoint_roomTemp = (data[1] * 3);
 
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_THERMOSTAT);
 	return 0;
 }
 
@@ -236,6 +243,7 @@ uint8_t irt_handle_0x82(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	} else {
 		EMS_Boiler.heatingActive = 0;
 	}
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 
 	return 0;
 }
@@ -299,6 +307,7 @@ uint8_t irt_handle_0x93(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	} else {
 		EMS_Boiler.heatPmp = 1;
 	}
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 
 	return 0;
 }
@@ -368,6 +377,7 @@ uint8_t irt_handle_0xA3(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	EMS_Boiler.serviceCodeChar[2] = '\0';
 
 	EMS_Boiler.serviceCode = data[4];
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 
 	return 0;
 }
@@ -377,6 +387,7 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A4 5D 17 42 19 */
 	/* A4 ?? ?? ?? ww */
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 	return 0;
 }
 uint8_t irt_handle_0xA6(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
@@ -385,6 +396,7 @@ uint8_t irt_handle_0xA6(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A6 A5 F0 1E 1C */
 	/* A6 ?? ?? cc ww */
 	EMS_Boiler.retTemp = (data[4] * 10);
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 	return 0;
 }
 
@@ -394,6 +406,7 @@ uint8_t irt_handle_0xA8(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A8 A5 F0 10 41 */
 	/* A8 ?? ?? cc ww */
 	EMS_Boiler.wWCurTmp = (data[4] * 10);
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 	return 0;
 }
 #include <limits.h>
@@ -906,6 +919,7 @@ void irt_send_next_poll_to_boiler()
 		irt_add_sub_msg(&IRT_Tx, 0xA8, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0xAA, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0xAB, 0, 0, 0);
+		irt_add_sub_msg(&IRT_Tx, 0xAC, 0, 0, 0);
 		IRT_TxQueue.push(IRT_Tx);
 		break;
 
@@ -1019,17 +1033,26 @@ void irt_sendRawTelegram(char *telegram)
 
 
 }
-
-void irt_init()
+void irt_init_uart()
 {
 	// init of irt, setup uart
 	irtuart_init();
+}
+
+void irt_init()
+{
+
 
 	IRT_Sys_Status.last_send_check = millis();
 	IRT_Sys_Status.send_interval = 4000; // in milliseconds
 	IRT_Sys_Status.poll_step = 0;
 	IRT_Sys_Status.my_address = 1;
 	IRT_Sys_Status.req_water_temp = 0;
+}
+
+void irt_setup()
+{
+	irtuart_setup();
 }
 
 void irt_start()
@@ -1041,4 +1064,107 @@ void irt_stop()
 {
 	// called before OTA update starts
 	irtuart_stop();
+}
+
+/* --- stuff t make the compiler happy --- */
+
+_EMS_SYS_LOGGING ems_getLogging() {
+    return EMS_Sys_Status.emsLogging;
+}
+
+bool ems_getBusConnected() {
+    if ((millis() - EMS_Sys_Status.emsRxTimestamp) > EMS_BUS_TIMEOUT) {
+        EMS_Sys_Status.emsBusConnected = false;
+    }
+    return EMS_Sys_Status.emsBusConnected;
+}
+void ems_setTxDisabled(bool b) {
+    EMS_Sys_Status.emsTxDisabled = b;
+}
+
+bool ems_getTxDisabled() {
+    return (EMS_Sys_Status.emsTxDisabled);
+}
+
+void ems_setTxMode(uint8_t mode) {
+	EMS_Sys_Status.emsTxMode = mode;
+	// update hardware
+	irt_setup();
+}
+
+bool ems_getThermostatEnabled() {
+    return (EMS_Thermostat.device_id != EMS_ID_NONE);
+}
+void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool silent) {
+    if (loglevel <= EMS_SYS_LOGGING_JABBER) {
+        EMS_Sys_Status.emsLogging = loglevel;
+        if (silent) {
+            return; // don't print to telnet/serial
+        }
+
+        if (loglevel == EMS_SYS_LOGGING_NONE) {
+            myDebug_P(PSTR("System Logging set to None"));
+        } else if (loglevel == EMS_SYS_LOGGING_BASIC) {
+            myDebug_P(PSTR("System Logging set to Basic"));
+        } else if (loglevel == EMS_SYS_LOGGING_VERBOSE) {
+            myDebug_P(PSTR("System Logging set to Verbose"));
+        } else if (loglevel == EMS_SYS_LOGGING_THERMOSTAT) {
+            myDebug_P(PSTR("System Logging set to Thermostat only"));
+        } else if (loglevel == EMS_SYS_LOGGING_SOLARMODULE) {
+            myDebug_P(PSTR("System Logging set to Solar Module only"));
+        } else if (loglevel == EMS_SYS_LOGGING_RAW) {
+            myDebug_P(PSTR("System Logging set to Raw mode"));
+        } else if (loglevel == EMS_SYS_LOGGING_JABBER) {
+            myDebug_P(PSTR("System Logging set to Jabber mode"));
+        }
+    }
+}
+
+/**
+ * Set the boiler flow temp
+ */
+void ems_setFlowTemp(uint8_t temperature) {
+    myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
+
+}
+/**
+ * Activate / De-activate the Warm Water 0x33
+ * true = on, false = off
+ */
+void ems_setWarmWaterActivated(bool activated) {
+    myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
+}
+/**
+ * Set the warm water temperature 0x33
+ */
+void ems_setWarmWaterTemp(uint8_t temperature) {
+    // check for invalid temp values
+    if ((temperature < 30) || (temperature > EMS_BOILER_TAPWATER_TEMPERATURE_MAX)) {
+        return;
+    }
+
+    myDebug_P(PSTR("Setting boiler warm water temperature to %d C"), temperature);
+}
+
+bool ems_getBoilerEnabled() {
+    return (EMS_Boiler.device_id != EMS_ID_NONE);
+}
+
+/*
+ * Add one or more flags to the current flags.
+ */
+void ems_Device_add_flags(unsigned int flags) {
+    EMS_Sys_Status.emsRefreshedFlags |= flags;
+}
+/*
+ * Check if the current flags include all of the specified flags.
+ */
+bool ems_Device_has_flags(unsigned int flags) {
+    return (EMS_Sys_Status.emsRefreshedFlags & flags) == flags;
+}
+/*
+ * Remove one or more flags from the current flags.
+ */
+void ems_Device_remove_flags(unsigned int flags) {
+    EMS_Sys_Status.emsRefreshedFlags &= ~flags;
 }

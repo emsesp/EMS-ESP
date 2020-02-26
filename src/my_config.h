@@ -8,10 +8,11 @@
 
 #pragma once
 
-#include "ems.h"
+//#include "ems.h"
 
-// TOPICS with _CMD_ are used for receiving commands from an MQTT Broker
+// TOPICS with *_CMD_* are used for receiving commands from an MQTT Broker
 // EMS-ESP will subscribe to these topics
+
 #define TOPIC_GENERIC_CMD "generic_cmd" // for receiving generic system commands via MQTT
 
 // MQTT for thermostat
@@ -37,21 +38,27 @@
 #define THERMOSTAT_HEATINGTYPE "heatingtype"         // RC35 specific (3=floorheating)
 #define THERMOSTAT_CIRCUITCALCTEMP "circuitcalctemp" // RC35 specific
 
+// mixing module
+#define MIXING_HC "hc"   // which heating circuit number
+#define MIXING_WWC "wwc" // which warm water circuit number
+
 // MQTT for boiler
 #define TOPIC_BOILER_DATA "boiler_data"                // for sending boiler values to MQTT
 #define TOPIC_BOILER_TAPWATER_ACTIVE "tapwater_active" // if hot tap water is running
 #define TOPIC_BOILER_HEATING_ACTIVE "heating_active"   // if heating is on
 
-#define TOPIC_BOILER_CMD "boiler_cmd"                         // for receiving boiler commands via MQTT
-#define TOPIC_BOILER_CMD_WWACTIVATED "boiler_cmd_wwactivated" // change water on/off
-#define TOPIC_BOILER_CMD_WWTEMP "boiler_cmd_wwtemp"           // wwtemp changes via MQTT
-#define TOPIC_BOILER_CMD_COMFORT "comfort"                    // ww comfort setting via MQTT
-#define TOPIC_BOILER_CMD_FLOWTEMP "flowtemp"                  // flowtemp value via MQTT
+#define TOPIC_BOILER_CMD "boiler_cmd"                             // for receiving boiler commands via MQTT
+#define TOPIC_BOILER_CMD_WWACTIVATED "boiler_cmd_wwactivated"     // change water on/off
+#define TOPIC_BOILER_CMD_WWONETIME "boiler_cmd_wwonetime"         // warm warter one time loading
+#define TOPIC_BOILER_CMD_WWCIRCULATION "boiler_cmd_wwcirculation" // start warm warter circulation
+#define TOPIC_BOILER_CMD_WWTEMP "boiler_cmd_wwtemp"               // wwtemp changes via MQTT
+#define TOPIC_BOILER_CMD_COMFORT "comfort"                        // ww comfort setting via MQTT
+#define TOPIC_BOILER_CMD_FLOWTEMP "flowtemp"                      // flowtemp value via MQTT
 
 // MQTT for mixing device
 #define TOPIC_MIXING_DATA "mixing_data" // for sending mixing device values to MQTT
 
-// MQTT for SM10/SM100 Solar Module
+// MQTT for SM10/SM100/SM200 Solar Module
 #define TOPIC_SM_DATA "sm_data"            // topic name
 #define SM_COLLECTORTEMP "collectortemp"   // collector temp
 #define SM_BOTTOMTEMP "bottomtemp"         // bottom temp
@@ -75,5 +82,7 @@
 #define TOPIC_SHOWER_DURATION "duration" // duration of the last shower
 
 // MQTT for External Sensors
-#define TOPIC_EXTERNAL_SENSORS "sensors"   // for sending sensor values to MQTT
-#define PAYLOAD_EXTERNAL_SENSORS "temp_%d" // for formatting the payload for each external dallas sensor
+#define TOPIC_EXTERNAL_SENSORS "sensors"     // topic for sending sensor values to MQTT
+#define PAYLOAD_EXTERNAL_SENSOR_NUM "sensor" // which sensor #
+#define PAYLOAD_EXTERNAL_SENSOR_ID "id"
+#define PAYLOAD_EXTERNAL_SENSOR_TEMP "temp"

@@ -1,5 +1,5 @@
-# IRT-EMS-ESP
-IRT-EMS-ESP is a project to build an electronic controller circuit using an Espressif ESP8266 micro controller to communicate with iRT based Boilers from the Nefit Ecomline HR Classic range and compatibles such as Buderus.
+# IRT-ESP
+IRT-ESP is a project to build an electronic controller circuit using an Espressif ESP8266 micro controller to communicate with iRT based Boilers from the Nefit Ecomline HR Classic range and compatibles such as Buderus.
 
 This project is a fork of the [Proddy EMS-ESP](https://github.com/proddy/EMS-ESP) project.
 

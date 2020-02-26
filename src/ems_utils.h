@@ -1,6 +1,6 @@
 /*
  * Generic utils
- * 
+ *
  * Paul Derbyshire - https://github.com/proddy/EMS-ESP
  *
  */
@@ -9,7 +9,7 @@
 #pragma once
 
 #include "MyESP.h"
-#include "ems.h"
+#include "irt.h"
 
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)

@@ -1,5 +1,5 @@
 /*
- * MyESP.h
+ * MyESP.h - does all the basics like WiFI/MQTT/NTP/Debug logs etc
  *
  * Paul Derbyshire - first version December 2018
  */
@@ -9,16 +9,24 @@
 #ifndef MyESP_h
 #define MyESP_h
 
-#define MYESP_VERSION "1.2.12"
+#define MYESP_VERSION "1.2.30"
 
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
-#include <AsyncMqttClient.h> // https://github.com/marvinroger/async-mqtt-client and for ESP32 see https://github.com/marvinroger/async-mqtt-client/issues/127
-#include <ESPAsyncUDP.h>
+#include <AsyncMqttClient.h>
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
-#include <JustWifi.h> // https://github.com/xoseperez/justwifi
+#include <JustWifi.h>
+#include <deque> // for MQTT publish queue
 
+// SysLog
+#include <uuid/common.h>
+#include <uuid/log.h>
+#include <uuid/syslog.h>
+static uuid::syslog::SyslogService syslog;
+enum MYESP_SYSLOG_LEVEL : uint8_t { MYESP_SYSLOG_INFO, MYESP_SYSLOG_ERROR };
+
+// local libraries
 #include "Ntp.h"
 #include "TelnetSpy.h" // modified from https://github.com/yasheena/telnetspy
 
@@ -54,7 +62,8 @@ extern struct rst_info resetInfo;
 
 #define MYESP_CONFIG_FILE "/myesp.json"
 #define MYESP_CUSTOMCONFIG_FILE "/customconfig.json"
-#define MYESP_EVENTLOG_FILE "/eventlog.json"
+#define MYESP_OLD_EVENTLOG_FILE "/eventlog.json" // depreciated
+#define MYESP_OLD_CONFIG_FILE "/config.json"     // depreciated
 
 #define MYESP_HTTP_USERNAME "admin" // HTTP username
 #define MYESP_HTTP_PASSWORD "admin" // default password
@@ -66,6 +75,9 @@ extern struct rst_info resetInfo;
 // WIFI
 #define MYESP_WIFI_CONNECT_TIMEOUT 20000     // Connecting timeout for WIFI in ms (20 seconds)
 #define MYESP_WIFI_RECONNECT_INTERVAL 600000 // If could not connect to WIFI, retry after this time in ms. 10 minutes
+
+// set to value >0 if the ESP is overheating or there are timing issues. Recommend a value of 1.
+#define MYESP_DELAY 1
 
 // MQTT
 #define MQTT_PORT 1883                  // MQTT port
@@ -84,17 +96,17 @@ extern struct rst_info resetInfo;
 #define MQTT_QOS 0                          // default qos 0
 #define MQTT_WILL_TOPIC "status"            // for last will & testament topic name
 #define MQTT_MAX_TOPIC_SIZE 50              // max length of MQTT topic
-#define MQTT_MAX_PAYLOAD_SIZE 700           // max size of a JSON object. See https://arduinojson.org/v6/assistant/
-#define MQTT_MAX_PAYLOAD_SIZE_LARGE 2000    // max size of a large JSON object, like for sending MQTT log
+#define MQTT_QUEUE_MAX_SIZE 50              // Size of the MQTT queue
+#define MQTT_PUBLISH_WAIT 750               // time in ms before sending MQTT messages
+#define MQTT_PUBLISH_MAX_RETRY 4            // max retries for giving up on publishing
+#define MYESP_JSON_MAXSIZE_LARGE 2000       // for large Dynamic json files - https://arduinojson.org/v6/assistant/
+#define MYESP_JSON_MAXSIZE_MEDIUM 800       // for medium Dynamic json files - https://arduinojson.org/v6/assistant/
+#define MYESP_JSON_MAXSIZE_SMALL 200        // for smaller Static json documents - https://arduinojson.org/v6/assistant/
 
 // Internal MQTT events
 #define MQTT_CONNECT_EVENT 0
 #define MQTT_DISCONNECT_EVENT 1
 #define MQTT_MESSAGE_EVENT 2
-
-#define MYESP_JSON_MAXSIZE 2000    // for large Dynamic json files
-#define MYESP_MQTTLOG_MAX 60       // max number of log entries for MQTT publishes and subscribes
-#define MYESP_JSON_LOG_MAXSIZE 300 // max size of an JSON log entry
 
 #define MYESP_MQTT_PAYLOAD_ON '1'  // for MQTT switch on
 #define MYESP_MQTT_PAYLOAD_OFF '0' // for MQTT switch off
@@ -102,6 +114,7 @@ extern struct rst_info resetInfo;
 // Telnet
 #define TELNET_SERIAL_BAUD 115200
 #define TELNET_MAX_COMMAND_LENGTH 80 // length of a command
+#define TELNET_MAX_BUFFER_LENGTH 700 // max length of telnet string
 #define TELNET_EVENT_CONNECT 1
 #define TELNET_EVENT_DISCONNECT 0
 #define TELNET_EVENT_SHOWCMD 10
@@ -142,10 +155,9 @@ PROGMEM const char * const custom_reset_string[]   = {custom_reset_hardware, cus
 #define CUSTOM_RESET_FACTORY 5  // Factory reset
 #define CUSTOM_RESET_MAX 5
 
-// SPIFFS
+// SPIFFS - max allocation is 1000 KB
 // https://arduinojson.org/v6/assistant/
-#define MYESP_SPIFFS_MAXSIZE_CONFIG 800     // max size for a config file
-#define MYESP_SPIFFS_MAXSIZE_EVENTLOG 20000 // max size for the eventlog in bytes
+#define MYESP_SPIFFS_MAXSIZE_CONFIG 999 // max size for a config file
 
 // CRASH
 /**
@@ -197,41 +209,41 @@ struct RtcmemData {
 
 static_assert(sizeof(RtcmemData) <= (RTCMEM_BLOCKS * 4u), "RTCMEM struct is too big");
 
-#define MYESP_SYSTEM_CHECK_TIME 60000   // The system is considered stable after these many millis (1 minute)
-#define MYESP_SYSTEM_CHECK_MAX 10       // After this many crashes on boot
-#define MYESP_HEARTBEAT_INTERVAL 120000 // in milliseconds, how often the MQTT heartbeat is sent (2 mins)
+#define MYESP_SYSTEM_CHECK_TIME 60000  // The system is considered stable after these many millis (1 min)
+#define MYESP_SYSTEM_CHECK_MAX 10      // After this many crashes on boot
+#define MYESP_HEARTBEAT_INTERVAL 60000 // in milliseconds, how often the MQTT heartbeat is sent (1 min)
 
 typedef struct {
-    bool set; // is it a set command
+    bool set; // is it a set command?
     char key[50];
-    char description[100];
+    char description[110];
 } command_t;
 
-typedef enum { MYESP_FSACTION_SET, MYESP_FSACTION_LIST, MYESP_FSACTION_SAVE, MYESP_FSACTION_LOAD } MYESP_FSACTION;
+typedef enum {
+    MYESP_FSACTION_SET,
+    MYESP_FSACTION_LIST,
+    MYESP_FSACTION_SAVE,
+    MYESP_FSACTION_LOAD,
+    MYESP_FSACTION_ERR,
+    MYESP_FSACTION_OK,
+    MYESP_FSACTION_RESTART
+} MYESP_FSACTION_t;
 
 typedef enum {
     MYESP_BOOTSTATUS_POWERON     = 0,
     MYESP_BOOTSTATUS_BOOTED      = 1,
     MYESP_BOOTSTATUS_BOOTING     = 2,
     MYESP_BOOTSTATUS_RESETNEEDED = 3
-} MYESP_BOOTSTATUS; // boot messages
+} MYESP_BOOTSTATUS_t; // boot messages
 
-// for storing all MQTT publish messages
-typedef struct {
-    uint8_t type; // 0=none, 1=publish, 2=subscribe
-    char *  topic;
-    char *  payload;
-    time_t  timestamp;
-} _MQTT_Log;
-
-typedef std::function<void(unsigned int, const char *, const char *)>            mqtt_callback_f;
-typedef std::function<void()>                                                    wifi_callback_f;
-typedef std::function<void()>                                                    ota_callback_f;
-typedef std::function<void(uint8_t, const char *)>                               telnetcommand_callback_f;
-typedef std::function<void(uint8_t)>                                             telnet_callback_f;
-typedef std::function<bool(MYESP_FSACTION, JsonObject json)>                     fs_loadsave_callback_f;
-typedef std::function<bool(MYESP_FSACTION, uint8_t, const char *, const char *)> fs_setlist_callback_f;
-typedef std::function<void(JsonObject root)>                                     web_callback_f;
+typedef std::function<void(unsigned int, const char *, const char *)>                          mqtt_callback_f;
+typedef std::function<void()>                                                                  wifi_callback_f;
+typedef std::function<void()>                                                                  ota_callback_f;
+typedef std::function<void(uint8_t, const char *)>                                             telnetcommand_callback_f;
+typedef std::function<void(uint8_t)>                                                           telnet_callback_f;
+typedef std::function<bool(MYESP_FSACTION_t, JsonObject json)>                                 fs_loadsave_callback_f;
+typedef std::function<MYESP_FSACTION_t(MYESP_FSACTION_t, uint8_t, const char *, const char *)> fs_setlist_callback_f;
+typedef std::function<void(JsonObject root)>                                                   web_callback_f;
 
 // calculates size of an 2d array at compile time
 template <typename T, size_t N>
@@ -240,12 +252,9 @@ constexpr size_t ArraySize(T (&)[N]) {
 }
 
 #define MYESP_UPTIME_OVERFLOW 4294967295 // Uptime overflow value
-
-// web min and max length of wifi ssid and password
-#define MYESP_MAX_STR_LEN 16
-
-#define MYESP_BOOTUP_FLASHDELAY 50 // flash duration for LED at bootup sequence
-#define MYESP_BOOTUP_DELAY 2000    // time before we open the window to reset. This is to stop resetting values when uploading firmware via USB
+#define MYESP_MAX_STR_LEN 16             // web min and max length of wifi ssid and password
+#define MYESP_BOOTUP_FLASHDELAY 50       // flash duration for LED at bootup sequence
+#define MYESP_BOOTUP_DELAY 2000          // time before we open the window to reset. This is to stop resetting values when uploading firmware via USB
 
 // class definition
 class MyESP {
@@ -261,9 +270,6 @@ class MyESP {
     MyESP();
     ~MyESP();
 
-    // write event called from within lambda classs
-    static void _writeEvent(const char * type, const char * src, const char * desc, const char * data);
-
     // wifi
     void setWIFICallback(void (*callback)());
     void setWIFI(wifi_callback_f callback);
@@ -274,9 +280,12 @@ class MyESP {
     bool isMQTTConnected();
     bool mqttSubscribe(const char * topic);
     void mqttUnsubscribe(const char * topic);
-    bool mqttPublish(const char * topic, const char * payload);
-    bool mqttPublish(const char * topic, const char * payload, bool retain);
+    void mqttPublish(const char * topic, const char * payload);
+    void mqttPublish(const char * topic, const char * payload, bool retain);
+    void mqttPublish(const char * topic, JsonDocument payload);
+    void mqttPublish(const char * topic, JsonDocument payload, bool retain);
     void setMQTT(mqtt_callback_f callback);
+    bool mqttUseNestedJson();
 
     // OTA
     void setOTA(ota_callback_f OTACallback_pre, ota_callback_f OTACallback_post);
@@ -288,13 +297,18 @@ class MyESP {
     bool getUseSerial();
     void setUseSerial(bool toggle);
 
+    // syslog
+    void writeLogEvent(const uint8_t type, const char * msg);
+
     // FS
     void setSettings(fs_loadsave_callback_f loadsave, fs_setlist_callback_f setlist, bool useSerial = true);
+    void saveSettings();
     bool fs_saveConfig(JsonObject root);
     bool fs_saveCustomConfig(JsonObject root);
     bool fs_setSettingValue(char ** setting, const char * value, const char * value_default);
     bool fs_setSettingValue(uint16_t * setting, const char * value, uint16_t value_default);
     bool fs_setSettingValue(uint8_t * setting, const char * value, uint8_t value_default);
+    bool fs_setSettingValue(int8_t * setting, const char * value, int8_t value_default);
     bool fs_setSettingValue(bool * setting, const char * value, bool value_default);
 
     // Web
@@ -306,33 +320,34 @@ class MyESP {
     void crashInfo();
 
     // general
-    void     end();
-    void     loop();
-    void     begin(const char * app_hostname, const char * app_name, const char * app_version, const char * app_url, const char * app_updateurl);
-    void     resetESP();
-    int      getWifiQuality();
-    void     showSystemStats();
-    bool     getHeartbeat();
-    uint32_t getSystemLoadAverage();
-    uint32_t getSystemResetReason();
-    uint8_t  getSystemBootStatus();
-    bool     _have_ntp_time;
+    void          end();
+    void          loop();
+    void          begin(const char * app_hostname, const char * app_name, const char * app_version, const char * app_url, const char * app_url_api);
+    void          resetESP();
+    int           getWifiQuality();
+    void          showSystemStats();
+    bool          getHeartbeat();
+    uint32_t      getSystemLoadAverage();
+    uint32_t      getSystemResetReason();
+    uint8_t       getSystemBootStatus();
+    unsigned long getSystemTime();
+    void          heartbeatPrint();
+    void          heartbeatCheck(bool force = false);
 
   private:
     // mqtt
-    void   _mqttOnMessage(char * topic, char * payload, size_t len);
-    void   _mqttConnect();
-    void   _mqtt_setup();
-    void   _mqttOnConnect();
-    void   _sendStart();
-    char * _mqttTopic(const char * topic);
-
-    // mqtt log
-    _MQTT_Log MQTT_log[MYESP_MQTTLOG_MAX]; // log for publish and subscribe messages
-
-    void _printMQTTLog();
-    void _addMQTTLog(const char * topic, const char * payload, const uint8_t type);
-
+    void            _mqttOnMessage(char * topic, char * payload, size_t len);
+    void            _mqttOnPublish(uint16_t packetId);
+    void            _mqttConnect();
+    void            _mqtt_setup();
+    void            _mqttOnConnect();
+    void            _sendStart();
+    char *          _mqttTopic(const char * topic);
+    bool            _mqttQueue(const char * topic, const char * payload, bool retain);
+    bool            _mqttQueue(const char * topic, JsonDocument payload, bool retain);
+    void            _printMQTTLog();
+    void            _mqttPublishQueue();
+    void            _mqttRemoveLastPublish();
     AsyncMqttClient mqttClient; // the MQTT class
     uint32_t        _mqtt_reconnect_delay;
     mqtt_callback_f _mqtt_callback_f;
@@ -351,6 +366,8 @@ class MyESP {
     uint32_t        _mqtt_last_connection;
     bool            _mqtt_connecting;
     bool            _mqtt_heartbeat;
+    bool            _mqtt_nestedjson;
+    uint16_t        _mqtt_publish_fails;
 
     // wifi
     void            _wifiCallback(justwifi_messages_t code, char * parameter);
@@ -359,6 +376,10 @@ class MyESP {
     char *          _network_ssid;
     char *          _network_password;
     uint8_t         _network_wmode;
+    char *          _network_staticip;
+    char *          _network_gatewayip;
+    char *          _network_nmask;
+    char *          _network_dnsip;
     bool            _wifi_connected;
     String          _getESPhostname();
 
@@ -371,7 +392,7 @@ class MyESP {
     // crash
     void _eeprom_setup();
 
-    // telnet & debug
+    // telnet
     TelnetSpy                SerialAndTelnet;
     void                     _telnetConnected();
     void                     _telnetDisconnected();
@@ -385,21 +406,22 @@ class MyESP {
     telnet_callback_f        _telnet_callback_f;        // callback for connect/disconnect
     bool                     _changeSetting(uint8_t wc, const char * setting, const char * value);
 
-    // fs and settings
-    void   _fs_setup();
-    bool   _fs_loadConfig();
-    bool   _fs_loadCustomConfig();
-    void   _fs_eraseConfig();
-    bool   _fs_writeConfig();
-    bool   _fs_createCustomConfig();
-    bool   _fs_sendConfig();
-    size_t _fs_validateConfigFile(const char * filename, size_t maxsize, JsonDocument & doc);
-    size_t _fs_validateLogFile(const char * filename);
+    // syslog
+    void _syslog_setup();
 
+    // fs and settings
+    void                   _fs_setup();
+    bool                   _fs_loadConfig();
+    bool                   _fs_loadCustomConfig();
+    void                   _fs_eraseConfig();
+    bool                   _fs_writeConfig();
+    bool                   _fs_createCustomConfig();
+    bool                   _fs_sendConfig();
+    size_t                 _fs_validateConfigFile(const char * filename, size_t maxsize, JsonDocument & doc);
+    size_t                 _fs_validateLogFile(const char * filename);
     fs_loadsave_callback_f _fs_loadsave_callback_f;
     fs_setlist_callback_f  _fs_setlist_callback_f;
-
-    void _printSetCommands();
+    void                   _printSetCommands();
 
     // general
     char *        _general_hostname;
@@ -407,9 +429,11 @@ class MyESP {
     char *        _app_version;
     char *        _app_url;
     char *        _app_updateurl;
+    char *        _app_updateurl_dev;
     bool          _suspendOutput;
     bool          _general_serial;
     bool          _general_log_events;
+    char *        _general_log_ip;
     char *        _buildTime;
     bool          _timerequest;
     bool          _formatreq;
@@ -417,36 +441,30 @@ class MyESP {
     char *        _getBuildTime();
     bool          _hasValue(const char * s);
     void          _printHeap(const char * s);
+    void          _kick();
 
     // reset reason and rtcmem
-    bool _rtcmem_status;
-    bool _rtcmemStatus();
-    bool _getRtcmemStatus();
-
-    void _rtcmemInit();
-    void _rtcmemSetup();
-
-    void _deferredReset(unsigned long delay, uint8_t reason);
-
+    bool    _rtcmem_status;
+    bool    _rtcmemStatus();
+    bool    _getRtcmemStatus();
+    void    _rtcmemInit();
+    void    _rtcmemSetup();
+    void    _deferredReset(unsigned long delay, uint8_t reason);
     uint8_t _getSystemStabilityCounter();
     void    _setSystemStabilityCounter(uint8_t counter);
-
     uint8_t _getSystemDropoutCounter();
     void    _setSystemDropoutCounter(uint8_t counter);
     void    _increaseSystemDropoutCounter();
-
     void    _setSystemResetReason(uint8_t reason);
     uint8_t _getCustomResetReason();
     void    _setCustomResetReason(uint8_t reason);
     uint8_t _getSystemResetReason();
-
-    void _setSystemBootStatus(uint8_t status);
-
-    bool _systemStable;
-    void _bootupSequence();
-    bool _getSystemCheck();
-    void _systemCheckLoop();
-    void _setSystemCheck(bool stable);
+    void    _setSystemBootStatus(uint8_t status);
+    bool    _systemStable;
+    void    _bootupSequence();
+    bool    _getSystemCheck();
+    void    _systemCheckLoop();
+    void    _setSystemCheck(bool stable);
 
     // load average (0..100) and heap ram
     void     _calculateLoad();
@@ -454,15 +472,9 @@ class MyESP {
     uint32_t _getInitialFreeHeap();
     uint32_t _getUsedHeap();
 
-    // heartbeat
-    void _heartbeatCheck(bool force);
-
     // web
     web_callback_f _web_callback_f;
     const char *   _http_username;
-
-    // log
-    void _sendEventLog(uint8_t page);
 
     // web
     void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t * data, size_t len);
@@ -472,14 +484,13 @@ class MyESP {
     void _printScanResult(int networksFound);
     void _sendTime();
     void _webserver_setup();
-    void _webRootPage();
-    void _webResetPage();
-    void _webResetAllPage();
 
     // ntp
-    char *  _ntp_server;
-    uint8_t _ntp_interval;
-    bool    _ntp_enabled;
+    char *   _ntp_server;
+    uint16_t _ntp_interval;
+    bool     _ntp_enabled;
+    uint8_t  _ntp_timezone;
+    bool     _have_ntp_time;
 };
 
 extern MyESP myESP;

@@ -56,6 +56,7 @@ typedef struct {
 } _IRTTxBuf;
 
 void ICACHE_FLASH_ATTR irtuart_init();
+void ICACHE_FLASH_ATTR irtuart_setup();
 void ICACHE_FLASH_ATTR irtuart_stop();
 void ICACHE_FLASH_ATTR irtuart_start();
 

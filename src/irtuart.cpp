@@ -8,13 +8,15 @@
 #include "irtuart.h"
 #include "irt.h"
 #include <user_interface.h>
-#include "ems.h"
+//#include "ems.h"
 
 #include "MyESP.h"
 // MyESP class for logging to telnet and serial
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
 
+extern _EMS_Sys_Status  EMS_Sys_Status;
+extern _IRT_Sys_Status IRT_Sys_Status; // iRT Status
 
 _IRTRxBuf * pIRTRxBuf;
 _IRTRxBuf * paIRTRxBuf[IRT_MAXBUFFERS];
@@ -173,8 +175,8 @@ static void irtuart_rx_intr_handler(void * para) {
 	unsigned long now_millis = millis();
 
 	// is a new buffer? if so init the thing for a new telegram
-	if (EMS_Sys_Status.emsRxStatus == EMS_RX_STATUS_IDLE) {
-		EMS_Sys_Status.emsRxStatus = EMS_RX_STATUS_BUSY; // status set to busy
+	if (IRT_Sys_Status.irtRxStatus == IRT_RX_STATUS_IDLE) {
+		IRT_Sys_Status.irtRxStatus = IRT_RX_STATUS_BUSY; // status set to busy
 		length                     = 0;
 	}
 
@@ -224,7 +226,7 @@ static void irtuart_rx_intr_handler(void * para) {
         pIRTRxBuf->length = (length > IRT_MAXBUFFERSIZE) ? IRT_MAXBUFFERSIZE : length;
         os_memcpy((void *)pIRTRxBuf->buffer, (void *)&uart_buffer, pIRTRxBuf->length); // copy data into transfer buffer, including the BRK 0x00 at the end
         length                     = 0;
-        EMS_Sys_Status.emsRxStatus = EMS_RX_STATUS_IDLE; // set the status flag stating BRK has been received and we can start a new package
+        IRT_Sys_Status.irtRxStatus = IRT_RX_STATUS_IDLE; // set the status flag stating BRK has been received and we can start a new package
         ETS_UART_INTR_ENABLE();                          // re-enable UART interrupts
 
         system_os_post(IRTUART_recvTaskPrio, 0, 0); // call irtuart_recvTask() at next opportunity
@@ -259,21 +261,7 @@ static inline void ICACHE_FLASH_ATTR irtuart_flush_fifos() {
 /*
  * init UART0 driver
  */
-void ICACHE_FLASH_ATTR irtuart_init() {
-    ETS_UART_INTR_DISABLE();
-    ETS_UART_INTR_ATTACH(nullptr, nullptr);
-
-    // allocate and preset IRT Receive buffers
-    for (int i = 0; i < IRT_MAXBUFFERS; i++) {
-        _IRTRxBuf * p = (_IRTRxBuf *)malloc(sizeof(_IRTRxBuf));
-        paIRTRxBuf[i] = p;
-    }
-    pIRTRxBuf = paIRTRxBuf[0]; // preset IRT Rx Buffer
-
-    // Create a transmit buffer
-    pIRTTxBuf = (_IRTTxBuf *)malloc(sizeof(_IRTTxBuf));
-    pIRTTxBuf->valid = 0;
-    pIRTTxBuf->state = 0;
+void ICACHE_FLASH_ATTR irtuart_set_registers() {
 
     // pin settings
     PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
@@ -310,6 +298,30 @@ void ICACHE_FLASH_ATTR irtuart_init() {
     // change: we don't care about Rx Timeout - it may lead to wrong readouts
     USIE(IRTUART_UART) = (1 << UIBD) | (1 << UIFF) | (0 << UITO);
 
+}
+
+
+/*
+ * init UART0 driver
+ */
+void ICACHE_FLASH_ATTR irtuart_init() {
+    ETS_UART_INTR_DISABLE();
+    ETS_UART_INTR_ATTACH(nullptr, nullptr);
+
+    // allocate and preset IRT Receive buffers
+    for (int i = 0; i < IRT_MAXBUFFERS; i++) {
+        _IRTRxBuf * p = (_IRTRxBuf *)malloc(sizeof(_IRTRxBuf));
+        paIRTRxBuf[i] = p;
+    }
+    pIRTRxBuf = paIRTRxBuf[0]; // preset IRT Rx Buffer
+
+    // Create a transmit buffer
+    pIRTTxBuf = (_IRTTxBuf *)malloc(sizeof(_IRTTxBuf));
+    pIRTTxBuf->valid = 0;
+    pIRTTxBuf->state = 0;
+
+    irtuart_set_registers();
+
     // set up interrupt callbacks for Rx
     system_os_task(irtuart_recvTask, IRTUART_recvTaskPrio, irtRecvTaskQueue, IRTUART_recvTaskQueueLen);
 
@@ -320,6 +332,18 @@ void ICACHE_FLASH_ATTR irtuart_init() {
     system_uart_swap();
 
     ETS_UART_INTR_ATTACH(irtuart_rx_intr_handler, nullptr);
+    ETS_UART_INTR_ENABLE();
+}
+
+
+/*
+ * init UART0 driver
+ */
+void ICACHE_FLASH_ATTR irtuart_setup() {
+    ETS_UART_INTR_DISABLE();
+
+    irtuart_set_registers();
+
     ETS_UART_INTR_ENABLE();
 }
 
