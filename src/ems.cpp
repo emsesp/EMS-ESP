@@ -198,7 +198,7 @@ void ems_init() {
     EMS_SolarModule.bottomTemp2            = EMS_VALUE_SHORT_NOTSET; // bottom temp 2 from SM200
     EMS_SolarModule.pumpModulation         = EMS_VALUE_INT_NOTSET;   // modulation solar pump SM10/SM100/SM200
     EMS_SolarModule.pump                   = EMS_VALUE_BOOL_NOTSET;  // pump active
-    EMS_SolarModule.valveStatus            = EMS_VALUE_BOOL_NOTSET;  // Status of 3-way-valve SM200
+    EMS_SolarModule.valveStatus            = EMS_VALUE_BOOL_NOTSET;  // valve status from SM200
     EMS_SolarModule.EnergyLastHour         = EMS_VALUE_USHORT_NOTSET;
     EMS_SolarModule.EnergyToday            = EMS_VALUE_USHORT_NOTSET;
     EMS_SolarModule.EnergyTotal            = EMS_VALUE_USHORT_NOTSET;
@@ -206,7 +206,7 @@ void ems_init() {
     EMS_SolarModule.product_id             = EMS_ID_NONE;
     EMS_SolarModule.pumpWorkMin            = EMS_VALUE_LONG_NOTSET;
     EMS_SolarModule.setpoint_maxBottomTemp = EMS_VALUE_SHORT_NOTSET;
- 
+
     // Other EMS devices values
     EMS_HeatPump.HPModulation = EMS_VALUE_INT_NOTSET;
     EMS_HeatPump.HPSpeed      = EMS_VALUE_INT_NOTSET;
@@ -1496,10 +1496,14 @@ void _process_SM10Monitor(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /*
- * SM100Monitor - type 0x0262 EMS+
+ * SM100Monitor - type 0x0262 EMS+ - for SM100 and SM200
+ * e.g. B0 0B FF 00 02 62 00 44 02 7A 80 00 80 00 80 00 80 00 80 00 80 00 00 7C 80 00 80 00 80 00 80
  * e.g, 30 00 FF 00 02 62 01 AC
  *      30 00 FF 18 02 62 80 00
  *      30 00 FF 00 02 62 01 A1 - for bottom temps
+ * bytes 0+1 = TS1 Temperature sensor for collector
+ * bytes 2+3 = TS2 Temperature sensor bottom cylinder 1
+ * bytes 16+17 = TS5 Temperature sensor bottom cylinder 2
  */
 void _process_SM100Monitor(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_SolarModule.collectorTemp, 0); // is *10
@@ -1508,7 +1512,7 @@ void _process_SM100Monitor(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /*
- * SM100Status - type 0x0264 EMS+ for pump modulation
+ * SM100Status - type 0x0264 EMS+ for pump modulation - for SM100 and SM200
  * e.g. 30 00 FF 09 02 64 64 = 100%
  *      30 00 FF 09 02 64 1E = 30%
  */
@@ -1517,11 +1521,14 @@ void _process_SM100Status(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /*
- * SM100Status2 - type 0x026A EMS+ for pump on/off at offset 0x0A
+ * SM100Status2 - type 0x026A EMS+ for pump on/off at offset 0x0A - for SM100 and SM200
+ * e.g. B0 00 FF 00 02 6A 03 03 03 03 01 03 03 03 03 03 01 03 
+ * byte 4 = VS2 3-way valve for cylinder 2 : test=01, on=04 and off=03
+ * byte 10 = PS1 Solar circuit pump for collector array 1: test=01, on=04 and off=03
  */
 void _process_SM100Status2(_EMS_RxTelegram * EMS_RxTelegram) {
-    _setValue(EMS_RxTelegram, &EMS_SolarModule.pump, 10, 2);       // 03=off 04=on
     _setValue(EMS_RxTelegram, &EMS_SolarModule.valveStatus, 4, 2); // 03=off 04=on
+    _setValue(EMS_RxTelegram, &EMS_SolarModule.pump, 10, 2);       // 03=off 04=on
 }
 
 /*
@@ -2002,7 +2009,7 @@ void ems_getSolarModuleValues() {
         if (EMS_SolarModule.device_flags == EMS_DEVICE_FLAG_SM10) {
             ems_doReadCommand(EMS_TYPE_SM10Monitor, EMS_SolarModule.device_id); // fetch all from SM10Monitor
         } else if (EMS_SolarModule.device_flags == EMS_DEVICE_FLAG_SM100) {
-            ems_doReadCommand(EMS_TYPE_SM100Monitor, EMS_SolarModule.device_id); // fetch all from SM100Monitor
+            ems_doReadCommand(EMS_TYPE_SM100Monitor, EMS_SolarModule.device_id); // fetch all from SM100Monitor (also for SM200)
         }
     }
 }
@@ -2290,6 +2297,16 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
     EMS_TxTelegram.action = EMS_TX_TELEGRAM_WRITE;
     EMS_TxTelegram.dest   = device_id;
 
+    char s[10] = {0};
+    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
+                  _float_to_char(s, temperature),
+                  hc_num,
+                  temptype);
+    } else {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d"), _float_to_char(s, temperature), hc_num);
+    }
+
     if (model == EMS_DEVICE_FLAG_RC20) {
         EMS_TxTelegram.type               = EMS_TYPE_RC20Set;
         EMS_TxTelegram.offset             = EMS_OFFSET_RC20Set_temp;
@@ -2345,24 +2362,14 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
             break;
         default:
         case 0: // automatic selection, if no type is defined, we use the standard code
-            // https://github.com/proddy/EMS-ESP/issues/310
             if (model == EMS_DEVICE_FLAG_RC35) {
-                if (EMS_Thermostat.hc[hc_num - 1].mode == 0) {
-                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
-                    temptype = 1;
-                } else if (EMS_Thermostat.hc[hc_num - 1].mode == 1) {
-                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
-                    temptype = 2;
-                } else {
-                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
-                }
+                // https://github.com/proddy/EMS-ESP/issues/310
+                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
             } else {
                 if (EMS_Thermostat.hc[hc_num - 1].mode_type == 0) {
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
-                    temptype = 1;
                 } else if (EMS_Thermostat.hc[hc_num - 1].mode_type == 1) {
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
-                    temptype = 2;
                 }
             }
             break;
@@ -2428,16 +2435,6 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
     EMS_TxTelegram.comparisonValue  = EMS_TxTelegram.dataValue;
 
     EMS_TxQueue.push(EMS_TxTelegram);
- 
-    char s[10] = {0};
-    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
-        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
-                  _float_to_char(s, temperature),
-                  hc_num,
-                 temptype);
-    } else {
-        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d"), _float_to_char(s, temperature), hc_num);
-    }
 }
 
 /**
@@ -2462,11 +2459,6 @@ void ems_setThermostatMode(uint8_t mode, uint8_t hc_num) {
         return;
     }
 
-    if (mode > 2 ) {
-        myDebug_P(PSTR("Invalid mode"));
-        return;
-    }
-
     uint8_t model     = ems_getThermostatModel();
     uint8_t device_id = EMS_Thermostat.device_id;
     uint8_t set_mode;
@@ -2482,25 +2474,13 @@ void ems_setThermostatMode(uint8_t mode, uint8_t hc_num) {
         set_mode = mode;
     }
 
-    // RC35 has different settings
-    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
-        // 0=night, 1=day, 2=auto
-        if (mode == 0) {
-            myDebug_P(PSTR("Setting thermostat mode to night for heating circuit %d"), hc_num);
-        } else if (set_mode == 1) {
-            myDebug_P(PSTR("Setting thermostat mode to day for heating circuit %d"), hc_num);
-        } else if (set_mode == 2) {
-            myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
-        }
-    } else {
-        // 0=off, 1=manual, 2=auto
-        if (mode == 0) {
-            myDebug_P(PSTR("Setting thermostat mode to off for heating circuit %d"), hc_num);
-        } else if (set_mode == 1) {
-            myDebug_P(PSTR("Setting thermostat mode to manual for heating circuit %d"), hc_num);
-        } else if (set_mode == 2) {
-            myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
-        }
+    // 0=off, 1=manual, 2=auto
+    if (mode == 0) {
+        myDebug_P(PSTR("Setting thermostat mode to off for heating circuit %d"), hc_num);
+    } else if (set_mode == 1) {
+        myDebug_P(PSTR("Setting thermostat mode to manual for heating circuit %d"), hc_num);
+    } else if (set_mode == 2) {
+        myDebug_P(PSTR("Setting thermostat mode to auto for heating circuit %d"), hc_num);
     }
 
     _EMS_TxTelegram EMS_TxTelegram = EMS_TX_TELEGRAM_NEW; // create new Tx
@@ -2854,7 +2834,7 @@ const _EMS_Type EMS_Types[] = {
     {EMS_DEVICE_UPDATE_FLAG_BOILER, EMS_TYPE_UBAMonitorFast2, "UBAMonitorFast2", _process_UBAMonitorFast2},
     {EMS_DEVICE_UPDATE_FLAG_BOILER, EMS_TYPE_UBAMonitorSlow2, "UBAMonitorSlow2", _process_UBAMonitorSlow2},
 
-    // Solar Module devices
+    // Solar Module devices. Note SM100 also covers SM200
     {EMS_DEVICE_UPDATE_FLAG_SOLAR, EMS_TYPE_SM10Monitor, "SM10Monitor", _process_SM10Monitor},
     {EMS_DEVICE_UPDATE_FLAG_SOLAR, EMS_TYPE_SM100Monitor, "SM100Monitor", _process_SM100Monitor},
     {EMS_DEVICE_UPDATE_FLAG_SOLAR, EMS_TYPE_SM100Status, "SM100Status", _process_SM100Status},
