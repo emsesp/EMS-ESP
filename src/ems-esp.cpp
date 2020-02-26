@@ -30,10 +30,10 @@ DS18 ds18;
 #include <Ticker.h> // https://github.com/esp8266/Arduino/tree/master/libraries/Ticker
 
 // default APP params
-#define APP_NAME "EMS-ESP"
+#define APP_NAME "IRT-ESP"
 #define APP_HOSTNAME "ems-esp"
-#define APP_URL "https://github.com/proddy/EMS-ESP"
-#define APP_URL_API "https://api.github.com/repos/proddy/EMS-ESP"
+#define APP_URL "https://github.com/Victor-Mo/IRT-EMS-ESP"
+#define APP_URL_API "https://api.github.com/repos/Victor-Mo/IRT-EMS-ESP"
 
 #define DEFAULT_PUBLISHTIME 0         // 0=automatic
 #define DEFAULT_SENSOR_PUBLISHTIME 10 // 10 seconds to post MQTT topics on Dallas sensors when in automatic mode
@@ -203,7 +203,7 @@ _EMS_THERMOSTAT_MODE _getThermostatMode2(uint8_t hc_num) {
 #endif
 // Info - display status and data on an 'info' command
 void showInfo() {
-    static char buffer_type[200] = {0};
+//    static char buffer_type[200] = {0};
 
     myDebug_P(PSTR("%sEMS-ESP system status:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
     _EMS_SYS_LOGGING sysLog = ems_getLogging();
@@ -729,7 +729,7 @@ void publishEMSValues_boiler() {
 // handle the thermostat values
 void publishEMSValues_thermostat() {
     StaticJsonDocument<MYESP_JSON_MAXSIZE_MEDIUM> doc;
-    JsonObject                                    rootThermostat = doc.to<JsonObject>();
+//    JsonObject                                    rootThermostat = doc.to<JsonObject>();
     JsonObject                                    dataThermostat;
 
     bool has_data = false;
@@ -1258,7 +1258,7 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char
         if (strcmp(setting, "master_thermostat") == 0) {
             if (wc == 1) {
                 // show list
-                char device_string[100];
+//                char device_string[100];
                 myDebug_P(PSTR("Available thermostat Product ids:"));
 //                for (std::list<_Detected_Device>::iterator it = Devices.begin(); it != Devices.end(); ++it) {
 //                    if (it->device_type == EMS_DEVICE_TYPE_THERMOSTAT) {
@@ -1365,7 +1365,7 @@ void saveEMSDevices() {
     }
 
     char s[100];
-    char buffer[16] = {0};
+//    char buffer[16] = {0};
     s[0]            = '\0';
 
 //    for (std::list<_Detected_Device>::iterator it = Devices.begin(); it != Devices.end(); ++it) {
@@ -1615,8 +1615,8 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
     // we're connected. lets subscribe to some topics
     if (type == MQTT_CONNECT_EVENT) {
         // subscribe to the 4 heating circuits for receiving setpoint temperature and modes
-        char topic_s[50];
-        char buffer[4];
+//        char topic_s[50];
+//        char buffer[4];
 //        for (uint8_t hc = 1; hc <= EMS_THERMOSTAT_MAXHC; hc++) {
 //            strlcpy(topic_s, TOPIC_THERMOSTAT_CMD_TEMP_HA, sizeof(topic_s));
 //            strlcat(topic_s, itoa(hc, buffer, 10), sizeof(topic_s));
@@ -1945,8 +1945,8 @@ void WebCallback(JsonObject root) {
     }
 
     // send over EMS devices
-    JsonArray list = emsbus.createNestedArray("devices");
-    char      buffer[50];
+//    JsonArray list = emsbus.createNestedArray("devices");
+//    char      buffer[50];
 /*
     for (std::list<_Detected_Device>::iterator it = Devices.begin(); it != Devices.end(); ++it) {
         JsonObject item = list.createNestedObject();
@@ -2027,7 +2027,7 @@ void WebCallback(JsonObject root) {
     if (ems_getBoilerEnabled()) {
         boiler["ok"] = true;
 
-        char buffer[200];
+//        char buffer[200];
         boiler["bm"] = /*ems_getDeviceDescription(EMS_DEVICE_TYPE_BOILER, buffer, true)*/ "iRT";
 
         boiler["b1"] = (EMS_Boiler.tapwaterActive ? "running" : "off");
@@ -2207,14 +2207,14 @@ void startupEMSscan() {
         // get first value
         if ((p = strtok(temp, " "))) { // delimiter
             strlcpy(value, p, sizeof(value));
-            uint8_t val = (uint8_t)strtol(value, 0, 16);
+//            uint8_t val = (uint8_t)strtol(value, 0, 16);
 //            ems_doReadCommand(EMS_TYPE_Version, val);
         }
         // and iterate until end
         while (p != 0) {
             if ((p = strtok(nullptr, " "))) {
                 strlcpy(value, p, sizeof(value));
-                uint8_t val = (uint8_t)strtol(value, 0, 16);
+//                uint8_t val = (uint8_t)strtol(value, 0, 16);
 //                ems_doReadCommand(EMS_TYPE_Version, val);
             }
         }

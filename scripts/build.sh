@@ -161,7 +161,7 @@ shift $((OPTIND-1))
 
 # Welcome message
 echo "--------------------------------------------------------------"
-echo "EMS-ESP FIRMWARE BUILDER"
+echo "IRT-ESP FIRMWARE BUILDER"
 echo "Building for version ${version}" ${git_revision:+($git_revision)}
 
 # Environments to build
