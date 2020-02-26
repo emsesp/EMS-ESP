@@ -31,7 +31,7 @@ DS18 ds18;
 
 // default APP params
 #define APP_NAME "IRT-ESP"
-#define APP_HOSTNAME "ems-esp"
+#define APP_HOSTNAME "irt-esp"
 #define APP_URL "https://github.com/Victor-Mo/IRT-EMS-ESP"
 #define APP_URL_API "https://api.github.com/repos/Victor-Mo/IRT-EMS-ESP"
 
