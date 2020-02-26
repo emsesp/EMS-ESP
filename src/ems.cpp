@@ -2297,16 +2297,6 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
     EMS_TxTelegram.action = EMS_TX_TELEGRAM_WRITE;
     EMS_TxTelegram.dest   = device_id;
 
-    char s[10] = {0};
-    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
-        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
-                  _float_to_char(s, temperature),
-                  hc_num,
-                  temptype);
-    } else {
-        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d"), _float_to_char(s, temperature), hc_num);
-    }
-
     if (model == EMS_DEVICE_FLAG_RC20) {
         EMS_TxTelegram.type               = EMS_TYPE_RC20Set;
         EMS_TxTelegram.offset             = EMS_OFFSET_RC20Set_temp;
@@ -2364,12 +2354,22 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
         case 0: // automatic selection, if no type is defined, we use the standard code
             if (model == EMS_DEVICE_FLAG_RC35) {
                 // https://github.com/proddy/EMS-ESP/issues/310
-                EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
+                if (EMS_Thermostat.hc[hc_num - 1].mode == 0) {
+                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
+                    temptype = 1;
+                } else if (EMS_Thermostat.hc[hc_num - 1].mode == 1) {
+                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
+                    temptype = 2;
+                } else {
+                    EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp;
+                }
             } else {
                 if (EMS_Thermostat.hc[hc_num - 1].mode_type == 0) {
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
+                    temptype = 1;
                 } else if (EMS_Thermostat.hc[hc_num - 1].mode_type == 1) {
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
+                    temptype = 2;
                 }
             }
             break;
@@ -2427,6 +2427,15 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
             EMS_TxTelegram.comparisonPostRead = EMS_TYPE_JunkersStatusMessage_HC1;
         }
         EMS_TxTelegram.type_validate = EMS_TxTelegram.type;
+    }
+    char s[10] = {0};
+    if ((model == EMS_DEVICE_FLAG_RC35) || (model == EMS_DEVICE_FLAG_RC30N)) {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d type %d (0=auto,1=night,2=day,3=holiday)"),
+                  _float_to_char(s, temperature),
+                  hc_num,
+                  temptype);
+    } else {
+        myDebug_P(PSTR("Setting new thermostat temperature to %s for heating circuit %d"), _float_to_char(s, temperature), hc_num);
     }
 
     EMS_TxTelegram.length           = EMS_MIN_TELEGRAM_LENGTH;
