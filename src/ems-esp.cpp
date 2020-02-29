@@ -385,14 +385,10 @@ void showInfo() {
         myDebug_P(PSTR("  Solar module: %s"), ems_getDeviceDescription(EMS_DEVICE_TYPE_SOLAR, buffer_type));
         _renderShortValue("Collector temperature (TS1)", "C", EMS_SolarModule.collectorTemp);
         _renderShortValue("Bottom temperature (TS2)", "C", EMS_SolarModule.bottomTemp);
-        if (EMS_SolarModule.bottomTemp2 <= EMS_VALUE_SHORT_NOTSET) {
-            _renderShortValue("Bottom temperature (TS5)", "C", EMS_SolarModule.bottomTemp2);
-        }
+        _renderShortValue("Bottom temperature (TS5)", "C", EMS_SolarModule.bottomTemp2);
         _renderIntValue("Pump modulation", "%", EMS_SolarModule.pumpModulation);
         _renderBoolValue("Pump (PS1) active", EMS_SolarModule.pump);
-        if (EMS_SolarModule.valveStatus != EMS_VALUE_BOOL_NOTSET) {
-            _renderBoolValue("Valve (VS2) status", EMS_SolarModule.valveStatus);
-        }
+        _renderBoolValue("Valve (VS2) status", EMS_SolarModule.valveStatus);
         if (EMS_SolarModule.pumpWorkMin != EMS_VALUE_LONG_NOTSET) {
             myDebug_P(PSTR("  Pump working time: %d days %d hours %d minutes"),
                       EMS_SolarModule.pumpWorkMin / 1440,
@@ -968,7 +964,7 @@ bool publishEMSValues_solar() {
     }
     if (EMS_SolarModule.valveStatus != EMS_VALUE_BOOL_NOTSET) {
         char s[20];
-        rootSM[SM_VALVE] = _bool_to_char(s, EMS_SolarModule.valveStatus);
+        rootSM[SM_VALVESTATUS] = _bool_to_char(s, EMS_SolarModule.valveStatus);
     }
 
     return (myESP.mqttPublish(TOPIC_SM_DATA, doc));
@@ -1058,7 +1054,7 @@ bool publishEMSValues(bool force) {
     }
 
     // print
-    char log_s[50];
+    char log_s[70];
     strlcpy(log_s, "Publishing MQTT data for:", sizeof(log_s));
     if (thermo) {
         strlcat(log_s, " thermostat", sizeof(log_s));

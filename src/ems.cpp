@@ -3037,7 +3037,7 @@ void _printMessage(_EMS_RxTelegram * EMS_RxTelegram, const int8_t show_type) {
         }
     } else if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_DEVICE) {
         // only print ones to/from DeviceID
-        if ((src == EMS_Sys_Status.emsLogging_ID) || (dest == EMS_Sys_Status.emsLogging_ID)) {
+        if (((src & 0x7F) == EMS_Sys_Status.emsLogging_ID) || ((dest & 0x7F) == EMS_Sys_Status.emsLogging_ID)) {
             _debugPrintTelegram(output_str, EMS_RxTelegram, color_s);
         }
     } else {
