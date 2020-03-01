@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Solar Module SM200 support
 - `set master_thermostat <product id>` to choose with thermostat is master when there are multiple on the bus
-- MM10 Mixer support (thanks @MichaelDvP)
+- MM10 Mixing module support (thanks @MichaelDvP)
 - MM200 warm water circuits (https://github.com/proddy/EMS-ESP/pull/315)
 - First implementation of writing to Junker Thermostats (thanks @Neonox31)
 - Added model type (Buderus, Sieger, Junkers, Nefit, Bosch, Worcester) to device names
@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MQTT publish messages are queued and gracefully published every second to avoid TCP blocks
 - Added `mqtt_nestedjson` option to disable multiple data records being nested into a single JSON string
 - Support for Moduline 200 and Sieger ES72 thermostats
+- Added features to WW messages (0x33, 0x34) to improve WW monitoring. (PR#338 by @ypaindaveine)
+- Added mixing log and stub for EMS type 0xAC (PR#338 by @ypaindaveine)
 
 ### Fixed
 - set boiler warm water temp on Junkers/Bosch HT3
@@ -26,9 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RC35 setting temperature also forces the current select temp to change, irrespective of the mode
 
 ### Changed
-- improved MQTT publishing to stop flooding. `publish_time` must be at least 1 (second)
-- External sensors (like dallas) are sent as a nested MQTT topic including their unqiue identifier
-- `mqttlog` console command renamed to `mqttqueue`
+- improved MQTT publishing to stop network flooding. `publish_time` of -1 is no publish, 0 is automatic otherwise its a time interval
+- External sensors (like Dallas DS18*) are sent as a nested MQTT topic including their unqiue identifier
+- `mqttlog` console command renamed to `mqttqueue` to only show the current publish queue
 
 ### Removed
  - `autodetect scan`

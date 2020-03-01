@@ -120,15 +120,16 @@ typedef enum {
 
 /* EMS logging */
 typedef enum {
-    EMS_SYS_LOGGING_NONE,        // no messages
-    EMS_SYS_LOGGING_RAW,         // raw data mode
-    EMS_SYS_LOGGING_WATCH,       // watch a specific type ID
-    EMS_SYS_LOGGING_BASIC,       // only basic read/write messages
-    EMS_SYS_LOGGING_THERMOSTAT,  // only telegrams sent from thermostat
-    EMS_SYS_LOGGING_SOLARMODULE, // only telegrams sent from solarmodule
-    EMS_SYS_LOGGING_VERBOSE,     // everything
-    EMS_SYS_LOGGING_JABBER,      // lots of debug output...
-    EMS_SYS_LOGGING_DEVICE       // watch the device ID
+    EMS_SYS_LOGGING_NONE,         // no messages
+    EMS_SYS_LOGGING_RAW,          // raw data mode
+    EMS_SYS_LOGGING_WATCH,        // watch a specific type ID
+    EMS_SYS_LOGGING_BASIC,        // only basic read/write messages
+    EMS_SYS_LOGGING_THERMOSTAT,   // only telegrams sent from thermostat
+    EMS_SYS_LOGGING_SOLARMODULE,  // only telegrams sent from solar module
+    EMS_SYS_LOGGING_MIXINGMODULE, // only telegrams sent from mixing module
+    EMS_SYS_LOGGING_VERBOSE,      // everything
+    EMS_SYS_LOGGING_JABBER,       // lots of debug output...
+    EMS_SYS_LOGGING_DEVICE        // watch the device ID
 } _EMS_SYS_LOGGING;
 
 // status/counters since last power on
@@ -155,22 +156,6 @@ typedef struct {
     uint8_t          emsMasterThermostat; // product ID for the default thermostat to use
 } _EMS_Sys_Status;
 
-// The Tx send package
-typedef struct {
-    _EMS_TX_TELEGRAM_ACTION action; // read, write, validate, init
-    uint8_t                 dest;
-    uint16_t                type;
-    uint8_t                 offset;
-    uint8_t                 length;             // full length of complete telegram, including CRC
-    uint8_t                 dataValue;          // value to validate against
-    uint16_t                type_validate;      // type to call after a successful Write command
-    uint8_t                 comparisonValue;    // value to compare against during a validate command
-    uint8_t                 comparisonOffset;   // offset of where the byte is we want to compare too during validation
-    uint16_t                comparisonPostRead; // after a successful write, do a read from this type ID
-    unsigned long           timestamp;          // when created
-    uint8_t                 data[EMS_MAX_TELEGRAM_LENGTH];
-} _EMS_TxTelegram;
-
 // The Rx receive package
 typedef struct {
     unsigned long timestamp;    // timestamp from millis()
@@ -186,6 +171,23 @@ typedef struct {
     uint8_t       emsplus_type; // FF, F7 or F9
 } _EMS_RxTelegram;
 
+// The Tx send package
+typedef struct {
+    _EMS_TX_TELEGRAM_ACTION action; // read, write, validate, init
+    uint8_t                 dest;
+    uint16_t                type;
+    uint8_t                 offset;
+    uint8_t                 length;             // full length of complete telegram, including CRC
+    bool                    emsplus;            // true if ems+/ems 2.0
+    uint8_t                 dataValue;          // value to validate against
+    uint16_t                type_validate;      // type to call after a successful Write command
+    uint8_t                 comparisonValue;    // value to compare against during a validate command
+    uint8_t                 comparisonOffset;   // offset of where the byte is we want to compare too during validation
+    uint16_t                comparisonPostRead; // after a successful write, do a read from this type ID
+    unsigned long           timestamp;          // when created
+    uint8_t                 data[EMS_MAX_TELEGRAM_LENGTH];
+} _EMS_TxTelegram;
+
 // default empty Tx, must match struct
 const _EMS_TxTelegram EMS_TX_TELEGRAM_NEW = {
     EMS_TX_TELEGRAM_INIT, // action
@@ -193,7 +195,8 @@ const _EMS_TxTelegram EMS_TX_TELEGRAM_NEW = {
     EMS_ID_NONE,          // type
     0,                    // offset
     0,                    // length
-    0,                    // data value
+    false,                // emsplus (no)
+    0,                    // dataValue
     EMS_ID_NONE,          // type_validate
     0,                    // comparisonValue
     0,                    // comparisonOffset
@@ -286,6 +289,8 @@ typedef struct {
     uint8_t wWActivated;     // Warm Water activated
     uint8_t wWSelTemp;       // Warm Water selected temperature
     uint8_t wWCircPump;      // Warm Water circulation pump Available
+    uint8_t wWCircPumpMode;  // Warm Water circulation pump mode (1 = 1x3min, ..., 6=6x3min, 7 continuous)
+    uint8_t wWCircPumpType;  // Warm Water circulation pump type (0 = charge pump, 0xff = 3-way pump)
     uint8_t wWDesinfectTemp; // Warm Water desinfection temperature
     uint8_t wWComfort;       // Warm water comfort or ECO mode
 
@@ -319,11 +324,15 @@ typedef struct {
     uint16_t switchTemp;  // Switch temperature
 
     // UBAMonitorWWMessage
-    uint16_t wWCurTmp;  // Warm Water current temperature
-    uint32_t wWStarts;  // Warm Water # starts
-    uint32_t wWWorkM;   // Warm Water # minutes
-    uint8_t  wWOneTime; // Warm Water one time function on/off
-    uint8_t  wWCurFlow; // Warm Water current flow in l/min
+    uint16_t wWCurTmp;       // Warm Water current temperature
+    uint32_t wWStarts;       // Warm Water # starts
+    uint32_t wWWorkM;        // Warm Water # minutes
+    uint8_t  wWOneTime;      // Warm Water one time function on/off
+    uint8_t  wWDesinfecting; // Warm Water desinfection on/off
+    uint8_t  wWReadiness;    // Warm Water readiness on/off
+    uint8_t  wWRecharging;   // Warm Water recharge on/off
+    uint8_t  wWTemperaturOK; // Warm Water temperatur ok on/off
+    uint8_t  wWCurFlow;      // Warm Water current flow in l/min
 
     // UBATotalUptimeMessage
     uint32_t UBAuptime; // Total UBA working hours
@@ -370,7 +379,7 @@ typedef struct {
     uint8_t  tempStatus;
 } _EMS_MixingModule_WWC;
 
-// Mixer data
+// Mixing data
 typedef struct {
     uint8_t               device_id;
     uint8_t               device_flags;

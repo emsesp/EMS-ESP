@@ -145,6 +145,8 @@ void ems_init() {
     EMS_Boiler.wWActivated     = EMS_VALUE_BOOL_NOTSET; // Warm Water activated
     EMS_Boiler.wWSelTemp       = EMS_VALUE_INT_NOTSET;  // Warm Water selected temperature
     EMS_Boiler.wWCircPump      = EMS_VALUE_BOOL_NOTSET; // Warm Water circulation pump available
+    EMS_Boiler.wWCircPumpMode  = EMS_VALUE_INT_NOTSET;  // Warm Water circulation pump mode
+    EMS_Boiler.wWCircPumpType  = EMS_VALUE_BOOL_NOTSET; // Warm Water circulation pump type
     EMS_Boiler.wWDesinfectTemp = EMS_VALUE_INT_NOTSET;  // Warm Water desinfection temperature to prevent infection
     EMS_Boiler.wWComfort       = EMS_VALUE_INT_NOTSET;  // WW comfort mode
 
@@ -178,11 +180,16 @@ void ems_init() {
     EMS_Boiler.switchTemp  = EMS_VALUE_USHORT_NOTSET;
 
     // UBAMonitorWWMessage
-    EMS_Boiler.wWCurTmp  = EMS_VALUE_USHORT_NOTSET; // Warm Water current temperature
-    EMS_Boiler.wWStarts  = EMS_VALUE_LONG_NOTSET;   // Warm Water # starts
-    EMS_Boiler.wWWorkM   = EMS_VALUE_LONG_NOTSET;   // Warm Water # minutes
-    EMS_Boiler.wWOneTime = EMS_VALUE_INT_NOTSET;    // Warm Water one time function on/off
-    EMS_Boiler.wWCurFlow = EMS_VALUE_INT_NOTSET;    // WW current flow temp
+    EMS_Boiler.wWCurTmp       = EMS_VALUE_USHORT_NOTSET; // Warm Water current temperature
+    EMS_Boiler.wWStarts       = EMS_VALUE_LONG_NOTSET;   // Warm Water # starts
+    EMS_Boiler.wWWorkM        = EMS_VALUE_LONG_NOTSET;   // Warm Water # minutes
+    EMS_Boiler.wWOneTime      = EMS_VALUE_INT_NOTSET;    // Warm Water one time function on/off
+    EMS_Boiler.wWDesinfecting = EMS_VALUE_INT_NOTSET;    // Warm Water desinfection on/off
+    EMS_Boiler.wWReadiness    = EMS_VALUE_INT_NOTSET;    // Warm Water readiness on/off
+    EMS_Boiler.wWRecharging   = EMS_VALUE_INT_NOTSET;    // Warm Water recharge on/off
+    EMS_Boiler.wWTemperaturOK = EMS_VALUE_INT_NOTSET;    // Warm Water temperatur ok on/off
+
+    EMS_Boiler.wWCurFlow = EMS_VALUE_INT_NOTSET; // WW current flow temp
 
     // UBATotalUptimeMessage
     EMS_Boiler.UBAuptime = EMS_VALUE_LONG_NOTSET; // Total UBA working hours
@@ -319,6 +326,8 @@ void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool quiet) {
         myDebug_P(PSTR("System Logging set to Thermostat only"));
     } else if (loglevel == EMS_SYS_LOGGING_SOLARMODULE) {
         myDebug_P(PSTR("System Logging set to Solar Module only"));
+    } else if (loglevel == EMS_SYS_LOGGING_MIXINGMODULE) {
+        myDebug_P(PSTR("System Logging set to Mixing Module only"));
     } else if (loglevel == EMS_SYS_LOGGING_RAW) {
         myDebug_P(PSTR("System Logging set to Raw mode"));
     } else if (loglevel == EMS_SYS_LOGGING_JABBER) {
@@ -607,7 +616,8 @@ void _ems_sendTelegram() {
     }
 
     // complete the rest of the header depending on EMS or EMS+
-    if (EMS_TxTelegram.type > 0xFF) {
+    // or if we explicitly set EMS+ like with Junkers
+    if ((EMS_TxTelegram.type > 0xFF) || (EMS_TxTelegram.emsplus)) {
         // EMS 2.0 / EMS+
         EMS_TxTelegram.data[2] = 0xFF; // fixed value indicating an extended message
         EMS_TxTelegram.data[3] = EMS_TxTelegram.offset;
@@ -699,6 +709,7 @@ void _createValidate() {
     new_EMS_TxTelegram.comparisonValue    = EMS_TxTelegram.comparisonValue;
     new_EMS_TxTelegram.comparisonPostRead = EMS_TxTelegram.comparisonPostRead;
     new_EMS_TxTelegram.comparisonOffset   = EMS_TxTelegram.comparisonOffset;
+    new_EMS_TxTelegram.emsplus            = EMS_TxTelegram.emsplus;
 
     // this is what is different
     new_EMS_TxTelegram.offset    = EMS_TxTelegram.comparisonOffset; // location of byte to fetch
@@ -927,7 +938,7 @@ void _removeTxQueue() {
 
 /**
  * Check if hot tap water or heating is active
- * using a quick hack for checking the heating. Selected Flow Temp >= 70
+ * using a quick hack for checking the heating by looking at the Selected Flow Temp
  */
 void _checkActive() {
     // hot tap water, using flow to check instead of the burner power
@@ -946,8 +957,10 @@ void _checkActive() {
  * received only after requested (not broadcasted)
  */
 void _process_UBAParameterWW(_EMS_RxTelegram * EMS_RxTelegram) {
-    _setValue(EMS_RxTelegram, &EMS_Boiler.wWActivated, 1); // 0xFF means on
-    _setValue(EMS_RxTelegram, &EMS_Boiler.wWCircPump, 6);  // 0xFF means on
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWActivated, 1);     // 0xFF means on
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWCircPump, 6);      // 0xFF means on
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWCircPumpMode, 7);  // 1=1x3min... 6=6x3min, 7=continuous
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWCircPumpType, 10); // 0 = charge pump, 0xff = 3-way valve
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWSelTemp, 2);
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWDesinfectTemp, 8);
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWComfort, EMS_OFFSET_UBAParameterWW_wwComfort);
@@ -979,6 +992,10 @@ void _process_UBAMonitorWWMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWStarts, 13);
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWWorkM, 10);
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWOneTime, 5, 1);
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWDesinfecting, 5, 2);
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWReadiness, 5, 3);
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWRecharging, 5, 4);
+    _setValue(EMS_RxTelegram, &EMS_Boiler.wWTemperaturOK, 5, 5);
     _setValue(EMS_RxTelegram, &EMS_Boiler.wWCurFlow, 9);
 }
 
@@ -1066,7 +1083,7 @@ void _process_UBAMonitorFast(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /**
- * UBAMonitorFast2 - type 0xE4 - central heating monitor
+ * UBAMonitorFast2 - type 0xE4 - central heating monitor EMS+
  */
 void _process_UBAMonitorFast2(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Boiler.selFlowTemp, 6);
@@ -1104,7 +1121,7 @@ void _process_UBAMonitorSlow(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Boiler.extTemp, 0);
     _setValue(EMS_RxTelegram, &EMS_Boiler.boilTemp, 2);
     _setValue(EMS_RxTelegram, &EMS_Boiler.exhaustTemp, 4);
-    _setValue(EMS_RxTelegram, &EMS_Boiler.switchTemp, 25); // only if there is a mixer
+    _setValue(EMS_RxTelegram, &EMS_Boiler.switchTemp, 25); // only if there is a mixing module present
     _setValue(EMS_RxTelegram, &EMS_Boiler.pumpMod, 9);
     _setValue(EMS_RxTelegram, &EMS_Boiler.burnStarts, 10);
     _setValue(EMS_RxTelegram, &EMS_Boiler.burnWorkMin, 13);
@@ -1112,7 +1129,7 @@ void _process_UBAMonitorSlow(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /**
- * UBAMonitorSlow2 - type 0xE5 - central heating monitor
+ * UBAMonitorSlow2 - type 0xE5 - central heating monitor EMS+
  */
 void _process_UBAMonitorSlow2(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Boiler.fanWork, 2, 2);
@@ -1126,7 +1143,7 @@ void _process_UBAMonitorSlow2(_EMS_RxTelegram * EMS_RxTelegram) {
 }
 
 /**
- * UBAOutdoorTemp - type 0xD1 - external temperature
+ * UBAOutdoorTemp - type 0xD1 - external temperature EMS+
  */
 void _process_UBAOutdoorTemp(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Boiler.extTemp, 0);
@@ -1288,7 +1305,7 @@ void _process_MMPLUSStatusMessageWW(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_MixingModule.wwc[wwc].tempStatus, EMS_OFFSET_MMPLUSStatusMessage_WW_temp_status);
 }
 
-// Mixer - 0xAB
+// Mixing - 0xAB
 // https://github.com/proddy/EMS-ESP/issues/270
 // We assume MM10 is on HC2 and WM10 is using HC1
 void _process_MMStatusMessage(_EMS_RxTelegram * EMS_RxTelegram) {
@@ -1300,6 +1317,17 @@ void _process_MMStatusMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].flowSetTemp, EMS_OFFSET_MMStatusMessage_flow_set);
 
     //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].valveStatus, EMS_OFFSET_MMStatusMessage_valve_status);
+}
+
+// Mixing Parameters - 0xAC
+// We assume MM10 is on HC2 and WM10 is using HC1
+void _process_MM10ParameterMessage(_EMS_RxTelegram * EMS_RxTelegram) {
+    //uint8_t hc                     = 1; // fixed to HC2
+    //EMS_MixingModule.hc[hc].active = true;
+
+    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].flowTemp, EMS_OFFSET_MMStatusMessage_flow_temp);
+    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].pumpMod, EMS_OFFSET_MMStatusMessage_pump_mod);
+    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].flowSetTemp, EMS_OFFSET_MMStatusMessage_flow_set);
 }
 
 /**
@@ -2415,6 +2443,8 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
         EMS_TxTelegram.type_validate = EMS_TxTelegram.type;
     }
     else if (model == EMS_DEVICE_FLAG_JUNKERS) {
+        // All Junkers use EMS+. I think.
+        EMS_TxTelegram.emsplus = true;
         switch (temptype) {
         case 1: // change the no frost temp
             EMS_TxTelegram.offset = EMS_OFFSET_JunkersSetMessage_no_frost_temp;
@@ -2427,7 +2457,7 @@ void ems_setThermostatTemp(float temperature, uint8_t hc_num, uint8_t temptype) 
             break;
         default:
         case 0: // automatic selection, if no type is defined, we use the standard code
-            // not sure if this is correct for Junkers
+            // TODO: not sure if this is correct for Junkers
             if (EMS_Thermostat.hc[hc_num - 1].mode_type == 0) {
                 EMS_TxTelegram.offset = EMS_OFFSET_JunkersSetMessage_night_temp;
             } else if (EMS_Thermostat.hc[hc_num - 1].mode_type == 1) {
@@ -2934,10 +2964,8 @@ const _EMS_Type EMS_Types[] = {
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_HC4, "MMPLUSStatusMessage_HC4", _process_MMPLUSStatusMessage},
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_WWC1, "MMPLUSStatusMessage_WWC1", _process_MMPLUSStatusMessageWW},
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_WWC2, "MMPLUSStatusMessage_WWC2", _process_MMPLUSStatusMessageWW},
-    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMStatusMessage, "MMStatusMessage", _process_MMStatusMessage}
-
-
-};
+    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMStatusMessage, "MMStatusMessage", _process_MMStatusMessage},
+    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MM10ParameterMessage, "MM10ParameterMessage", _process_MM10ParameterMessage}};
 
 // calculate sizes of arrays at compile time
 uint8_t _EMS_Types_max = ArraySize(EMS_Types);
@@ -3030,8 +3058,18 @@ void _printMessage(_EMS_RxTelegram * EMS_RxTelegram, const int8_t show_type) {
             _debugPrintTelegram(output_str, EMS_RxTelegram, color_s);
         }
     } else if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_SOLARMODULE) {
-        // only print ones to/from thermostat if logging is set to thermostat only
+        // only print ones to/from solar module if logging is set to solar module only
         if ((src == EMS_SolarModule.device_id) || (dest == EMS_SolarModule.device_id)) {
+            _debugPrintTelegram(output_str, EMS_RxTelegram, color_s);
+        }
+    } else if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_MIXINGMODULE) {
+        // only print ones to/from mixing module if logging is set to mixing module only
+        if ((src == EMS_MixingModule.device_id) || (dest == EMS_MixingModule.device_id)) {
+            _debugPrintTelegram(output_str, EMS_RxTelegram, color_s);
+            // also analyse the sequence of instructions prior to instructions to/from mixing module
+            // typically: EMS_TYPE_MM10ParameterMessage(0xAC) - EMS_TYPE_UBASetPoints(0x1A) - EMS_TYPE_UBAFlags(0x35)
+        } else if ((type == EMS_TYPE_MMStatusMessage) || (type == EMS_TYPE_MM10ParameterMessage) || (type == EMS_TYPE_UBASetPoints)
+                   || (type == EMS_TYPE_UBAFlags)) {
             _debugPrintTelegram(output_str, EMS_RxTelegram, color_s);
         }
     } else if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_DEVICE) {
