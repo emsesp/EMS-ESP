@@ -1227,7 +1227,7 @@ void MyESP::_telnetCommand(char * commandLine) {
     }
 
     // quit
-    if ((strcmp(ptrToCommandName, "quit") == 0) && (wc == 1)) {
+    if (((strcmp(ptrToCommandName, "exit") == 0) || (strcmp(ptrToCommandName, "quit") == 0)) && (wc == 1)) {
         myDebug_P(PSTR("[TELNET] exiting telnet session"));
         SerialAndTelnet.disconnectClient();
         return;
