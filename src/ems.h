@@ -29,11 +29,11 @@
 #define EMS_VALUE_BOOL_ON 0x01         // boolean true
 #define EMS_VALUE_BOOL_ON2 0xFF        // boolean true, EMS sometimes uses 0xFF for TRUE
 #define EMS_VALUE_BOOL_OFF 0x00        // boolean false
+#define EMS_VALUE_BOOL_NOTSET 0xFE     // random number that's not 0, 1 or FF
 #define EMS_VALUE_INT_NOTSET 0xFF      // for 8-bit unsigned ints/bytes
 #define EMS_VALUE_SHORT_NOTSET -32000  // was -32768 for 2-byte signed shorts
 #define EMS_VALUE_USHORT_NOTSET 32000  // was 0x8000 for 2-byte unsigned shorts
 #define EMS_VALUE_LONG_NOTSET 0xFFFFFF // for 3-byte longs
-#define EMS_VALUE_BOOL_NOTSET 0xFE     // random number that's not 0, 1 or FF
 
 // thermostat specific
 #define EMS_THERMOSTAT_MAXHC 4     // max number of heating circuits
@@ -59,7 +59,8 @@ enum EMS_DEVICE_FLAG_TYPES : uint8_t {
     EMS_DEVICE_FLAG_RC30     = 4,
     EMS_DEVICE_FLAG_RC30N    = 5, // newer type of RC30 with RC35 circuit
     EMS_DEVICE_FLAG_RC35     = 6,
-    EMS_DEVICE_FLAG_RC300    = 7,
+    EMS_DEVICE_FLAG_RC100    = 7,
+    EMS_DEVICE_FLAG_RC300    = 8,
     EMS_DEVICE_FLAG_JUNKERS1 = 31,       // use 0x65 for HC
     EMS_DEVICE_FLAG_JUNKERS2 = 32,       // use 0x79 for HC, older models
     EMS_DEVICE_FLAG_JUNKERS  = (1 << 6), // 6th bit set if its junkers HT3
@@ -68,9 +69,9 @@ enum EMS_DEVICE_FLAG_TYPES : uint8_t {
 
 // trigger settings to determine if hot tap water or the heating is active
 #define EMS_BOILER_BURNPOWER_TAPWATER 100
-#define EMS_BOILER_SELFLOWTEMP_HEATING 30 // was 70, changed to 30 for https://github.com/proddy/EMS-ESP/issues/193
+#define EMS_BOILER_SELFLOWTEMP_HEATING 20 // was originally 70, changed to 30 for issue #193, then to 20 with issue #344
 
-// define min & maximum setable tapwater temperature
+// define min & maximum setable tapwater temperatures
 #define EMS_BOILER_TAPWATER_TEMPERATURE_MAX 60
 #define EMS_BOILER_TAPWATER_TEMPERATURE_MIN 30
 
@@ -315,7 +316,9 @@ typedef struct {
     uint16_t switchTemp;  // Switch temperature
 
     // UBAMonitorWWMessage
+    uint8_t  wWSetTmp;        // set temp WW (DHW)
     uint16_t wWCurTmp;        // Warm Water current temperature
+    uint16_t wWCurTmp2;       // Warm Water current temperature storage
     uint32_t wWStarts;        // Warm Water # starts
     uint32_t wWWorkM;         // Warm Water # minutes
     uint8_t  wWOneTime;       // Warm Water one time function on/off
@@ -442,25 +445,30 @@ typedef struct {
 } _EMS_Type;
 
 typedef enum : uint8_t {
-    THERMOSTAT_TEMP_MODE_AUTO = 0,
-    THERMOSTAT_TEMP_MODE_NIGHT,
-    THERMOSTAT_TEMP_MODE_DAY,
-    THERMOSTAT_TEMP_MODE_HOLIDAY,
-    THERMOSTAT_TEMP_MODE_NOFROST,
-    THERMOSTAT_TEMP_MODE_ECO, // 'sparen'
-    THERMOSTAT_TEMP_MODE_HEAT // 'heizen'
-} _THERMOSTAT_TEMP_MODE;
-
-typedef enum {
-    EMS_THERMOSTAT_MODE_UNKNOWN,
+    EMS_THERMOSTAT_MODE_UNKNOWN = 0,
     EMS_THERMOSTAT_MODE_OFF,
     EMS_THERMOSTAT_MODE_MANUAL,
     EMS_THERMOSTAT_MODE_AUTO,
+    EMS_THERMOSTAT_MODE_HEAT, // 'heizen'
     EMS_THERMOSTAT_MODE_NIGHT,
     EMS_THERMOSTAT_MODE_DAY,
-    EMS_THERMOSTAT_MODE_ECO,
-    EMS_THERMOSTAT_MODE_COMFORT
+    EMS_THERMOSTAT_MODE_ECO, // 'sparen'
+    EMS_THERMOSTAT_MODE_COMFORT,
+    EMS_THERMOSTAT_MODE_HOLIDAY,
+    EMS_THERMOSTAT_MODE_NOFROST
 } _EMS_THERMOSTAT_MODE;
+
+#define EMS_THERMOSTAT_MODE_UNKNOWN_STR "unknown"
+#define EMS_THERMOSTAT_MODE_OFF_STR "off"
+#define EMS_THERMOSTAT_MODE_MANUAL_STR "manual"
+#define EMS_THERMOSTAT_MODE_AUTO_STR "auto"
+#define EMS_THERMOSTAT_MODE_HEAT_STR "heat"
+#define EMS_THERMOSTAT_MODE_NIGHT_STR "night"
+#define EMS_THERMOSTAT_MODE_DAY_STR "day"
+#define EMS_THERMOSTAT_MODE_ECO_STR "eco"
+#define EMS_THERMOSTAT_MODE_COMFORT_STR "comfort"
+#define EMS_THERMOSTAT_MODE_HOLIDAY_STR "holiday"
+#define EMS_THERMOSTAT_MODE_NOFROST_STR "nofrost"
 
 // function definitions
 void    ems_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length);
@@ -474,31 +482,36 @@ void    ems_printTxQueue();
 void    ems_testTelegram(uint8_t test_num);
 void    ems_startupTelegrams();
 bool    ems_checkEMSBUSAlive();
-void    ems_setThermostatTemp(float temperature, uint8_t hc, _THERMOSTAT_TEMP_MODE temptype = THERMOSTAT_TEMP_MODE_AUTO);
-void    ems_setThermostatMode(uint8_t mode, uint8_t hc);
-void    ems_setWarmWaterTemp(uint8_t temperature);
-void    ems_setFlowTemp(uint8_t temperature);
-void    ems_setWarmWaterActivated(bool activated);
-void    ems_setWarmWaterOnetime(bool activated);
-void    ems_setWarmWaterCirculation(bool activated);
-void    ems_setWarmTapWaterActivated(bool activated);
-void    ems_setPoll(bool b);
-void    ems_setLogging(_EMS_SYS_LOGGING loglevel, uint16_t type_id);
-void    ems_setLogging(_EMS_SYS_LOGGING loglevel, bool quiet = false);
-void    ems_setWarmWaterModeComfort(uint8_t comfort);
-void    ems_setModels();
-void    ems_setTxDisabled(bool b);
-void    ems_setTxMode(uint8_t mode);
-void    ems_setEMSbusid(uint8_t id);
-void    ems_setMasterThermostat(uint8_t product_id);
-char *  ems_getDeviceDescription(_EMS_DEVICE_TYPE device_type, char * buffer, bool name_only = false);
-bool    ems_getDeviceTypeDescription(uint8_t device_id, char * buffer);
-char *  ems_getDeviceTypeName(_EMS_DEVICE_TYPE device_type, char * buffer);
 
-void ems_getThermostatValues();
-void ems_getBoilerValues();
-void ems_getSolarModuleValues();
-void ems_getMixingModuleValues();
+void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE temptype);
+void ems_setThermostatTemp(float temperature, uint8_t hc, const char * mode_s);
+void ems_setThermostatMode(_EMS_THERMOSTAT_MODE mode, uint8_t hc);
+void ems_setThermostatMode(const char * mode_s, uint8_t hc);
+void ems_setWarmWaterTemp(uint8_t temperature);
+void ems_setFlowTemp(uint8_t temperature);
+void ems_setWarmWaterActivated(bool activated);
+void ems_setWarmWaterOnetime(bool activated);
+void ems_setWarmWaterCirculation(bool activated);
+void ems_setWarmTapWaterActivated(bool activated);
+void ems_setPoll(bool b);
+void ems_setLogging(_EMS_SYS_LOGGING loglevel, uint16_t type_id);
+void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool quiet = false);
+void ems_setWarmWaterModeComfort(uint8_t comfort);
+void ems_setModels();
+void ems_setTxDisabled(bool b);
+void ems_setTxMode(uint8_t mode);
+void ems_setEMSbusid(uint8_t id);
+void ems_setMasterThermostat(uint8_t product_id);
+
+char *               ems_getDeviceDescription(_EMS_DEVICE_TYPE device_type, char * buffer, bool name_only = false);
+bool                 ems_getDeviceTypeDescription(uint8_t device_id, char * buffer);
+char *               ems_getDeviceTypeName(_EMS_DEVICE_TYPE device_type, char * buffer);
+_EMS_THERMOSTAT_MODE ems_getThermostatMode(const char * mode_s);
+void                 ems_getThermostatValues();
+void                 ems_getBoilerValues();
+void                 ems_getSolarModuleValues();
+void                 ems_getMixingModuleValues();
+char *               ems_getThermostatModeString(_EMS_THERMOSTAT_MODE mode, char * mode_str);
 
 bool ems_getPoll();
 bool ems_getTxEnabled();

@@ -590,6 +590,36 @@ void MyESP::_mqttPublishQueue() {
     _mqttRemoveLastPublish();
 }
 
+// send online appended with the version information as JSON
+void MyESP::_sendStartTopic() {
+    StaticJsonDocument<MYESP_JSON_MAXSIZE_SMALL> doc;
+    JsonObject                                   payload = doc.to<JsonObject>();
+    payload["version"]                                   = _app_version;
+    payload["IP"]                                        = WiFi.localIP().toString();
+    // add time if we know it
+    if ((_ntp_enabled) && (NTP.tcr->abbrev != nullptr)) {
+        uint32_t real_time = getSystemTime();
+        // exclude millis() just in case
+        if (real_time > 10000L) {
+            char s[25];
+            // ISO 8601 describes an internationally accepted way to represent dates and times using numbers
+            snprintf_P(s,
+                       25,
+                       PSTR("%04u-%02u-%02uT%02u:%02u:%02u"),
+                       to_year(real_time),
+                       to_month(real_time),
+                       to_day(real_time),
+                       to_hour(real_time),
+                       to_minute(real_time),
+                       to_second(real_time)
+
+            );
+            payload["boottime"] = s;
+        }
+    }
+    mqttPublish(MQTT_TOPIC_START, doc, true); // send with retain on
+}
+
 // MQTT onConnect - when a connect is established
 void MyESP::_mqttOnConnect() {
     myDebug_P(PSTR("[MQTT] MQTT connected"));
@@ -597,8 +627,8 @@ void MyESP::_mqttOnConnect() {
     _mqtt_reconnect_delay = MQTT_RECONNECT_DELAY_MIN;
     _mqtt_last_connection = millis();
 
-    // say we're alive to the Last Will topic
-    mqttPublish(_mqtt_will_topic, _mqtt_will_online_payload, true); // force retain on
+    // say we're alive to the Last Will topic, with retain on
+    mqttPublish(_mqtt_will_topic, _mqtt_will_online_payload, true);
 
     // subscribe to general subs
     mqttSubscribe(MQTT_TOPIC_RESTART);
@@ -606,7 +636,11 @@ void MyESP::_mqttOnConnect() {
     // subscribe to a start message and send the first publish
     // forcing retain to off since we only want to send this once
     mqttSubscribe(MQTT_TOPIC_START);
-    mqttPublish(MQTT_TOPIC_START, MQTT_TOPIC_START_PAYLOAD, false);
+
+    // send start topic now unless NTP is enabled, otherwise wait for the time
+    if (!_ntp_enabled) {
+        _sendStartTopic();
+    }
 
     // send heartbeat if enabled
     heartbeatCheck(true);
@@ -2859,9 +2893,11 @@ void MyESP::_bootupSequence() {
 
     // check if its booted
     if (boot_status == MYESP_BOOTSTATUS_BOOTED) {
-        if ((_ntp_enabled) && (now() > 10000) && !_have_ntp_time) {
+        if ((_ntp_enabled) && (now() > 10000L) && !_have_ntp_time) {
             _have_ntp_time = true;
             writeLogEvent(MYESP_SYSLOG_INFO, "System booted");
+            // send start topic
+            _sendStartTopic();
         }
         return;
     }
