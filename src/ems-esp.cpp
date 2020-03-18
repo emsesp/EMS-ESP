@@ -991,7 +991,7 @@ void publishValues(bool force, bool send_sensor) {
         return;
     }
 
-    myDebugLog("Starting scheduled MQTT publish...");
+    //myDebugLog("Starting scheduled MQTT publish...");
     publishEMSValues(force);
     if (send_sensor) {
         publishSensorValues();
@@ -1945,7 +1945,13 @@ void WebCallback(JsonObject root) {
     }
 
     // send over EMS devices
-//    JsonArray list = emsbus.createNestedArray("devices");
+    JsonArray list = emsbus.createNestedArray("devices");
+    JsonObject item = list.createNestedObject();
+    item["type"] = "Boiler";
+    item["model"] = "UBA";
+    item["version"] = "0.0";
+    item["productid"] = "0";
+
 //    char      buffer[50];
 /*
     for (std::list<_Detected_Device>::iterator it = Devices.begin(); it != Devices.end(); ++it) {
