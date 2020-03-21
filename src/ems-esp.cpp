@@ -2054,6 +2054,10 @@ void WebCallback(JsonObject root) {
     } else {
         boiler["ok"] = false;
     }
+    JsonObject sm = root.createNestedObject("sm");
+    sm["ok"] = false;
+    JsonObject hp = root.createNestedObject("hp");
+    hp["ok"] = false;
 #ifdef nuniet
     // For SM10/SM100/SM200 Solar Module
     JsonObject sm = root.createNestedObject("sm");

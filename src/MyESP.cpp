@@ -2725,7 +2725,6 @@ void MyESP::_webserver_setup() {
         AsyncWebServerResponse * response = request->beginResponse(404, "text/plain", "Not found");
         request->send(response);
     });
-
     _webServer->on("/update",
                    HTTP_POST,
                    [](AsyncWebServerRequest * request) {
@@ -2734,15 +2733,18 @@ void MyESP::_webserver_setup() {
                        request->send(response);
                    },
                    [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t * data, size_t len, bool final) {
+#ifdef MYESP_DEBUG
+								myESP.myDebug_P(PSTR("[UPDATE] index %d len %d final %d"), (int)index, (int)len, (int)final);
+#endif
                        if (!request->authenticate(MYESP_HTTP_USERNAME, _general_password)) {
                            return;
                        }
                        if (!index) {
                            ETS_UART_INTR_DISABLE(); // disable all UART interrupts to be safe
-                           //_writeLogEvent(MYESP_SYSLOG_INFO, "Firmware update started");
+                           myESP.myDebug_P(PSTR("[UPDATE] Firmware update started"));
                            Update.runAsync(true);
                            if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-                //_writeLogEvent(MYESP_SYSLOG_ERROR, "Not enough space to update");
+                               myESP.myDebug_P(PSTR("[UPDATE] Not enough space to update"));
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif
@@ -2750,7 +2752,7 @@ void MyESP::_webserver_setup() {
                        }
                        if (!Update.hasError()) {
                            if (Update.write(data, len) != len) {
-                //_writeLogEvent(MYESP_SYSLOG_ERROR, "Writing to flash failed");
+                               myESP.myDebug_P(PSTR("[UPDATE] Writing to flash failed"));
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif
@@ -2758,10 +2760,10 @@ void MyESP::_webserver_setup() {
                        }
                        if (final) {
                            if (Update.end(true)) {
-                               //_writeLogEvent(MYESP_SYSLOG_INFO, "Firmware update finished");
+                               myESP.myDebug_P(PSTR("[UPDATE] Firmware update finished"));
                                _shouldRestart = !Update.hasError();
                            } else {
-                //_writeLogEvent(MYESP_SYSLOG_ERROR, "Firmware update failed");
+                               myESP.myDebug_P(PSTR("[UPDATE] Firmware update failed"));
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif

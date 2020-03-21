@@ -947,7 +947,9 @@ void irt_loop()
 		IRT_Sys_Status.last_send_check = now_millis;
 	}
 	// check send buffers
-	irt_check_send_queue();
+	if (EMSESP_Settings.tx_mode > 4) {
+		irt_check_send_queue();
+	}
 }
 
 void irt_set_water_temp(uint8_t wc, const char *setting, const char *value)
@@ -1088,8 +1090,7 @@ bool ems_getTxDisabled() {
 
 void ems_setTxMode(uint8_t mode) {
 	EMS_Sys_Status.emsTxMode = mode;
-	// update hardware
-	irt_setup();
+
 }
 
 bool ems_getThermostatEnabled() {
