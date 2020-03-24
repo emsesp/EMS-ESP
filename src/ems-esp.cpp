@@ -112,8 +112,8 @@ static const command_t project_cmds[] PROGMEM = {
     {false, "log <n | b | t | s | m | r | j | v | w [ID] | d [ID]>", "logging: none, basic, thermo, solar, mixing, raw, jabber, verbose, watch a type or device"},
     {false, "publish", "publish all values to MQTT"},
     {false, "refresh", "fetch values from the EMS devices"},
-    {false, "devices [scan] | [scan deep] | [save]", "list detected devices, quick scan or deep scan and save as known devices"},
-    {false, "queue", "show current Tx queue"},
+    {false, "devices [scan] | [scan+] | [clear] | [save] ", "list detected devices, quick scan, deep scan, clear and and save"},
+    {false, "txqueue", "show current Tx queue"},
     {false, "send XX ...", "send raw telegram data to EMS bus (XX are hex values)"},
     {false, "thermostat read <type ID>", "send read request to the thermostat for heating circuit hc 1-4"},
     {false, "thermostat temp <degrees> [mode] [hc]", "set thermostat temperature. mode is manual,auto,heat,day,night,eco,comfort,holiday,nofrost"},
@@ -257,14 +257,17 @@ void showInfo() {
               ((EMSESP_Settings.shower_timer) ? "enabled" : "disabled"),
               ((EMSESP_Settings.shower_alert) ? "enabled" : "disabled"));
 
+    if (strlen(EMSESP_Settings.known_devices) > 0) {
+        myDebug_P(PSTR("  Saved known device IDs: %s"), EMSESP_Settings.known_devices);
+    } else {
+        myDebug_P(PSTR("  Saved known device IDs: none"));
+    }
+
     myDebug_P(PSTR("\n%sEMS Bus status:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
 
     if (ems_getBusConnected()) {
         myDebug_P(PSTR("  Bus is connected, protocol: %s"), (ems_isHT3() ? "HT3" : "Buderus"));
         myDebug_P(PSTR("  Rx: # successful read requests=%d, # CRC errors=%d"), EMS_Sys_Status.emsRxPgks, EMS_Sys_Status.emxCrcErr);
-        if (strlen(EMSESP_Settings.known_devices) > 0) {
-            myDebug_P(PSTR("  Saved known device IDs: %s"), EMSESP_Settings.known_devices);
-        }
 
         if (ems_getTxCapable()) {
             char valuestr[8] = {0}; // for formatting floats
@@ -438,24 +441,37 @@ void showInfo() {
 
         // settings parameters
         if (EMS_Thermostat.ibaMainDisplay != EMS_VALUE_INT_NOTSET) {
-            if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
-                myDebug_P(PSTR("  Display: internal temperature"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTSETPOINT) {
-                myDebug_P(PSTR("  Display: internal setpoint"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_EXTTEMP) {
-                myDebug_P(PSTR("  Display: external temperature"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_BURNERTEMP) {
-                myDebug_P(PSTR("  Display: burner temperature"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_WWTEMP) {
-                myDebug_P(PSTR("  Display: WW temperature"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_FUNCMODE) {
-                myDebug_P(PSTR("  Display: functioning mode"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_TIME) {
-                myDebug_P(PSTR("  Display: time"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
-                myDebug_P(PSTR("  Display: date"));
-            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
-                myDebug_P(PSTR("  Display: smoke temperature"));
+            uint8_t              model      = ems_getThermostatFlags();
+            if (model == EMS_DEVICE_FLAG_RC30N) {
+                if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
+                    myDebug_P(PSTR("  Display: internal temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTSETPOINT) {
+                    myDebug_P(PSTR("  Display: internal setpoint"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_EXTTEMP) {
+                    myDebug_P(PSTR("  Display: external temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_BURNERTEMP) {
+                    myDebug_P(PSTR("  Display: burner temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_WWTEMP) {
+                    myDebug_P(PSTR("  Display: WW temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_FUNCMODE) {
+                    myDebug_P(PSTR("  Display: functioning mode"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_TIME) {
+                    myDebug_P(PSTR("  Display: time"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
+                    myDebug_P(PSTR("  Display: date"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
+                    myDebug_P(PSTR("  Display: smoke temperature"));
+                }
+            } else if (model == EMS_DEVICE_FLAG_RC35) {
+                if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME) {
+                    myDebug_P(PSTR("  Display: date/time"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_EXTTEMP) {
+                    myDebug_P(PSTR("  Display: external temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_BURNERTEMP) {
+                    myDebug_P(PSTR("  Display: burner temperature"));
+                } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP) {
+                    myDebug_P(PSTR("  Display: WW temperature"));
+                } 
             }
         }
         if (EMS_Thermostat.ibaLanguage != EMS_VALUE_INT_NOTSET) {
@@ -473,7 +489,7 @@ void showInfo() {
             _renderIntValue("Offset int. temperature", "K", EMS_Thermostat.ibaCalIntTemperature, 10); // offset int. temperature sensor, by * 0.1 Kelvin
         }
         if (EMS_Thermostat.ibaMinExtTemperature != EMS_VALUE_SHORT_NOTSET) {
-            _renderShortValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature, 0);        // min ext temp for heating curve, in deg.
+            _renderShortValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature, 0); // min ext temp for heating curve, in deg.
         }
         if (EMS_Thermostat.ibaBuildingType != EMS_VALUE_INT_NOTSET) {
             if (EMS_Thermostat.ibaBuildingType == EMS_VALUE_IBASettings_BUILDING_LIGHT) {
@@ -484,8 +500,8 @@ void showInfo() {
                 myDebug_P(PSTR("  Building: heavy"));
             }
         }
-        if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_INT_NOTSET) {
-            _renderIntValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset);     // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+        if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_SHORT_NOTSET) {
+            _renderShortValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset, 0); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
         }
 
         uint8_t _m_setpoint, _m_curr;
@@ -976,24 +992,37 @@ bool publishEMSValues_settings() {
     JsonObject          rootSettings = doc.to<JsonObject>();
 
     if (EMS_Thermostat.ibaMainDisplay != EMS_VALUE_INT_NOTSET) {
-        if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
-            rootSettings["display"] = "int. temperature";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTSETPOINT) {
-            rootSettings["display"] = "int. setpoint";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_EXTTEMP) {
-            rootSettings["display"] = "ext. temperature";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_BURNERTEMP) {
-            rootSettings["display"] = "burner temperature";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_WWTEMP) {
-            rootSettings["display"] = "WW temperature";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_FUNCMODE) {
-            rootSettings["display"] = "functioning mode";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_TIME) {
-            rootSettings["display"] = "time";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
-            rootSettings["display"] = "date";
-        } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
-            rootSettings["display"] = "smoke temperature";
+        uint8_t              model      = ems_getThermostatFlags();
+        if (model == EMS_DEVICE_FLAG_RC30N) {
+            if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
+                rootSettings["display"] = "int. temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTSETPOINT) {
+                rootSettings["display"] = "int. setpoint";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_EXTTEMP) {
+                rootSettings["display"] = "ext. temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_BURNERTEMP) {
+                rootSettings["display"] = "burner temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_WWTEMP) {
+                rootSettings["display"] = "WW temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_FUNCMODE) {
+                rootSettings["display"] = "functioning mode";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_TIME) {
+                rootSettings["display"] = "time";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
+                rootSettings["display"] = "date";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
+                rootSettings["display"] = "smoke temperature";            
+            }
+        } else if (model == EMS_DEVICE_FLAG_RC35) {
+            if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME) {
+                rootSettings["display"] = "date/time";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_EXTTEMP) {
+                rootSettings["display"] = "ext. temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_BURNERTEMP) {
+                rootSettings["display"] = "burner temperature";
+            } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP) {
+                rootSettings["display"] = "WW temperature";
+            } 
         }
     }
     if (EMS_Thermostat.ibaLanguage != EMS_VALUE_INT_NOTSET) {
@@ -1008,10 +1037,10 @@ bool publishEMSValues_settings() {
         }
     }
     if (EMS_Thermostat.ibaCalIntTemperature != EMS_VALUE_INT_NOTSET) {
-        rootSettings["CalIntTemperature"] = (float)EMS_Thermostat.ibaCalIntTemperature / 10;    // offset int. temperature sensor, by * 0.1 Kelvin
+        rootSettings["CalIntTemperature"] = (float)EMS_Thermostat.ibaCalIntTemperature / 10; // offset int. temperature sensor, by * 0.1 Kelvin
     }
     if (EMS_Thermostat.ibaMinExtTemperature != EMS_VALUE_SHORT_NOTSET) {
-        rootSettings["MinExtTemperature"] = EMS_Thermostat.ibaMinExtTemperature;                // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
+        rootSettings["MinExtTemperature"] = EMS_Thermostat.ibaMinExtTemperature; // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
     }
     if (EMS_Thermostat.ibaBuildingType != EMS_VALUE_INT_NOTSET) {
         if (EMS_Thermostat.ibaBuildingType == EMS_VALUE_IBASettings_BUILDING_LIGHT) {
@@ -1022,8 +1051,8 @@ bool publishEMSValues_settings() {
             rootSettings["building"] = "heavy";
         }
     }
-    if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_INT_NOTSET) {
-        rootSettings["clockOffset"] = EMS_Thermostat.ibaClockOffset;                // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+    if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_SHORT_NOTSET) {
+        rootSettings["clockOffset"] = EMS_Thermostat.ibaClockOffset; // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
     }
     return (myESP.mqttPublish(TOPIC_SETTINGS_DATA, doc));
 }
@@ -1189,7 +1218,7 @@ bool publishEMSValues(bool force) {
     }
 
     if (ems_getBoilerEnabled() && (ems_Device_has_flags(EMS_DEVICE_UPDATE_FLAG_SETTINGS))) {
-        // never force publication of settings 
+        // never force publication of settings
         settings = publishEMSValues_settings();
         ems_Device_remove_flags(EMS_DEVICE_UPDATE_FLAG_SETTINGS); // unset flag
     }
@@ -1622,6 +1651,11 @@ void TelnetCallback(uint8_t event) {
     }
 }
 
+void clearEMSDevices() {
+    EMSESP_Settings.known_devices = strdup("");
+    myESP.saveSettings();
+}
+
 // get the list of know devices, as a string, and save them to the config file
 void saveEMSDevices() {
     if (Devices.empty()) {
@@ -1662,7 +1696,7 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
 
     if (strcmp(first_cmd, "refresh") == 0) {
         do_regularUpdates();
-        do_dailyUpdates();        
+        do_dailyUpdates();
         ok = true;
     }
 
@@ -1675,33 +1709,28 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
         // wc = 2 or more. check for "scan"
         char * second_cmd = _readWord();
         if (strcmp(second_cmd, "scan") == 0) {
-            if (wc == 2) {
-                // just scan use UBA 0x07 telegram
-                myDebug_P(PSTR("Requesting EMS bus master for its device list and scanning for external sensors..."));
-                scanDallas();
-                Devices.clear(); // init the device map
-                ems_doReadCommand(EMS_TYPE_UBADevices, EMS_Boiler.device_id);
-                return;
-            }
-
-            // wc is 3 or more. check for additional "force" argument
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "deep") == 0) {
-                myDebug_P(PSTR("Started deep scan of EMS bus for our known devices. This can take up to 10 seconds..."));
-                Devices.clear(); // init the device map
-                ems_scanDevices();
-                return;
-            }
+            // just scan use UBA 0x07 telegram
+            myDebug_P(PSTR("Requesting EMS bus master for its device list and scanning for external sensors..."));
+            scanDallas();
+            Devices.clear(); // init the device map
+            ems_doReadCommand(EMS_TYPE_UBADevices, EMS_Boiler.device_id);
+            return;
+        } else if (strcmp(second_cmd, "scan+") == 0) {
+            myDebug_P(PSTR("Started deep scan of EMS bus for our known devices. This can take up to 10 seconds..."));
+            Devices.clear(); // init the device map
+            ems_scanDevices();
+            return;
         } else if (strcmp(second_cmd, "save") == 0) {
             saveEMSDevices();
             return;
+        } else if (strcmp(second_cmd, "clear") == 0) {
+            clearEMSDevices();
+            return;
         }
-
         ok = false; // unknown command
     }
 
-
-    if (strcmp(first_cmd, "queue") == 0) {
+    if (strcmp(first_cmd, "txqueue") == 0) {
         ems_printTxQueue();
         ok = true;
     }
@@ -2099,6 +2128,8 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_FRENCH);
             } else if (strcasecmp((char *)data, "german") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_GERMAN);
+            } else if (strcasecmp((char *)data, "dutch") == 0) {
+                ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_DUTCH);
             } else if (strcasecmp((char *)data, "italian") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_ITALIAN);
             }
@@ -2126,9 +2157,27 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
                 return;
             }
             uint8_t t = atoi((char *)data);
-            if (t) {
-                ems_setSettingsDisplay(t-1);
+            ems_setSettingsDisplay(t);
+            return;
+        }
+        // min. ext. temperature setting
+        if (strcmp(command, TOPIC_SETTINGS_CMD_MINEXTTEMP) == 0) {
+            const char * data = doc["data"];
+            if (data == nullptr) {
+                return;
             }
+            int16_t t = atoi((char *)data);
+            ems_setSettingsMinExtTemperature(t);
+            return;
+        }
+        // clock offset setting
+        if (strcmp(command, TOPIC_SETTINGS_CMD_CKOFFSET) == 0) {
+            const char * data = doc["data"];
+            if (data == nullptr) {
+                return;
+            }
+            int16_t t = atoi((char *)data);
+            ems_setSettingsClockOffset(t);
             return;
         }
         return; // unknown settings command
@@ -2477,7 +2526,7 @@ void initEMSESP() {
     EMSESP_Settings.tx_mode           = EMS_TXMODE_DEFAULT; // default tx mode
     EMSESP_Settings.bus_id            = EMS_BUSID_DEFAULT;  // Service Key is default
     EMSESP_Settings.master_thermostat = 0;
-    EMSESP_Settings.known_devices     = nullptr;
+    EMSESP_Settings.known_devices     = strdup("");
 
     // shower settings
     EMSESP_Shower.timerStart    = 0;

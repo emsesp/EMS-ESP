@@ -53,13 +53,14 @@
 #define EMS_OFFSET_UBASetPoints_flowtemp 0 // flow temp
 
 // Installation settings
-#define EMS_TYPE_IBASettingsMessage 0xA5                 // installation settings
-#define EMS_OFFSET_IBASettings_Display 0                 // display
-#define EMS_OFFSET_IBASettings_Language 1                // language
-#define EMS_OFFSET_IBASettings_MinExtTemp 5              // min. ext. temperature
-#define EMS_OFFSET_IBASettings_Building 6                // building
-#define EMS_OFFSET_IBASettings_CalIntTemp 2              // cal. int. temperature
-#define EMS_OFFSET_IBASettings_ClockOffset 12            // clock offset
+#define EMS_TYPE_IBASettingsMessage 0xA5      // installation settings
+#define EMS_OFFSET_IBASettings_Display 0      // display
+#define EMS_OFFSET_IBASettingsRC35_Display 22 // display line on RC35
+#define EMS_OFFSET_IBASettings_Language 1     // language
+#define EMS_OFFSET_IBASettings_MinExtTemp 5   // min. ext. temperature
+#define EMS_OFFSET_IBASettings_Building 6     // building
+#define EMS_OFFSET_IBASettings_CalIntTemp 2   // cal. int. temperature
+#define EMS_OFFSET_IBASettings_ClockOffset 12 // clock offset
 
 #define EMS_VALUE_IBASettings_LANG_GERMAN 0
 #define EMS_VALUE_IBASettings_LANG_DUTCH 1
@@ -79,6 +80,11 @@
 #define EMS_VALUE_IBASettings_DISPLAY_TIME 6
 #define EMS_VALUE_IBASettings_DISPLAY_DATE 7
 #define EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP 9
+
+#define EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME 0
+#define EMS_VALUE_IBASettings_DISPLAYRC35_EXTTEMP 1
+#define EMS_VALUE_IBASettings_DISPLAYRC35_BURNERTEMP 2
+#define EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP 3
 
 // Mixing Modules
 // MM100/MM200 (EMS Plus)
