@@ -60,6 +60,7 @@
 #define EMS_OFFSET_IBASettings_Building 6     // building
 #define EMS_OFFSET_IBASettings_CalIntTemp 2   // cal. int. temperature
 #define EMS_OFFSET_IBASettings_ClockOffset 12 // clock offset
+#define EMS_OFFSET_IBASettings_Display1 22    // display on RC35
 
 #define EMS_VALUE_IBASettings_LANG_GERMAN 0
 #define EMS_VALUE_IBASettings_LANG_DUTCH 1
@@ -79,6 +80,11 @@
 #define EMS_VALUE_IBASettings_DISPLAY_TIME 6
 #define EMS_VALUE_IBASettings_DISPLAY_DATE 7
 #define EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP 9
+
+#define EMS_VALUE_IBASettings_DISPLAY1_DATETIME 0
+#define EMS_VALUE_IBASettings_DISPLAY1_EXTTEMP 1
+#define EMS_VALUE_IBASettings_DISPLAY1_BURNERTEMP 2
+#define EMS_VALUE_IBASettings_DISPLAY1_WWTEMP 3
 
 // Mixing Modules
 // MM100/MM200 (EMS Plus)
@@ -179,6 +185,9 @@
 #define EMS_OFFSET_RC35Set_heatingtype 0      // e.g. floor heating = 3
 #define EMS_OFFSET_RC35Set_circuitcalctemp 14 // calculated circuit temperature
 #define EMS_OFFSET_RC35Set_seltemp 37         // selected temp
+#define EMS_OFFSET_RC35Set_temp_offset 6      // position of thermostat heatingcurve offset temperature
+#define EMS_OFFSET_RC35Set_temp_design 17     // position of thermostat heatingcurve design temperature
+
 
 // Easy specific
 #define EMS_TYPE_EasyStatusMessage 0x0A          // reading values on an Easy Thermostat

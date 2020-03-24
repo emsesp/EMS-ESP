@@ -418,8 +418,10 @@ typedef struct {
     uint8_t daytemp;
     uint8_t nighttemp;
     uint8_t holidaytemp;
-    uint8_t heatingtype;     // type of heating: 1 radiator, 2 convectors, 3 floors, 4 room supply
-    uint8_t circuitcalctemp; // calculated setpoint flow temperature
+    uint8_t heatingtype;       // type of heating: 1 radiator, 2 convectors, 3 floors, 4 room supply
+    uint8_t circuitcalctemp;   // calculated setpoint flow temperature
+    uint8_t designtemp;        // heatingcurve design temp at MinExtTemp
+    uint8_t offsettemp;        // heatingcurve offest temp at roomtemp signed!
 } _EMS_Thermostat_HC;
 
 // Thermostat data
@@ -465,7 +467,9 @@ typedef enum : uint8_t {
     EMS_THERMOSTAT_MODE_ECO, // 'sparen'
     EMS_THERMOSTAT_MODE_COMFORT,
     EMS_THERMOSTAT_MODE_HOLIDAY,
-    EMS_THERMOSTAT_MODE_NOFROST
+    EMS_THERMOSTAT_MODE_NOFROST,
+    EMS_THERMOSTAT_MODE_OFFSET,
+    EMS_THERMOSTAT_MODE_DESIGN
 } _EMS_THERMOSTAT_MODE;
 
 #define EMS_THERMOSTAT_MODE_UNKNOWN_STR "unknown"
@@ -479,6 +483,8 @@ typedef enum : uint8_t {
 #define EMS_THERMOSTAT_MODE_COMFORT_STR "comfort"
 #define EMS_THERMOSTAT_MODE_HOLIDAY_STR "holiday"
 #define EMS_THERMOSTAT_MODE_NOFROST_STR "nofrost"
+#define EMS_THERMOSTAT_MODE_OFFSET_STR "offset"
+#define EMS_THERMOSTAT_MODE_DESIGN_STR "design"
 
 // function definitions
 void    ems_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length);
@@ -496,6 +502,7 @@ bool    ems_checkEMSBUSAlive();
 void ems_setSettingsLanguage(uint8_t lg);
 void ems_setSettingsBuilding(uint8_t bg);
 void ems_setSettingsDisplay(uint8_t ds);
+void ems_setSettingsMinExtTemp(int8_t t);
 
 void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE temptype);
 void ems_setThermostatTemp(float temperature, uint8_t hc, const char * mode_s);

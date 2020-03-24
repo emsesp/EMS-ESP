@@ -528,6 +528,10 @@ void showInfo() {
                     _renderIntValue(" Day temperature", "C", EMS_Thermostat.hc[hc_num - 1].daytemp, 2);          // convert to a single byte * 2
                     _renderIntValue(" Night temperature", "C", EMS_Thermostat.hc[hc_num - 1].nighttemp, 2);      // convert to a single byte * 2
                     _renderIntValue(" Vacation temperature", "C", EMS_Thermostat.hc[hc_num - 1].holidaytemp, 2); // convert to a single byte * 2
+                    if ((int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp < 100)
+                        _renderShortValue(" Offset temperature", "C", (int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
+                    if (EMS_Thermostat.hc[hc_num - 1].designtemp < EMS_VALUE_INT_NOTSET)
+                        _renderIntValue(" Design temperature", "C", EMS_Thermostat.hc[hc_num - 1].designtemp);
                 }
 
                 // show flow temp if we have it
@@ -920,6 +924,11 @@ bool publishEMSValues_thermostat() {
 
                 if (thermostat->circuitcalctemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_CIRCUITCALCTEMP] = thermostat->circuitcalctemp;
+                if (thermostat->offsettemp != 100)
+                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (int8_t)thermostat->offsettemp / 2;
+                if (thermostat->designtemp != EMS_VALUE_INT_NOTSET)
+                    dataThermostat[THERMOSTAT_DESIGNTEMP] = thermostat->designtemp;
+
             }
 
             // Thermostat Mode
@@ -2104,6 +2113,8 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_GERMAN);
             } else if (strcasecmp((char *)data, "italian") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_ITALIAN);
+            } else if (strcasecmp((char *)data, "dutch") == 0) {
+                ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_DUTCH);
             }
             return;
         }
@@ -2131,6 +2142,17 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             uint8_t t = atoi((char *)data);
             if (t) {
                 ems_setSettingsDisplay(t - 1);
+            }
+            return;
+        }
+        if (strcmp(command, TOPIC_SETTINGS_CMD_MINEXTTEMP) == 0) {
+            const char * data = doc["data"];
+            if (data == nullptr) {
+                return;
+            }
+            int8_t t = atoi((char *)data);
+            if (t<0) {
+                ems_setSettingsMinExtTemp(t);
             }
             return;
         }
@@ -2272,6 +2294,29 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
                 return;
             }
         }
+        // set heatingcurve design temperature at MinExtTemp
+        hc = _hasHCspecified(TOPIC_THERMOSTAT_CMD_DESIGNTEMP, command);
+        if (hc) {
+            if (EMS_Thermostat.hc[hc - 1].active) {
+                float f = doc["data"];
+                if (f>10) {
+                    ems_setThermostatTemp(f, hc, EMS_THERMOSTAT_MODE_DESIGN); 
+                }
+                return;
+            }
+        }
+        // set heatingcurve offset temperature at room temp (20°C)
+        hc = _hasHCspecified(TOPIC_THERMOSTAT_CMD_OFFSETTEMP, command);
+        if (hc) {
+            if (EMS_Thermostat.hc[hc - 1].active) {
+                 float f = doc["data"];
+                if (f<10) {
+                    ems_setThermostatTemp(f, hc, EMS_THERMOSTAT_MODE_OFFSET);
+                }
+                return;
+            }
+        }
+
     }
 }
 

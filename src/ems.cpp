@@ -127,6 +127,8 @@ void ems_init() {
         EMS_Thermostat.hc[i].circuitcalctemp   = EMS_VALUE_INT_NOTSET;
         EMS_Thermostat.hc[i].setpoint_roomTemp = EMS_VALUE_SHORT_NOTSET;
         EMS_Thermostat.hc[i].curr_roomTemp     = EMS_VALUE_SHORT_NOTSET;
+        EMS_Thermostat.hc[i].designtemp        = EMS_VALUE_INT_NOTSET;
+        EMS_Thermostat.hc[i].offsettemp        = 100;
     }
 
     EMS_MixingModule.device_id = EMS_ID_NONE;
@@ -1301,13 +1303,12 @@ void _process_IBASettingsMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     // send 0B 90 A5 00 20:
     // 10 0B A5 00 00 02 00 00 FF F6 01 06 00 01 0D 03 03
     //             00 01 02 03 04 05 06 07 08 09 10 11 12
-
+    // RC35
+    // 10 0B A5 00 00 00 00 00 FF F5 01 06 00 01 00 01 00 FF 00 01 00 05 20 05 28 FF 03 00 00 00 
     // values validated for RC30N
     uint8_t extTemp = 100; // Min. ext temperature is coded as int8,  0xF6=-10, 0x0 = 0, 0xFF=-1. 100 is out of permissible range
 
-    _setValue(EMS_RxTelegram,
-              &EMS_Thermostat.ibaMainDisplay,
-              EMS_OFFSET_IBASettings_Display); // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
+    _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaMainDisplay, EMS_OFFSET_IBASettings_Display); // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
     _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaLanguage, EMS_OFFSET_IBASettings_Language); // language on Thermostat: 0 german, 1 dutch, 2 french, 3 italian
     _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaBuildingType, EMS_OFFSET_IBASettings_Building);        // building type: 0 = light, 1 = medium, 2 = heavy
     _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaCalIntTemperature, EMS_OFFSET_IBASettings_CalIntTemp); // offset int. temperature sensor, by * 0.1 Kelvin
@@ -1575,6 +1576,8 @@ void _process_RC35Set(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].nighttemp, EMS_OFFSET_RC35Set_temp_night);     // is * 2
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].holidaytemp, EMS_OFFSET_RC35Set_temp_holiday); // is * 2
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].heatingtype, EMS_OFFSET_RC35Set_heatingtype);  // byte 0 bit floor heating = 3
+    _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].designtemp, EMS_OFFSET_RC35Set_temp_design);
+    _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].offsettemp, EMS_OFFSET_RC35Set_temp_offset);
 }
 
 /**
@@ -2122,6 +2125,7 @@ void ems_getSettingsValues() {
     // for the moment, only validated on RC30
     switch (device_flags) {
     case EMS_DEVICE_FLAG_RC30N:
+    case EMS_DEVICE_FLAG_RC35:
         ems_doReadCommand(EMS_TYPE_IBASettingsMessage, device_id);
         break;
     default:
@@ -2493,6 +2497,13 @@ void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE t
         case EMS_THERMOSTAT_MODE_HOLIDAY: // change the holiday temp
             EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_holiday;
             break;
+        case EMS_THERMOSTAT_MODE_OFFSET:
+            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_offset;
+            break;
+        case EMS_THERMOSTAT_MODE_DESIGN:
+            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_design;
+            temperature = temperature / 2;
+            break;
         default:
         case EMS_THERMOSTAT_MODE_AUTO: // automatic selection, if no type is defined, we use the standard code
             if (model == EMS_DEVICE_FLAG_RC35) {
@@ -2596,6 +2607,10 @@ _EMS_THERMOSTAT_MODE ems_getThermostatMode(const char * mode_s) {
         return EMS_THERMOSTAT_MODE_NOFROST;
     } else if (strncmp(mode_s, EMS_THERMOSTAT_MODE_ECO_STR, 10) == 0) {
         return EMS_THERMOSTAT_MODE_ECO;
+    } else if (strncmp(mode_s, EMS_THERMOSTAT_MODE_OFFSET_STR, 10) == 0) {
+        return EMS_THERMOSTAT_MODE_OFFSET;
+    } else if (strncmp(mode_s, EMS_THERMOSTAT_MODE_DESIGN_STR, 10) == 0) {
+        return EMS_THERMOSTAT_MODE_DESIGN;
     }
 
     return EMS_THERMOSTAT_MODE_UNKNOWN;
@@ -2630,6 +2645,12 @@ char * ems_getThermostatModeString(_EMS_THERMOSTAT_MODE mode, char * mode_str) {
         break;
     case EMS_THERMOSTAT_MODE_MANUAL:
         strlcpy(mode_str, EMS_THERMOSTAT_MODE_MANUAL_STR, 10);
+        break;
+    case EMS_THERMOSTAT_MODE_DESIGN:
+        strlcpy(mode_str, EMS_THERMOSTAT_MODE_DESIGN_STR, 10);
+        break;
+    case EMS_THERMOSTAT_MODE_OFFSET:
+        strlcpy(mode_str, EMS_THERMOSTAT_MODE_OFFSET_STR, 10);
         break;
     case EMS_THERMOSTAT_MODE_UNKNOWN:
     default:
@@ -2898,6 +2919,23 @@ void ems_setSettingsDisplay(uint8_t ds) {
     EMS_TxTelegram.dest          = EMS_Thermostat.device_id;
     EMS_TxTelegram.type          = EMS_TYPE_IBASettingsMessage;
     EMS_TxTelegram.offset        = EMS_OFFSET_IBASettings_Display;
+    EMS_TxTelegram.length        = EMS_MIN_TELEGRAM_LENGTH;
+    EMS_TxTelegram.type_validate = EMS_ID_NONE; // don't validate
+
+    EMS_TxQueue.push(EMS_TxTelegram);
+}
+
+void ems_setSettingsMinExtTemp(int8_t t) {
+    if(t<-20 || t>0 ) return;
+    _EMS_TxTelegram EMS_TxTelegram = EMS_TX_TELEGRAM_NEW; // create new Tx
+    EMS_TxTelegram.timestamp       = millis();            // set timestamp
+    EMS_Sys_Status.txRetryCount    = 0;                   // reset retry counter
+    myDebug_P(PSTR("Setting MinExtTemp to %d"), t);
+    EMS_TxTelegram.dataValue = t;
+    EMS_TxTelegram.action        = EMS_TX_TELEGRAM_WRITE;
+    EMS_TxTelegram.dest          = EMS_Thermostat.device_id;
+    EMS_TxTelegram.type          = EMS_TYPE_IBASettingsMessage;
+    EMS_TxTelegram.offset        = EMS_OFFSET_IBASettings_MinExtTemp;
     EMS_TxTelegram.length        = EMS_MIN_TELEGRAM_LENGTH;
     EMS_TxTelegram.type_validate = EMS_ID_NONE; // don't validate
 
