@@ -69,7 +69,8 @@
 #define TOPIC_SETTINGS_CMD_DISPLAY "display"        // change display
 #define TOPIC_SETTINGS_CMD_LANGUAGE "language"      // change language
 #define TOPIC_SETTINGS_CMD_BUILDING "building"      // change building
-#define TOPIC_SETTINGS_CMD_MINEXTTEMP "minextTemp"  // change min. ext. temp.
+#define TOPIC_SETTINGS_CMD_MINEXTTEMP "minexttemp"  // change min. ext. temp.
+#define TOPIC_SETTINGS_CMD_CKOFFSET "clockoffset"   // change clock offset
 
 // MQTT for mixing device
 #define TOPIC_MIXING_DATA "mixing_data" // for sending mixing device values to MQTT
