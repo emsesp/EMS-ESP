@@ -541,8 +541,8 @@ void showInfo() {
                     _renderIntValue(" Day temperature", "C", EMS_Thermostat.hc[hc_num - 1].daytemp, 2);          // convert to a single byte * 2
                     _renderIntValue(" Night temperature", "C", EMS_Thermostat.hc[hc_num - 1].nighttemp, 2);      // convert to a single byte * 2
                     _renderIntValue(" Vacation temperature", "C", EMS_Thermostat.hc[hc_num - 1].holidaytemp, 2); // convert to a single byte * 2
-                    if (EMS_Thermostat.hc[hc_num - 1].offsettemp > EMS_VALUE_SHORT_NOTSET)
-                        _renderShortValue(" Offset temperature", "C", EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
+                    if (EMS_Thermostat.hc[hc_num - 1].offsettemp !=100)
+                        _renderShortValue(" Offset temperature", "C", (int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
                     if (EMS_Thermostat.hc[hc_num - 1].designtemp < EMS_VALUE_INT_NOTSET)
                         _renderIntValue(" Design temperature", "C", EMS_Thermostat.hc[hc_num - 1].designtemp);
                 }
@@ -937,8 +937,8 @@ bool publishEMSValues_thermostat() {
 
                 if (thermostat->circuitcalctemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_CIRCUITCALCTEMP] = thermostat->circuitcalctemp;
-                if (thermostat->offsettemp > EMS_VALUE_SHORT_NOTSET)
-                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (float)thermostat->offsettemp / 2;
+                if (thermostat->offsettemp !=100)
+                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (float)(int8_t)thermostat->offsettemp / 2;
                 if (thermostat->designtemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_DESIGNTEMP] = thermostat->designtemp;
 

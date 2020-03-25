@@ -128,7 +128,7 @@ void ems_init() {
         EMS_Thermostat.hc[i].setpoint_roomTemp = EMS_VALUE_SHORT_NOTSET;
         EMS_Thermostat.hc[i].curr_roomTemp     = EMS_VALUE_SHORT_NOTSET;
         EMS_Thermostat.hc[i].designtemp        = EMS_VALUE_INT_NOTSET;
-        EMS_Thermostat.hc[i].offsettemp        = EMS_VALUE_SHORT_NOTSET;
+        EMS_Thermostat.hc[i].offsettemp        = 100;
     }
 
     EMS_MixingModule.device_id = EMS_ID_NONE;
@@ -1592,7 +1592,7 @@ void _process_RC35Set(_EMS_RxTelegram * EMS_RxTelegram) {
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].holidaytemp, EMS_OFFSET_RC35Set_temp_holiday); // is * 2
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].heatingtype, EMS_OFFSET_RC35Set_heatingtype);  // byte 0 bit floor heating = 3
     _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].designtemp, EMS_OFFSET_RC35Set_temp_design);
-    _setValue8(EMS_RxTelegram, &EMS_Thermostat.hc[hc].offsettemp, EMS_OFFSET_RC35Set_temp_offset);
+    _setValue(EMS_RxTelegram, &EMS_Thermostat.hc[hc].offsettemp, EMS_OFFSET_RC35Set_temp_offset);
 }
 
 /**
