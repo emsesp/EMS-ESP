@@ -116,7 +116,7 @@ static const command_t project_cmds[] PROGMEM = {
     {false, "txqueue", "show current Tx queue"},
     {false, "send XX ...", "send raw telegram data to EMS bus (XX are hex values)"},
     {false, "thermostat read <type ID>", "send read request to the thermostat for heating circuit hc 1-4"},
-    {false, "thermostat temp <degrees> [mode] [hc]", "set thermostat temperature. mode is manual,auto,heat,day,night,eco,comfort,holiday,nofrost"},
+    {false, "thermostat temp <degrees> [mode] [hc]", "set thermostat temp. mode is manual,auto,heat,day,night,eco,comfort,holiday,nofrost,offset,design"},
     {false, "thermostat mode <mode> [hc]", "set mode (manual,auto,heat,day,night,eco,comfort,holiday,nofrost)"},
     {false, "boiler read <type ID>", "send read request to boiler"},
     {false, "boiler wwtemp <degrees>", "set boiler warm water temperature"},
@@ -528,8 +528,8 @@ void showInfo() {
                     _renderIntValue(" Day temperature", "C", EMS_Thermostat.hc[hc_num - 1].daytemp, 2);          // convert to a single byte * 2
                     _renderIntValue(" Night temperature", "C", EMS_Thermostat.hc[hc_num - 1].nighttemp, 2);      // convert to a single byte * 2
                     _renderIntValue(" Vacation temperature", "C", EMS_Thermostat.hc[hc_num - 1].holidaytemp, 2); // convert to a single byte * 2
-                    if ((int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp < 100)
-                        _renderShortValue(" Offset temperature", "C", (int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
+                    if (EMS_Thermostat.hc[hc_num - 1].offsettemp > EMS_VALUE_SHORT_NOTSET)
+                        _renderShortValue(" Offset temperature", "C", EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
                     if (EMS_Thermostat.hc[hc_num - 1].designtemp < EMS_VALUE_INT_NOTSET)
                         _renderIntValue(" Design temperature", "C", EMS_Thermostat.hc[hc_num - 1].designtemp);
                 }
@@ -924,8 +924,8 @@ bool publishEMSValues_thermostat() {
 
                 if (thermostat->circuitcalctemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_CIRCUITCALCTEMP] = thermostat->circuitcalctemp;
-                if (thermostat->offsettemp != 100)
-                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (int8_t)thermostat->offsettemp / 2;
+                if (thermostat->offsettemp > EMS_VALUE_SHORT_NOTSET)
+                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (float)thermostat->offsettemp / 2;
                 if (thermostat->designtemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_DESIGNTEMP] = thermostat->designtemp;
 

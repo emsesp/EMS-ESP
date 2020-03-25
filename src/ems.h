@@ -421,7 +421,7 @@ typedef struct {
     uint8_t heatingtype;       // type of heating: 1 radiator, 2 convectors, 3 floors, 4 room supply
     uint8_t circuitcalctemp;   // calculated setpoint flow temperature
     uint8_t designtemp;        // heatingcurve design temp at MinExtTemp
-    uint8_t offsettemp;        // heatingcurve offest temp at roomtemp signed!
+    int16_t offsettemp;        // heatingcurve offest temp at roomtemp. Signed!
 } _EMS_Thermostat_HC;
 
 // Thermostat data
