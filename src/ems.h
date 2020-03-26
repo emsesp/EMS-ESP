@@ -490,7 +490,7 @@ typedef enum : uint8_t {
 void    ems_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length);
 void    ems_parseTelegram(uint8_t * telegram, uint8_t len);
 void    ems_init();
-void    ems_doReadCommand(uint16_t type, uint8_t dest);
+void    ems_doReadCommand(uint16_t type, uint8_t dest, uint8_t offset = 0);
 void    ems_sendRawTelegram(char * telegram);
 void    ems_printDevices();
 uint8_t ems_printDevices_s(char * buffer, uint16_t len);

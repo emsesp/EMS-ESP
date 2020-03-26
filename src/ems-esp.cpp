@@ -471,7 +471,7 @@ void showInfo() {
                     myDebug_P(PSTR("  Display: burner temperature"));
                 } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP) {
                     myDebug_P(PSTR("  Display: WW temperature"));
-                } 
+                }
             }
         }
         if (EMS_Thermostat.ibaLanguage != EMS_VALUE_INT_NOTSET) {
@@ -938,7 +938,7 @@ bool publishEMSValues_thermostat() {
                 if (thermostat->circuitcalctemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_CIRCUITCALCTEMP] = thermostat->circuitcalctemp;
                 if (thermostat->offsettemp !=100)
-                    dataThermostat[THERMOSTAT_OFFSETTEMP] = (float)(int8_t)thermostat->offsettemp / 2;
+                    dataThermostat[THERMOSTAT_OFFSETTEMP] = ((float)(int8_t)thermostat->offsettemp) / 2;
                 if (thermostat->designtemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_DESIGNTEMP] = thermostat->designtemp;
 
@@ -1020,7 +1020,7 @@ bool publishEMSValues_settings() {
             } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
                 rootSettings["display"] = "date";
             } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
-                rootSettings["display"] = "smoke temperature";            
+                rootSettings["display"] = "smoke temperature";    
             }
         } else if (model == EMS_DEVICE_FLAG_RC35) {
             if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME) {
@@ -1031,7 +1031,7 @@ bool publishEMSValues_settings() {
                 rootSettings["display"] = "burner temperature";
             } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP) {
                 rootSettings["display"] = "WW temperature";
-            } 
+            }
         }
     }
     if (EMS_Thermostat.ibaLanguage != EMS_VALUE_INT_NOTSET) {
@@ -2335,7 +2335,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             if (EMS_Thermostat.hc[hc - 1].active) {
                 float f = doc["data"];
                 if (f>10) {
-                    ems_setThermostatTemp(f, hc, EMS_THERMOSTAT_MODE_DESIGN); 
+                    ems_setThermostatTemp(f, hc, EMS_THERMOSTAT_MODE_DESIGN);
                 }
                 return;
             }
