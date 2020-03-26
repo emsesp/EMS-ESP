@@ -1020,7 +1020,7 @@ bool publishEMSValues_settings() {
             } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_DATE) {
                 rootSettings["display"] = "date";
             } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
-                rootSettings["display"] = "smoke temperature";    
+                rootSettings["display"] = "smoke temperature";
             }
         } else if (model == EMS_DEVICE_FLAG_RC35) {
             if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME) {
@@ -2753,6 +2753,8 @@ void loop() {
 
     // if we just have an EMS bus connection go and fetch the data and MQTT publish it to get started
     if (_need_first_publish) {
+        do_regularUpdates();
+        do_dailyUpdates();
         publishValues(true, true);
         _need_first_publish = false;
         return;

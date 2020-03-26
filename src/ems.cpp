@@ -1308,32 +1308,33 @@ void _process_IBASettingsMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     uint8_t extTemp  = 100;   // Min. ext temperature is coded as int8,  0xF6=-10, 0x0 = 0, 0xFF=-1. 100 is assumed to be out of permissible range
     uint8_t ckOffset = 100;   // Clock offset is coded as int8. 100 is assumed to be out of permissible range
     uint8_t model    = ems_getThermostatFlags();
-    uint8_t dOffset  = -1;
     switch(model) {
         case EMS_DEVICE_FLAG_RC30N:
-            dOffset = EMS_OFFSET_IBASettings_Display;
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaMainDisplay, EMS_OFFSET_IBASettings_Display); // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaLanguage, EMS_OFFSET_IBASettings_Language); // language on Thermostat: 0 german, 1 dutch, 2 french, 3 italian
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaBuildingType, EMS_OFFSET_IBASettings_Building);        // building type: 0 = light, 1 = medium, 2 = heavy
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaCalIntTemperature, EMS_OFFSET_IBASettings_CalIntTemp); // offset int. temperature sensor, by * 0.1 Kelvin
+            _setValue(EMS_RxTelegram, &extTemp, EMS_OFFSET_IBASettings_MinExtTemp); // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
+            if (extTemp != 100) {
+                // code as signed short, to benefit from negative value rendering
+                EMS_Thermostat.ibaMinExtTemperature = (int16_t)(extTemp > 127) ? (extTemp - 256) : extTemp;
+             }
+            _setValue(EMS_RxTelegram, &ckOffset, EMS_OFFSET_IBASettings_ClockOffset); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+            if (ckOffset != 100) {
+                // code as signed short, to benefit from negative value rendering
+                EMS_Thermostat.ibaClockOffset = (int16_t)(ckOffset > 127) ? (ckOffset - 256) : ckOffset;
+            }
             break;
         case EMS_DEVICE_FLAG_RC35:
-            dOffset = EMS_OFFSET_IBASettingsRC35_Display;
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaMainDisplay, EMS_OFFSET_IBASettingsRC35_Display); // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaBuildingType, EMS_OFFSET_IBASettings_Building);        // building type: 0 = light, 1 = medium, 2 = heavy
+            _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaCalIntTemperature, EMS_OFFSET_IBASettings_CalIntTemp); // offset int. temperature sensor, by * 0.1 Kelvin
+            _setValue(EMS_RxTelegram, &extTemp, EMS_OFFSET_IBASettings_MinExtTemp); // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
+            if (extTemp != 100) {
+                EMS_Thermostat.ibaMinExtTemperature = (int16_t)(int8_t)extTemp;
+             }
             break;
     }
-    _setValue(EMS_RxTelegram,
-              &EMS_Thermostat.ibaMainDisplay,
-              dOffset); // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
-    _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaLanguage, EMS_OFFSET_IBASettings_Language); // language on Thermostat: 0 german, 1 dutch, 2 french, 3 italian
-    _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaBuildingType, EMS_OFFSET_IBASettings_Building);        // building type: 0 = light, 1 = medium, 2 = heavy
-    _setValue(EMS_RxTelegram, &EMS_Thermostat.ibaCalIntTemperature, EMS_OFFSET_IBASettings_CalIntTemp); // offset int. temperature sensor, by * 0.1 Kelvin
-    _setValue(EMS_RxTelegram, &extTemp, EMS_OFFSET_IBASettings_MinExtTemp); // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
-    if (extTemp != 100) {
-        // code as signed short, to benefit from negative value rendering
-        EMS_Thermostat.ibaMinExtTemperature = (int16_t)(extTemp > 127) ? (extTemp - 256) : extTemp;
-    }
-    _setValue(EMS_RxTelegram, &ckOffset, EMS_OFFSET_IBASettings_ClockOffset); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
-    if (ckOffset != 100) {
-        // code as signed short, to benefit from negative value rendering
-        EMS_Thermostat.ibaClockOffset = (int16_t)(ckOffset > 127) ? (ckOffset - 256) : ckOffset;
-    }
-
     // publish settings to mqtt (assuming this is a very low frequency message), done in publishEMSValues_settings()
     ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_SETTINGS);
 }
@@ -2519,7 +2520,7 @@ void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE t
             break;
         case EMS_THERMOSTAT_MODE_HOLIDAY: // change the holiday temp
             EMS_Thermostat.hc[hc- 1].holidaytemp = temperature * 2;
-           EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_holiday;
+            EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_holiday;
             break;
         case EMS_THERMOSTAT_MODE_OFFSET:
             EMS_Thermostat.hc[hc- 1].offsettemp = temperature * 2;
@@ -2543,7 +2544,7 @@ void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE t
                 default:
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_seltemp; // https://github.com/proddy/EMS-ESP/issues/310
                     break;
-                } 
+                }
             } else {
                 EMS_TxTelegram.offset = (EMS_Thermostat.hc[hc - 1].mode_type == 0) ? EMS_OFFSET_RC35Set_temp_night : EMS_OFFSET_RC35Set_temp_day;
             }
