@@ -148,7 +148,7 @@ void _renderUShortValue(const char * prefix, const char * postfix, uint16_t valu
 }
 
 // convert int (single byte) to text value and returns it
-char * _int_to_char(char * s, uint8_t value, uint8_t div) {
+char * _uint_to_char(char * s, uint8_t value, uint8_t div) {
     s[0] = '\0'; // reset
     if (value == EMS_VALUE_INT_NOTSET) {
         strlcpy(s, "?", sizeof(s));
@@ -158,10 +158,6 @@ char * _int_to_char(char * s, uint8_t value, uint8_t div) {
     static char s2[5] = {0};
 
     switch (div) {
-    case 1:
-        itoa(value, s, 10);
-        break;
-
     case 2:
         strlcpy(s, itoa(value >> 1, s2, 10), 5);
         strlcat(s, ".", sizeof(s));
@@ -174,6 +170,34 @@ char * _int_to_char(char * s, uint8_t value, uint8_t div) {
         strlcat(s, itoa(value % 10, s2, 10), 5);
         break;
 
+    case 1:
+    default:
+        itoa(value, s, 10);
+        break;
+    }
+
+    return s;
+}
+// convert int (single byte) to text value and returns it
+char * _int_to_char(char * s, int8_t value, uint8_t div) {
+    s[0] = '\0'; // reset
+    if (value == 100) {
+        strlcpy(s, "?", sizeof(s));
+        return (s);
+    }
+    static char s2[5] = {0};
+    switch (div) {
+    case 2:
+        strlcpy(s, itoa(value >> 1, s2, 10), 5);
+        strlcat(s, ".", sizeof(s));
+        strlcat(s, ((value & 0x01) ? "5" : "0"), 5);
+        break;
+    case 10:
+        strlcpy(s, itoa(value / 10, s2, 10), 5);
+        strlcat(s, ".", sizeof(s));
+        strlcat(s, itoa(value % 10, s2, 10), 5);
+        break;
+    case 1:
     default:
         itoa(value, s, 10);
         break;
@@ -184,6 +208,24 @@ char * _int_to_char(char * s, uint8_t value, uint8_t div) {
 
 // takes an int value (1 byte), converts to a fraction and prints
 void _renderIntValue(const char * prefix, const char * postfix, uint8_t value, uint8_t div) {
+    static char buffer[200] = {0};
+    static char s[20]       = {0};
+    strlcpy(buffer, "  ", sizeof(buffer));
+    strlcat(buffer, prefix, sizeof(buffer));
+    strlcat(buffer, ": ", sizeof(buffer));
+
+    strlcat(buffer, _uint_to_char(s, value, div), sizeof(buffer));
+
+    if (postfix != nullptr) {
+        strlcat(buffer, " ", sizeof(buffer));
+        strlcat(buffer, postfix, sizeof(buffer));
+    }
+
+    myDebug(buffer);
+}
+
+// takes an signed int value (1 byte), converts to a fraction and prints
+void _renderIntValue(const char * prefix, const char * postfix, int8_t value, uint8_t div) {
     static char buffer[200] = {0};
     static char s[20]       = {0};
     strlcpy(buffer, "  ", sizeof(buffer));

@@ -71,6 +71,7 @@
 #define TOPIC_SETTINGS_CMD_BUILDING "building"      // change building
 #define TOPIC_SETTINGS_CMD_MINEXTTEMP "minexttemp"  // change min. ext. temp.
 #define TOPIC_SETTINGS_CMD_CKOFFSET "clockoffset"   // change clock offset
+#define TOPIC_SETTINGS_CMD_CALINTTEMP "calinttemp"  // calibrate internal temperature
 
 // MQTT for mixing device
 #define TOPIC_MIXING_DATA "mixing_data" // for sending mixing device values to MQTT

@@ -48,6 +48,8 @@ Ticker regularUpdatesTimer;
 #define DAILYUPDATES_TIME 86400 // every day a call is made to fetch data from EMS devices manually
 Ticker dailyUpdatesTimer;
 
+Ticker firstTimeUpdatesTimer;
+
 #define LEDCHECK_TIME 500 // every 1/2 second blink the heartbeat LED
 Ticker ledcheckTimer;
 
@@ -485,11 +487,11 @@ void showInfo() {
                 myDebug_P(PSTR("  Language: Italian"));
             }
         }
-        if (EMS_Thermostat.ibaCalIntTemperature != EMS_VALUE_INT_NOTSET) {
+        if (EMS_Thermostat.ibaCalIntTemperature != 127) {
             _renderIntValue("Offset int. temperature", "K", EMS_Thermostat.ibaCalIntTemperature, 10); // offset int. temperature sensor, by * 0.1 Kelvin
         }
-        if (EMS_Thermostat.ibaMinExtTemperature != EMS_VALUE_SHORT_NOTSET) {
-            _renderShortValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature, 0); // min ext temp for heating curve, in deg.
+        if (EMS_Thermostat.ibaMinExtTemperature != 127) {
+            _renderIntValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature, 0); // min ext temp for heating curve, in deg.
         }
         if (EMS_Thermostat.ibaBuildingType != EMS_VALUE_INT_NOTSET) {
             if (EMS_Thermostat.ibaBuildingType == EMS_VALUE_IBASettings_BUILDING_LIGHT) {
@@ -500,8 +502,8 @@ void showInfo() {
                 myDebug_P(PSTR("  Building: heavy"));
             }
         }
-        if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_SHORT_NOTSET) {
-            _renderShortValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset, 0); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+        if (EMS_Thermostat.ibaClockOffset != 127) {
+            _renderIntValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset, 0); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
         }
 
         uint8_t _m_setpoint, _m_curr;
@@ -541,8 +543,8 @@ void showInfo() {
                     _renderIntValue(" Day temperature", "C", EMS_Thermostat.hc[hc_num - 1].daytemp, 2);          // convert to a single byte * 2
                     _renderIntValue(" Night temperature", "C", EMS_Thermostat.hc[hc_num - 1].nighttemp, 2);      // convert to a single byte * 2
                     _renderIntValue(" Vacation temperature", "C", EMS_Thermostat.hc[hc_num - 1].holidaytemp, 2); // convert to a single byte * 2
-                    if (EMS_Thermostat.hc[hc_num - 1].offsettemp !=100)
-                        _renderShortValue(" Offset temperature", "C", (int8_t)EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
+                    if (EMS_Thermostat.hc[hc_num - 1].offsettemp !=127)
+                        _renderIntValue(" Offset temperature", "C", EMS_Thermostat.hc[hc_num - 1].offsettemp, 2);
                     if (EMS_Thermostat.hc[hc_num - 1].designtemp < EMS_VALUE_INT_NOTSET)
                         _renderIntValue(" Design temperature", "C", EMS_Thermostat.hc[hc_num - 1].designtemp);
                 }
@@ -683,7 +685,7 @@ bool publishSensorValues() {
                 hasdata = true;
                 char topic[30];                                        // sensors{1-n}
                 strlcpy(topic, TOPIC_EXTERNAL_SENSORS, sizeof(topic)); // create topic
-                strlcat(topic, _int_to_char(buffer, i + 1), sizeof(topic));
+                strlcat(topic, _uint_to_char(buffer, i + 1), sizeof(topic));
                 sensors[PAYLOAD_EXTERNAL_SENSOR_ID]   = ds18.getDeviceID(buffer, i); // add ID
                 sensors[PAYLOAD_EXTERNAL_SENSOR_TEMP] = sensorValue;                 // add temp value
                 myESP.mqttPublish(topic, doc);                                       // and publish
@@ -705,7 +707,7 @@ bool publishSensorValues() {
 #else
             char sensorID[10]; // sensor{1-n}
             strlcpy(sensorID, PAYLOAD_EXTERNAL_SENSOR_NUM, sizeof(sensorID));
-            strlcat(sensorID, _int_to_char(buffer, i + 1), sizeof(sensorID));
+            strlcat(sensorID, _uint_to_char(buffer, i + 1), sizeof(sensorID));
             JsonObject dataSensor                    = sensors.createNestedObject(sensorID);
             dataSensor[PAYLOAD_EXTERNAL_SENSOR_ID]   = ds18.getDeviceID(buffer, i);
             dataSensor[PAYLOAD_EXTERNAL_SENSOR_TEMP] = sensorValue;
@@ -902,7 +904,7 @@ bool publishEMSValues_thermostat() {
                 char hc[10]; // hc{1-4}
                 strlcpy(hc, THERMOSTAT_HC, sizeof(hc));
                 char s[20]; // for formatting strings
-                strlcat(hc, _int_to_char(s, thermostat->hc), sizeof(hc));
+                strlcat(hc, _uint_to_char(s, thermostat->hc), sizeof(hc));
                 dataThermostat = rootThermostat.createNestedObject(hc);
             } else {
                 dataThermostat = rootThermostat;
@@ -937,8 +939,8 @@ bool publishEMSValues_thermostat() {
 
                 if (thermostat->circuitcalctemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_CIRCUITCALCTEMP] = thermostat->circuitcalctemp;
-                if (thermostat->offsettemp !=100)
-                    dataThermostat[THERMOSTAT_OFFSETTEMP] = ((float)(int8_t)thermostat->offsettemp) / 2;
+                if (thermostat->offsettemp !=127)
+                    dataThermostat[THERMOSTAT_OFFSETTEMP] = ((float)thermostat->offsettemp) / 2;
                 if (thermostat->designtemp != EMS_VALUE_INT_NOTSET)
                     dataThermostat[THERMOSTAT_DESIGNTEMP] = thermostat->designtemp;
 
@@ -976,7 +978,7 @@ bool publishEMSValues_thermostat() {
                 char topic[30];
                 char s[20]; // for formatting strings
                 strlcpy(topic, TOPIC_THERMOSTAT_DATA, sizeof(topic));
-                strlcat(topic, _int_to_char(s, thermostat->hc), sizeof(topic)); // append hc to topic
+                strlcat(topic, _uint_to_char(s, thermostat->hc), sizeof(topic)); // append hc to topic
                 char data[MYESP_JSON_MAXSIZE_MEDIUM];
                 serializeJson(doc, data);
                 myESP.mqttPublish(topic, data);
@@ -1045,10 +1047,10 @@ bool publishEMSValues_settings() {
             rootSettings["language"] = "Italian";
         }
     }
-    if (EMS_Thermostat.ibaCalIntTemperature != EMS_VALUE_INT_NOTSET) {
+    if (EMS_Thermostat.ibaCalIntTemperature != 127) {
         rootSettings["CalIntTemperature"] = (float)EMS_Thermostat.ibaCalIntTemperature / 10; // offset int. temperature sensor, by * 0.1 Kelvin
     }
-    if (EMS_Thermostat.ibaMinExtTemperature != EMS_VALUE_SHORT_NOTSET) {
+    if (EMS_Thermostat.ibaMinExtTemperature != 127) {
         rootSettings["MinExtTemperature"] = EMS_Thermostat.ibaMinExtTemperature; // min ext temp for heating curve, in deg., 0xF6=-10, 0x0 = 0, 0xFF=-1
     }
     if (EMS_Thermostat.ibaBuildingType != EMS_VALUE_INT_NOTSET) {
@@ -1060,7 +1062,7 @@ bool publishEMSValues_settings() {
             rootSettings["building"] = "heavy";
         }
     }
-    if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_SHORT_NOTSET) {
+    if (EMS_Thermostat.ibaClockOffset != 127) {
         rootSettings["clockOffset"] = EMS_Thermostat.ibaClockOffset; // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
     }
     return (myESP.mqttPublish(TOPIC_SETTINGS_DATA, doc));
@@ -1081,7 +1083,7 @@ bool publishEMSValues_mixing() {
             has_data = true;
             char hc[10]; // hc{1-4}
             strlcpy(hc, MIXING_HC, sizeof(hc));
-            strlcat(hc, _int_to_char(s, mixingHC->hc), sizeof(hc));
+            strlcat(hc, _uint_to_char(s, mixingHC->hc), sizeof(hc));
             JsonObject dataMixingHC = rootMixing.createNestedObject(hc);
             if (mixingHC->flowTemp < EMS_VALUE_USHORT_NOTSET)
                 dataMixingHC["flowTemp"] = (float)mixingHC->flowTemp / 10;
@@ -1101,7 +1103,7 @@ bool publishEMSValues_mixing() {
             has_data = true;
             char wwc[10]; // wwc{1-2}
             strlcpy(wwc, MIXING_WWC, sizeof(wwc));
-            strlcat(wwc, _int_to_char(s, mixingWWC->wwc), sizeof(wwc));
+            strlcat(wwc, _uint_to_char(s, mixingWWC->wwc), sizeof(wwc));
             JsonObject dataMixing = rootMixing.createNestedObject(wwc);
             if (mixingWWC->flowTemp < EMS_VALUE_USHORT_NOTSET)
                 dataMixing["wwTemp"] = (float)mixingWWC->flowTemp / 10;
@@ -1338,6 +1340,11 @@ void do_dailyUpdates() {
         ems_getSettingsValues();
     }
 }
+void do_firstTimeUpdates() {
+        do_regularUpdates();
+        do_dailyUpdates();
+        firstTimeUpdatesTimer.detach();
+ }
 
 // turn back on the hot water for the shower
 void _showerColdShotStop() {
@@ -2133,16 +2140,14 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             if (data == nullptr) {
                 return;
             }
-            if (strcasecmp((char *)data, "french") == 0) {
-                ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_FRENCH);
-            } else if (strcasecmp((char *)data, "german") == 0) {
+            if (strcasecmp((char *)data, "german") == 0 || strcmp(data, "0") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_GERMAN);
-            } else if (strcasecmp((char *)data, "dutch") == 0) {
+            } else if (strcasecmp((char *)data, "dutch") == 0 || strcmp(data, "1") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_DUTCH);
-            } else if (strcasecmp((char *)data, "italian") == 0) {
+            } else if (strcasecmp((char *)data, "french") == 0 || strcmp(data, "2") == 0) {
+                ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_FRENCH);
+            } else if (strcasecmp((char *)data, "italian") == 0 || strcmp(data, "3") == 0) {
                 ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_ITALIAN);
-            } else if (strcasecmp((char *)data, "dutch") == 0) {
-                ems_setSettingsLanguage(EMS_VALUE_IBASettings_LANG_DUTCH);
             }
             return;
         }
@@ -2152,43 +2157,45 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
             if (data == nullptr) {
                 return;
             }
-            if (strcasecmp((char *)data, "light") == 0) {
+            if (strcasecmp((char *)data, "light") == 0 || strcmp(data, "0") == 0) {
                 ems_setSettingsBuilding(EMS_VALUE_IBASettings_BUILDING_LIGHT);
-            } else if (strcasecmp((char *)data, "medium") == 0) {
+            } else if (strcasecmp((char *)data, "medium") == 0 || strcmp(data, "1") == 0) {
                 ems_setSettingsBuilding(EMS_VALUE_IBASettings_BUILDING_MEDIUM);
-            } else if (strcasecmp((char *)data, "heavy") == 0) {
+            } else if (strcasecmp((char *)data, "heavy") == 0 || strcmp(data, "2") == 0) {
                 ems_setSettingsBuilding(EMS_VALUE_IBASettings_BUILDING_HEAVY);
             }
             return;
         }
         // display setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_DISPLAY) == 0) {
-            const char * data = doc["data"];
-            if (data == nullptr) {
-                return;
+            uint8_t t = doc["data"];
+            if(t) {
+                ems_setSettingsDisplay(t);
             }
-            uint8_t t = atoi((char *)data);
-            ems_setSettingsDisplay(t);
             return;
         }
         // min. ext. temperature setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_MINEXTTEMP) == 0) {
-            const char * data = doc["data"];
-            if (data == nullptr) {
-                return;
+            int8_t t = doc["data"];
+            if(t) {
+                ems_setSettingsMinExtTemperature(t);
             }
-            int16_t t = atoi((char *)data);
-            ems_setSettingsMinExtTemperature(t);
             return;
         }
         // clock offset setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_CKOFFSET) == 0) {
-            const char * data = doc["data"];
-            if (data == nullptr) {
-                return;
+            int8_t t = doc["data"];
+            if(t) {
+                ems_setSettingsClockOffset(t);
             }
-            int16_t t = atoi((char *)data);
-            ems_setSettingsClockOffset(t);
+            return;
+        }
+        // calibrate internal temperature sensor
+        if (strcmp(command, TOPIC_SETTINGS_CMD_CALINTTEMP) == 0) {
+            int8_t t = doc["data"];
+            if(t) {
+                ems_setSettingsCalIntTemp(t);
+            }
             return;
         }
         return; // unknown settings command
@@ -2710,6 +2717,7 @@ void setup() {
     if (!EMSESP_Settings.listen_mode) {
         regularUpdatesTimer.attach(REGULARUPDATES_TIME, do_regularUpdates); // regular reads from the EMS
         dailyUpdatesTimer.attach(DAILYUPDATES_TIME, do_dailyUpdates);       // daily reads from the EMS
+        firstTimeUpdatesTimer.attach(30,do_firstTimeUpdates);               // update once after 30 sec
     }
 
     // set timers for MQTT publish
@@ -2753,8 +2761,6 @@ void loop() {
 
     // if we just have an EMS bus connection go and fetch the data and MQTT publish it to get started
     if (_need_first_publish) {
-        do_regularUpdates();
-        do_dailyUpdates();
         publishValues(true, true);
         _need_first_publish = false;
         return;
