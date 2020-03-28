@@ -127,7 +127,7 @@ void ems_init() {
         EMS_Thermostat.hc[i].setpoint_roomTemp = EMS_VALUE_SHORT_NOTSET;
         EMS_Thermostat.hc[i].curr_roomTemp     = EMS_VALUE_SHORT_NOTSET;
         EMS_Thermostat.hc[i].designtemp        = EMS_VALUE_UINT_NOTSET;
-        EMS_Thermostat.hc[i].offsettemp        = 127;
+        EMS_Thermostat.hc[i].offsettemp        = EMS_VALUE_INT_NOTSET;
     }
 
     EMS_MixingModule.device_id = EMS_ID_NONE;
