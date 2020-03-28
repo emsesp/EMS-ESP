@@ -3032,12 +3032,15 @@ void ems_setSettingsDisplay(uint8_t ds) {
     EMS_TxQueue.push(EMS_TxTelegram);
 }
 
-void ems_setSettingsCalIntTemp(int8_t t) {
-    if(t<-20 || t>0 ) return;
+void ems_setSettingsCalIntTemp(float f) {
+    int8_t t = (int8_t)(f * 10);
+    if(t<-30 || t>30 ) return;
     _EMS_TxTelegram EMS_TxTelegram = EMS_TX_TELEGRAM_NEW; // create new Tx
     EMS_TxTelegram.timestamp       = millis();            // set timestamp
     EMS_Sys_Status.txRetryCount    = 0;                   // reset retry counter
-    myDebug_P(PSTR("Setting Temp calibration to %d"), t);
+    char s[10] = {0};
+    myDebug_P(PSTR("Setting Temp calibration to %s"), _int_to_char(s, t, 10));
+    EMS_Thermostat.ibaCalIntTemperature = t;
     EMS_TxTelegram.dataValue = t;
     EMS_TxTelegram.action        = EMS_TX_TELEGRAM_WRITE;
     EMS_TxTelegram.dest          = EMS_Thermostat.device_id;

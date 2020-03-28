@@ -2169,7 +2169,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         // display setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_DISPLAY) == 0) {
             uint8_t t = doc["data"];
-            if(t) {
+            if(doc["data"] != nullptr) {
                 ems_setSettingsDisplay(t);
             }
             return;
@@ -2177,7 +2177,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         // min. ext. temperature setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_MINEXTTEMP) == 0) {
             int8_t t = doc["data"];
-            if(t) {
+            if(doc["data"] != nullptr) {
                 ems_setSettingsMinExtTemperature(t);
             }
             return;
@@ -2185,16 +2185,16 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         // clock offset setting
         if (strcmp(command, TOPIC_SETTINGS_CMD_CKOFFSET) == 0) {
             int8_t t = doc["data"];
-            if(t) {
+            if(doc["data"] != nullptr) {
                 ems_setSettingsClockOffset(t);
             }
             return;
         }
         // calibrate internal temperature sensor
         if (strcmp(command, TOPIC_SETTINGS_CMD_CALINTTEMP) == 0) {
-            int8_t t = doc["data"];
-            if(t) {
-                ems_setSettingsCalIntTemp(t);
+            float f = doc["data"];
+            if(doc["data"] != nullptr) {
+                ems_setSettingsCalIntTemp(f);
             }
             return;
         }

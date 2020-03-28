@@ -186,20 +186,24 @@ char * _int_to_char(char * s, int8_t value, uint8_t div) {
         return (s);
     }
     static char s2[5] = {0};
+    if(value < 0) {
+        strlcat(s, "-", sizeof(s));
+        value *= -1;
+    }
     switch (div) {
     case 2:
-        strlcpy(s, itoa(value >> 1, s2, 10), 5);
+        strlcat(s, itoa(value >> 1, s2, 10), 5);
         strlcat(s, ".", sizeof(s));
         strlcat(s, ((value & 0x01) ? "5" : "0"), 5);
         break;
     case 10:
-        strlcpy(s, itoa(value / 10, s2, 10), 5);
+        strlcat(s, itoa(value / 10, s2, 10), 5);
         strlcat(s, ".", sizeof(s));
         strlcat(s, itoa(value % 10, s2, 10), 5);
         break;
     case 1:
     default:
-        itoa(value, s, 10);
+        strcat(s, itoa(value, s2, 10));
         break;
     }
 

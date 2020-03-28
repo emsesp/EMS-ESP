@@ -505,7 +505,7 @@ void ems_setSettingsBuilding(uint8_t bg);
 void ems_setSettingsDisplay(uint8_t ds);
 void ems_setSettingsMinExtTemperature(int8_t mt);
 void ems_setSettingsClockOffset(int8_t co);
-void ems_setSettingsCalIntTemp(int8_t t);
+void ems_setSettingsCalIntTemp(float f);
 
 
 void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE temptype);
