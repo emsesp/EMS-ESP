@@ -9,6 +9,7 @@
 
 #include "MyESP.h"
 #include "irt.h"
+#include "ems_utils.h"
 
 #ifdef CRASH
 EEPROM_Rotate EEPROMr;
@@ -90,6 +91,7 @@ MyESP::MyESP() {
     _mqtt_will_online_payload  = strdup(MQTT_WILL_ONLINE_PAYLOAD);
     _mqtt_will_offline_payload = strdup(MQTT_WILL_OFFLINE_PAYLOAD);
     _mqtt_publish_fails        = 0; // count of number of failed MQTT topic publishes
+    _mqtt_publish_failed       = 0; // keep track of the last publish
 
     // network
     _network_password  = nullptr;
@@ -562,13 +564,15 @@ void MyESP::_mqttPublishQueue() {
         if (element.retry_count == (MQTT_PUBLISH_MAX_RETRY - 1)) {
             myDebug_P(PSTR("[MQTT] Failed to publish to %s with payload %s"), _mqttTopic(element.topic), element.payload);
             _mqtt_publish_fails++; // increment failure counter
+            _mqtt_publish_failed = 1;
             _mqttRemoveLastPublish();
         } else {
             _mqtt_queue[0].retry_count++;
         }
         return;
     }
-
+    // reset error flag
+    _mqtt_publish_failed = 0;
     // if we have ACK set with QOS 1 or 2, leave on queue and let the ACK process remove it
     // but add the packet_id so we can check it later
     if (_mqtt_qos != 0) {
@@ -993,7 +997,7 @@ void MyESP::_printSetCommands() {
 
     // print any custom settings
     if (_fs_setlist_callback_f) {
-        (_fs_setlist_callback_f)(MYESP_FSACTION_LIST, 0, nullptr, nullptr);
+        (_fs_setlist_callback_f)(MYESP_FSACTION_LIST, nullptr, 0);
     }
 
     myDebug_P(PSTR("")); // newline
@@ -1024,11 +1028,14 @@ char * MyESP::_telnet_readWord(bool allow_all_chars) {
 // change settings - always as strings
 // messy code but effective since we don't have too many settings
 // wc is word count, number of parameters after the 'set' command
-bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value) {
+bool MyESP::_changeSetting(char **argv, size_t argc) {
     bool save_config = false;
     bool restart     = false;
 
     MYESP_FSACTION_t save_custom_config = MYESP_FSACTION_ERR; // default
+
+	char *setting = argv[0];
+	char *value = argv[1]; //argv array is init with null ptrs
 
     // check for our internal commands first
     if (strcmp(setting, "erase") == 0) {
@@ -1092,7 +1099,7 @@ bool MyESP::_changeSetting(uint8_t wc, const char * setting, const char * value)
     } else {
         // finally check for any custom commands
         if (_fs_setlist_callback_f) {
-            save_custom_config = (_fs_setlist_callback_f)(MYESP_FSACTION_SET, wc, setting, value);
+            save_custom_config = (_fs_setlist_callback_f)(MYESP_FSACTION_SET, argv, argc);
             restart            = (save_custom_config == MYESP_FSACTION_RESTART);
         }
     }
@@ -1153,31 +1160,40 @@ void MyESP::_telnetCommand(char * commandLine) {
     }
 
     // check first for reserved commands
-    char * temp             = strdup(commandLine);         // because strotok kills original string buffer
-    char * ptrToCommandName = strtok((char *)temp, " \n"); // space and newline
+	char *temp             = strdup(commandLine);         // because strotok kills original string buffer
 
-    // set command
-    if (strcmp(ptrToCommandName, "set") == 0) {
-        bool ok = false;
-        if (wc == 1) {
-            _printSetCommands();
-            ok = true;
-        } else if (wc == 2) { // set <something>
-            char * setting = _telnet_readWord(false);
-            ok             = _changeSetting(wc - 1, setting, nullptr);
-        } else { // set <something> <values...>
-            char * setting = _telnet_readWord(false);
-            char * value   = _telnet_readWord(true); // allow strange characters
-            ok             = _changeSetting(wc - 1, setting, value);
-        }
+	#define MAX_ARGVS 10
+	char *argv[MAX_ARGVS];
+	size_t argc;
 
-        if (!ok) {
-            myDebug_P(PSTR("")); // newline
-            myDebug_P(PSTR("Unknown set command or wrong number of arguments."));
-        }
+	argc = _parse_cmd_line(temp, argv, MAX_ARGVS);
+	if (argc < 1) {
+		myDebug_P(PSTR("Failed to parse CMD line, no data."));
+		free(temp);
+		return;
+	}
+	char *ptrToCommandName = argv[0];
 
-        return;
-    }
+
+//    char * ptrToCommandName = strtok((char *)temp, " \n"); // space and newline
+
+	// set command
+	if (strcmp(ptrToCommandName, "set") == 0) {
+		bool ok = false;
+		if (argc <= 1) {
+			_printSetCommands();
+			ok = true;
+		} else {
+			ok = _changeSetting(&argv[1], argc-1);
+		}
+
+		if (!ok) {
+			myDebug_P(PSTR("")); // newline
+			myDebug_P(PSTR("Unknown set command or wrong number of arguments."));
+		}
+
+		return;
+	}
     // command to set water temp
     if (strcmp(ptrToCommandName, "set_water") == 0) {
         if (wc == 1) {
@@ -2247,6 +2263,12 @@ bool MyESP::mqttUseNestedJson() {
 // returns true is MQTT is alive
 bool MyESP::isMQTTConnected() {
     return mqttClient.connected();
+}
+
+// return status inidcating if the MQTT connection is healthy
+bool MyESP::isMQTTHealthy() {
+	if ((isMQTTConnected()) && (_mqtt_publish_failed == 0)) return true;
+	return false;
 }
 
 // return true if wifi is connected (client or AP mode)

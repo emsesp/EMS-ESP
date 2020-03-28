@@ -62,11 +62,6 @@ void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length)
 	strlcat(output_str, COLOR_YELLOW, sizeof(output_str));
 	strlcat(output_str, prefix, sizeof(output_str));
 
-	// show some EMS_Sys_Status entries
-//	strlcat(output_str, _hextoa(EMS_Sys_Status.emsRxStatus, buffer), sizeof(output_str));
-//	strlcat(output_str, " ", sizeof(output_str));
-//	strlcat(output_str, _hextoa(EMS_Sys_Status.emsTxStatus, buffer), sizeof(output_str));
-//	strlcat(output_str, " ", sizeof(output_str));
 	strlcat(output_str, _hextoa(length, buffer), sizeof(output_str));
 	strlcat(output_str, ": ", sizeof(output_str));
 
@@ -148,6 +143,7 @@ uint8_t irt_handle_0x05(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 
 uint8_t irt_handle_0x07(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
+	/* burner power 0x4d min power 0xff max power */
 	/*  0  1  2  3 */
 	/* 07 00 D0 6C */
 	/* 07 ss D0 ss*/
@@ -388,6 +384,9 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* A4 ?? ?? ?? ww */
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
 	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
+
+	IRT_Sys_Status.cur_flow_temp = data[4];
+	IRT_Sys_Status.last_flow_update = millis();
 	return 0;
 }
 uint8_t irt_handle_0xA6(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
@@ -835,6 +834,14 @@ void irt_send_next_poll_to_boiler()
 
 	uint16_t burner_power = 0;
 	uint8_t water_temp = 0x35; // default
+
+	if (myESP.isMQTTHealthy()) {
+		// set burner power
+	} else {
+		// fallback
+	}
+
+
 	if ((IRT_Sys_Status.req_water_temp > 20) && (IRT_Sys_Status.req_water_temp < 90)) {
 		// boiler will start if power is bigger then 0x50
 		// we have valid temp range of 20 till 90
@@ -952,6 +959,30 @@ void irt_loop()
 	}
 }
 
+
+/**
+ * Set the boiler flow temp
+ */
+void irt_setFlowTemp(uint8_t temperature) {
+
+	if (EMSESP_Settings.tx_mode == 5) {
+		myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
+		IRT_Sys_Status.req_water_temp = temperature;
+	} else {
+		myDebug_P(PSTR("Cannot set boiler flow temperature to %d C, not in active mode"), temperature);
+		IRT_Sys_Status.req_water_temp = 0;
+	}
+}
+/**
+ * Activate / De-activate the Warm Water 0x33
+ * true = on, false = off
+ */
+void irt_setWarmWaterActivated(bool activated) {
+    myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
+}
+
+
+
 void irt_set_water_temp(uint8_t wc, const char *setting, const char *value)
 {
 //	int sel_test = 0;
@@ -1031,10 +1062,9 @@ void irt_sendRawTelegram(char *telegram)
 		}
 	}
 	if (state >= 1)	IRT_TxQueue.push(IRT_Tx);
-
-
-
 }
+
+
 void irt_init_uart()
 {
 	// init of irt, setup uart
@@ -1044,12 +1074,15 @@ void irt_init_uart()
 void irt_init()
 {
 
-
-	IRT_Sys_Status.last_send_check = millis();
+	memset(&IRT_Sys_Status, 0, sizeof(_IRT_Sys_Status));
+	IRT_Sys_Status.last_send_check = 0;
 	IRT_Sys_Status.send_interval = 4000; // in milliseconds
 	IRT_Sys_Status.poll_step = 0;
 	IRT_Sys_Status.my_address = 1;
 	IRT_Sys_Status.req_water_temp = 0;
+
+	IRT_Sys_Status.cur_flow_temp = 20; // setup a default
+	IRT_Sys_Status.last_flow_update = 0;
 }
 
 void irt_setup()
@@ -1097,7 +1130,7 @@ bool ems_getThermostatEnabled() {
     return (EMS_Thermostat.device_id != EMS_ID_NONE);
 }
 void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool silent) {
-    if (loglevel <= EMS_SYS_LOGGING_JABBER) {
+    if (loglevel <= EMS_SYS_LOGGING_MQTT) {
         EMS_Sys_Status.emsLogging = loglevel;
         if (silent) {
             return; // don't print to telnet/serial
@@ -1117,24 +1150,12 @@ void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool silent) {
             myDebug_P(PSTR("System Logging set to Raw mode"));
         } else if (loglevel == EMS_SYS_LOGGING_JABBER) {
             myDebug_P(PSTR("System Logging set to Jabber mode"));
-        }
+        } else if (loglevel == EMS_SYS_LOGGING_MQTT) {
+            myDebug_P(PSTR("System Logging set to MQTT"));        }
     }
 }
 
-/**
- * Set the boiler flow temp
- */
-void ems_setFlowTemp(uint8_t temperature) {
-    myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
 
-}
-/**
- * Activate / De-activate the Warm Water 0x33
- * true = on, false = off
- */
-void ems_setWarmWaterActivated(bool activated) {
-    myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
-}
 /**
  * Set the warm water temperature 0x33
  */

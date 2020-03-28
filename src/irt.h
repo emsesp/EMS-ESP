@@ -44,6 +44,8 @@ typedef struct {
 	uint8_t				my_address;					// address used to identify myself
 	uint8_t				req_water_temp;			// requested water temperature
 	unsigned long		last_boiler_poll;			// last time
+	uint8_t				cur_flow_temp;				// last reported flow temp in Celsius
+	unsigned long		last_flow_update;			// last time the flow temp was reported
 } _IRT_Sys_Status;
 
 #define IRT_MAX_SUB_MSGS 5 // max 5 messages in a single go
@@ -74,6 +76,9 @@ typedef struct {
 // function definitions
 extern void irt_dumpBuffer(const char * prefix, uint8_t * telegram, uint8_t length);
 extern void irt_parseTelegram(uint8_t * telegram, uint8_t len);
+
+void irt_setFlowTemp(uint8_t temperature);
+void irt_setWarmWaterActivated(bool activated);
 
 void irt_init_uart();
 void irt_init();
@@ -119,6 +124,14 @@ void irt_set_water_temp(uint8_t wc, const char *setting, const char *value);
 // define maximum setable tapwater temperature
 #define EMS_BOILER_TAPWATER_TEMPERATURE_MAX 60
 
+#define IRT_FLOW_PID_P_DEFAULT 50
+#define IRT_FLOW_PID_I_DEFAULT 40
+#define IRT_FLOW_PID_D_DEFAULT 30
+
+#define IRT_FLOW_MAX_TEMP_DEFAULT 60
+
+
+
 /* EMS logging */
 typedef enum {
     EMS_SYS_LOGGING_NONE,        // no messages
@@ -129,7 +142,8 @@ typedef enum {
     EMS_SYS_LOGGING_SOLARMODULE, // only telegrams sent from solarmodule
     EMS_SYS_LOGGING_VERBOSE,     // everything
     EMS_SYS_LOGGING_JABBER,      // lots of debug output...
-    EMS_SYS_LOGGING_DEVICE       // watch the device ID
+    EMS_SYS_LOGGING_DEVICE,       // watch the device ID
+    EMS_SYS_LOGGING_MQTT         // start logging the MQTT messages
 } _EMS_SYS_LOGGING;
 
 #define EMS_SYS_LOGGING_DEFAULT EMS_SYS_LOGGING_NONE
@@ -278,6 +292,15 @@ typedef struct {
     uint8_t bus_id;            // BUS ID, defaults to 0x0B for the service key
     uint8_t master_thermostat; // Product ID of master thermostat to use, 0 for automatic
     char *  known_devices;     // list of known deviceIDs for quick boot
+
+	// PID flow settings
+	uint16_t	flow_temp_P;		// P value of PID for flow temp control
+	uint16_t	flow_temp_I;		// I value of PID for flow temp control
+	uint16_t	flow_temp_D;		// D value of PID for flow temp control
+
+	uint8_t	max_flow_temp;		// safety value, system will always limit to this max temp
+
+
 } _EMSESP_Settings;
 
 // status/counters since last power on
@@ -326,7 +349,5 @@ void             ems_Device_remove_flags(unsigned int flags);
 bool             ems_getThermostatEnabled();
 void ems_setLogging(_EMS_SYS_LOGGING loglevel, bool silent = false);
 
-void ems_setFlowTemp(uint8_t temperature);
-void ems_setWarmWaterActivated(bool activated);
 void ems_setWarmWaterTemp(uint8_t temperature);
 bool ems_getBoilerEnabled();

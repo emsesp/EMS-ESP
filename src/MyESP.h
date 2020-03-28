@@ -242,7 +242,7 @@ typedef std::function<void()>                                                   
 typedef std::function<void(uint8_t, const char *)>                                             telnetcommand_callback_f;
 typedef std::function<void(uint8_t)>                                                           telnet_callback_f;
 typedef std::function<bool(MYESP_FSACTION_t, JsonObject json)>                                 fs_loadsave_callback_f;
-typedef std::function<MYESP_FSACTION_t(MYESP_FSACTION_t, uint8_t, const char *, const char *)> fs_setlist_callback_f;
+typedef std::function<MYESP_FSACTION_t(MYESP_FSACTION_t, char **, size_t)> fs_setlist_callback_f;
 typedef std::function<void(JsonObject root)>                                                   web_callback_f;
 
 // calculates size of an 2d array at compile time
@@ -278,6 +278,7 @@ class MyESP {
 
     // mqtt
     bool isMQTTConnected();
+    bool isMQTTHealthy();
     bool mqttSubscribe(const char * topic);
     void mqttUnsubscribe(const char * topic);
     void mqttPublish(const char * topic, const char * payload);
@@ -368,6 +369,7 @@ class MyESP {
     bool            _mqtt_heartbeat;
     bool            _mqtt_nestedjson;
     uint16_t        _mqtt_publish_fails;
+    uint8_t         _mqtt_publish_failed;
 
     // wifi
     void            _wifiCallback(justwifi_messages_t code, char * parameter);
@@ -404,7 +406,7 @@ class MyESP {
     void                     _consoleShowHelp();
     telnetcommand_callback_f _telnetcommand_callback_f; // Callable for projects commands
     telnet_callback_f        _telnet_callback_f;        // callback for connect/disconnect
-    bool                     _changeSetting(uint8_t wc, const char * setting, const char * value);
+    bool                     _changeSetting(char **argv, size_t argc);
 
     // syslog
     void _syslog_setup();

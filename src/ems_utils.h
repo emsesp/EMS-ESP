@@ -11,8 +11,10 @@
 #include "MyESP.h"
 #include "irt.h"
 
+#ifdef EMS_UTILS_INCLUDE_DEBUG_MACRO
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
+#endif
 
 char *   _float_to_char(char * a, float f, uint8_t precision = 2);
 char *   _bool_to_char(char * s, uint8_t value);
@@ -31,3 +33,4 @@ uint8_t  _readIntNumber();
 float    _readFloatNumber();
 uint16_t _readHexNumber();
 char *   _readWord();
+size_t	_parse_cmd_line(char *cmd_line, char **argv, size_t max_argv);

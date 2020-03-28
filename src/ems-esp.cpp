@@ -8,6 +8,8 @@
  */
 
 // local libraries
+#define EMS_UTILS_INCLUDE_DEBUG_MACRO
+
 #include "MyESP.h"
 #include "irt.h"
 #include "irtuart.h"
@@ -84,6 +86,7 @@ static const command_t project_cmds[] PROGMEM = {
     {true, "publish_time <seconds>", "set frequency for publishing data to MQTT (-1=off, 0=automatic)"},
     {true, "tx_mode <n>", "changes Tx logic. 1=ems generic, 2=ems+, 3=Junkers HT3, 4=iRT, 5=Active iRT"},
     {true, "master_thermostat [product id]", "set default thermostat to use. No argument lists options"},
+    {true, "flow_pid [p] [i] [d]", "Set PID values for flow temp controller (0-100)"},
 
     {false, "info", "show current values deciphered from the EMS messages"},
     {false, "log <n | b | t | s | r | j | v | w [ID] | d [ID]>", "logging: none, basic, thermo, solar, raw, jabber, verbose, watch a type or device"},
@@ -221,6 +224,8 @@ void showInfo() {
         myDebug_P(PSTR("  System logging set to Watch"));
     } else if (sysLog == EMS_SYS_LOGGING_DEVICE) {
         myDebug_P(PSTR("  System logging set to device"));
+    } else if (sysLog == EMS_SYS_LOGGING_MQTT) {
+        myDebug_P(PSTR("  System logging set to MQTT"));
     } else {
         myDebug_P(PSTR("  System logging set to None"));
     }
@@ -357,6 +362,16 @@ void showInfo() {
                   (EMS_Boiler.UBAuptime % 1440) / 60,
                   EMS_Boiler.UBAuptime % 60);
     }
+
+	if (EMSESP_Settings.tx_mode == 5) {
+		myDebug_P(PSTR("  Flow temp. PID: %d %d %d"),
+							EMSESP_Settings.flow_temp_P,
+							EMSESP_Settings.flow_temp_I,
+							EMSESP_Settings.flow_temp_D);
+		myDebug_P(PSTR("  Max. flow temp.: %d C"),
+							EMSESP_Settings.max_flow_temp);
+	}
+
 #ifdef nuniet
     // For SM10/SM100 Solar Module
     if (ems_getSolarModuleEnabled()) {
@@ -1021,7 +1036,7 @@ void do_ledcheck() {
 // do a system health check every now and then to see if we all connections
 void do_systemCheck() {
     if (!ems_getBusConnected() && !myESP.getUseSerial()) {
-        myDebug_P(PSTR("Error! Unable to read the EMS bus."));
+        myDebug_P(PSTR("Error! Unable to read the iRT bus."));
     }
 }
 
@@ -1099,6 +1114,13 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
 
         EMSESP_Settings.known_devices = strdup(settings["known_devices"] | "");
 
+
+		EMSESP_Settings.flow_temp_P = settings["flow_temp_p"] | IRT_FLOW_PID_P_DEFAULT;
+		EMSESP_Settings.flow_temp_I = settings["flow_temp_i"] | IRT_FLOW_PID_I_DEFAULT;
+		EMSESP_Settings.flow_temp_D = settings["flow_temp_d"] | IRT_FLOW_PID_D_DEFAULT;
+		EMSESP_Settings.max_flow_temp = settings["max_flow_temp"] | IRT_FLOW_MAX_TEMP_DEFAULT;
+
+
         return true;
     }
 
@@ -1125,10 +1147,13 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
 // callback for custom settings when showing Stored Settings with the 'set' command
 // wc is number of arguments after the 'set' command
 // returns true if the setting was recognized and changed and should be saved back to SPIFFs
-MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char * setting, const char * value) {
+MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t argc /*uint8_t wc, const char * setting, const char * value*/) {
     MYESP_FSACTION_t ok = MYESP_FSACTION_ERR;
 
     if (action == MYESP_FSACTION_SET) {
+		char *setting = argv[0];
+		char *value = argv[1];
+		uint8_t wc = (uint8_t)argc;
         // led
         if ((strcmp(setting, "led") == 0) && (wc == 2)) {
             if (strcmp(value, "on") == 0) {
@@ -1281,7 +1306,18 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, uint8_t wc, const char
                 ok = MYESP_FSACTION_OK;
             }
         }
+		if ((strcmp(argv[0], "flow_pid") == 0) && (argc >= 1)) {
+			int8_t flow_p = -1;
+			int8_t flow_i = -1;
+			int8_t flow_d = -1;
+			if (argc > 1) flow_p = atoi(argv[1]);
+			if (argc > 2) flow_p = atoi(argv[2]);
+			if (argc > 3) flow_p = atoi(argv[3]);
+
+			myDebug_P(PSTR("flow_pid %d %d %d"), flow_p, flow_i, flow_d);
+		}
     }
+        // flow_pid
 
     if (action == MYESP_FSACTION_LIST) {
         myDebug_P(PSTR("  led=%s"), EMSESP_Settings.led ? "on" : "off");
@@ -1471,6 +1507,9 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
         } else if ((strcmp(second_cmd, "d") == 0) && (wc == 3)) {
             ems_setLogging(EMS_SYS_LOGGING_DEVICE, _readHexNumber()); // get device_id
             ok = true;
+        } else if (strcmp(second_cmd, "m") == 0) {
+            ems_setLogging(EMS_SYS_LOGGING_MQTT);
+            ok = true;
         }
     }
 
@@ -1528,15 +1567,15 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
                 ok = true;
             }
         } else if (strcmp(second_cmd, "flowtemp") == 0) {
-            ems_setFlowTemp(_readIntNumber());
+            irt_setFlowTemp(_readIntNumber());
             ok = true;
         } else if (strcmp(second_cmd, "wwactive") == 0) {
             char * third_cmd = _readWord();
             if (strcmp(third_cmd, "on") == 0) {
-                ems_setWarmWaterActivated(true);
+                irt_setWarmWaterActivated(true);
                 ok = true;
             } else if (strcmp(third_cmd, "off") == 0) {
-                ems_setWarmWaterActivated(false);
+                irt_setWarmWaterActivated(false);
                 ok = true;
             }
         } else if (strcmp(second_cmd, "wwonetime") == 0) {
@@ -1612,6 +1651,15 @@ uint8_t _hasHCspecified(const char * key, const char * input) {
 
 // MQTT Callback to handle incoming/outgoing changes
 void MQTTCallback(unsigned int type, const char * topic, const char * message) {
+
+	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_MQTT) {
+		const char *my_topic = "not set";
+		if (topic) my_topic = topic;
+		const char *my_msg = "no payload";
+		if ((message) && (message[0] >= ' ')) my_msg = message;
+		myDebug_P(PSTR("[MQTT] %d topic: '%s', payload: '%s'"), type, my_topic, my_msg);
+	}
+
     // we're connected. lets subscribe to some topics
     if (type == MQTT_CONNECT_EVENT) {
         // subscribe to the 4 heating circuits for receiving setpoint temperature and modes
@@ -1749,7 +1797,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         if (strcmp(command, TOPIC_BOILER_CMD_FLOWTEMP) == 0) {
             uint8_t t = doc["data"];
             if (t) {
-                ems_setFlowTemp(t);
+                irt_setFlowTemp(t);
             }
             return;
         }
@@ -1762,9 +1810,9 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
     // wwActivated
     if (strcmp(topic, TOPIC_BOILER_CMD_WWACTIVATED) == 0) {
         if ((message[0] == MYESP_MQTT_PAYLOAD_ON || strcmp(message, "on") == 0) || (strcmp(message, "auto") == 0)) {
-            ems_setWarmWaterActivated(true);
+            irt_setWarmWaterActivated(true);
         } else if (message[0] == MYESP_MQTT_PAYLOAD_OFF || strcmp(message, "off") == 0) {
-            ems_setWarmWaterActivated(false);
+            irt_setWarmWaterActivated(false);
         }
         return;
     }

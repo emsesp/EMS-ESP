@@ -1,9 +1,10 @@
 /*
  * Generic utils
- * 
+ *
  * Paul Derbyshire - https://github.com/proddy/EMS-ESP
  *
  */
+#define EMS_UTILS_INCLUDE_DEBUG_MACRO
 
 #include "ems_utils.h"
 
@@ -296,3 +297,57 @@ char * _readWord() {
     char * word = strtok(nullptr, ", \n");
     return word;
 }
+
+
+size_t _parse_cmd_line(char *cmd_line, char **argv, size_t max_argv)
+{
+	/* split-up a cmd line in to arguments
+	   Adds terminating '0', buffer will be modified !
+	   */
+
+	size_t i, len, cnt;
+	uint8_t flag;
+
+	for (i=0; i<max_argv; i++) {
+		argv[i] = nullptr;
+	}
+
+	len = strlen(cmd_line);
+	cnt = 0;
+	flag = 0;
+	for (i=0; i<len; i++) {
+		switch (flag) {
+			case 0:
+				if (cmd_line[i] > ' ') {
+					if (cmd_line[i] == '\"') {
+						if (cnt < max_argv) {
+							argv[cnt++] = &cmd_line[i + 1];
+						}
+						flag = 2;
+					} else {
+						if (cnt < max_argv) {
+							argv[cnt++] = &cmd_line[i];
+						}
+						flag = 1;
+					}
+				}
+				break;
+			case 1: // parsing data
+				if (cmd_line[i] <= ' ') {
+					cmd_line[i] = 0;
+					flag = 0;
+				}
+				break;
+			case 2: // parsing data
+				if (cmd_line[i] == '\"') {
+					cmd_line[i] = 0;
+					flag = 0;
+				}
+				break;
+		}
+	}
+
+
+	return cnt;
+}
+
