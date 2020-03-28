@@ -3034,7 +3034,7 @@ void ems_setSettingsDisplay(uint8_t ds) {
 
 void ems_setSettingsCalIntTemp(float f) {
     int8_t t = (int8_t)(f * 10);
-    if(t<-30 || t>30 ) return;
+    if(t<-50 || t>50 ) return;                            // limit according to RC30/RC35 manual
     _EMS_TxTelegram EMS_TxTelegram = EMS_TX_TELEGRAM_NEW; // create new Tx
     EMS_TxTelegram.timestamp       = millis();            // set timestamp
     EMS_Sys_Status.txRetryCount    = 0;                   // reset retry counter
