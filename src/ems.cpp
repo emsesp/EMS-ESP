@@ -156,15 +156,15 @@ void ems_init() {
 
     // UBAParameterWW
     EMS_Boiler.wWActivated     = EMS_VALUE_BOOL_NOTSET; // Warm Water activated
-    EMS_Boiler.wWSelTemp       = EMS_VALUE_UINT_NOTSET;  // Warm Water selected temperature
+    EMS_Boiler.wWSelTemp       = EMS_VALUE_UINT_NOTSET; // Warm Water selected temperature
     EMS_Boiler.wWCircPump      = EMS_VALUE_BOOL_NOTSET; // Warm Water circulation pump available
-    EMS_Boiler.wWCircPumpMode  = EMS_VALUE_UINT_NOTSET;  // Warm Water circulation pump mode
+    EMS_Boiler.wWCircPumpMode  = EMS_VALUE_UINT_NOTSET; // Warm Water circulation pump mode
     EMS_Boiler.wWCircPumpType  = EMS_VALUE_BOOL_NOTSET; // Warm Water circulation pump type
-    EMS_Boiler.wWDesinfectTemp = EMS_VALUE_UINT_NOTSET;  // Warm Water desinfection temperature to prevent infection
-    EMS_Boiler.wWComfort       = EMS_VALUE_UINT_NOTSET;  // WW comfort mode
+    EMS_Boiler.wWDesinfectTemp = EMS_VALUE_UINT_NOTSET; // Warm Water desinfection temperature to prevent infection
+    EMS_Boiler.wWComfort       = EMS_VALUE_UINT_NOTSET; // WW comfort mode
 
     // UBAMonitorFast - 0x18 on EMS1
-    EMS_Boiler.selFlowTemp    = EMS_VALUE_UINT_NOTSET;    // Selected flow temperature
+    EMS_Boiler.selFlowTemp    = EMS_VALUE_UINT_NOTSET;   // Selected flow temperature
     EMS_Boiler.curFlowTemp    = EMS_VALUE_USHORT_NOTSET; // Current flow temperature
     EMS_Boiler.wwStorageTemp1 = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 1
     EMS_Boiler.wwStorageTemp2 = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 2
@@ -173,12 +173,12 @@ void ems_init() {
     EMS_Boiler.fanWork        = EMS_VALUE_BOOL_NOTSET;   // Fan on/off
     EMS_Boiler.ignWork        = EMS_VALUE_BOOL_NOTSET;   // Ignition on/off
     EMS_Boiler.heatPmp        = EMS_VALUE_BOOL_NOTSET;   // Boiler pump on/off
-    EMS_Boiler.wWHeat         = EMS_VALUE_UINT_NOTSET;    // 3-way valve on WW
+    EMS_Boiler.wWHeat         = EMS_VALUE_UINT_NOTSET;   // 3-way valve on WW
     EMS_Boiler.wWCirc         = EMS_VALUE_BOOL_NOTSET;   // Circulation on/off
-    EMS_Boiler.selBurnPow     = EMS_VALUE_UINT_NOTSET;    // Burner max power %
-    EMS_Boiler.curBurnPow     = EMS_VALUE_UINT_NOTSET;    // Burner current power %
+    EMS_Boiler.selBurnPow     = EMS_VALUE_UINT_NOTSET;   // Burner max power %
+    EMS_Boiler.curBurnPow     = EMS_VALUE_UINT_NOTSET;   // Burner current power %
     EMS_Boiler.flameCurr      = EMS_VALUE_USHORT_NOTSET; // Flame current in micro amps
-    EMS_Boiler.sysPress       = EMS_VALUE_UINT_NOTSET;    // System pressure
+    EMS_Boiler.sysPress       = EMS_VALUE_UINT_NOTSET;   // System pressure
     strlcpy(EMS_Boiler.serviceCodeChar, "??", sizeof(EMS_Boiler.serviceCodeChar));
     EMS_Boiler.serviceCode = EMS_VALUE_USHORT_NOTSET;
 
@@ -186,23 +186,23 @@ void ems_init() {
     EMS_Boiler.extTemp     = EMS_VALUE_SHORT_NOTSET;  // Outside temperature
     EMS_Boiler.boilTemp    = EMS_VALUE_USHORT_NOTSET; // Boiler temperature
     EMS_Boiler.exhaustTemp = EMS_VALUE_USHORT_NOTSET; // Exhaust temperature
-    EMS_Boiler.pumpMod     = EMS_VALUE_UINT_NOTSET;    // Pump modulation %
+    EMS_Boiler.pumpMod     = EMS_VALUE_UINT_NOTSET;   // Pump modulation %
     EMS_Boiler.burnStarts  = EMS_VALUE_LONG_NOTSET;   // # burner restarts
     EMS_Boiler.burnWorkMin = EMS_VALUE_LONG_NOTSET;   // Total burner operating time
     EMS_Boiler.heatWorkMin = EMS_VALUE_LONG_NOTSET;   // Total heat operating time
     EMS_Boiler.switchTemp  = EMS_VALUE_USHORT_NOTSET;
 
     // UBAMonitorWWMessage
-    EMS_Boiler.wWSetTmp        = EMS_VALUE_UINT_NOTSET;    // Warm Water set temperature
+    EMS_Boiler.wWSetTmp        = EMS_VALUE_UINT_NOTSET;   // Warm Water set temperature
     EMS_Boiler.wWCurTmp        = EMS_VALUE_USHORT_NOTSET; // Warm Water current temperature
     EMS_Boiler.wWCurTmp2       = EMS_VALUE_USHORT_NOTSET; // Warm Water current temperature storage
     EMS_Boiler.wWStarts        = EMS_VALUE_LONG_NOTSET;   // Warm Water # starts
     EMS_Boiler.wWWorkM         = EMS_VALUE_LONG_NOTSET;   // Warm Water # minutes
-    EMS_Boiler.wWOneTime       = EMS_VALUE_UINT_NOTSET;    // Warm Water one time function on/off
-    EMS_Boiler.wWDesinfecting  = EMS_VALUE_UINT_NOTSET;    // Warm Water desinfection on/off
-    EMS_Boiler.wWReadiness     = EMS_VALUE_UINT_NOTSET;    // Warm Water readiness on/off
-    EMS_Boiler.wWRecharging    = EMS_VALUE_UINT_NOTSET;    // Warm Water recharge on/off
-    EMS_Boiler.wWTemperatureOK = EMS_VALUE_UINT_NOTSET;    // Warm Water temperature ok on/off
+    EMS_Boiler.wWOneTime       = EMS_VALUE_UINT_NOTSET;   // Warm Water one time function on/off
+    EMS_Boiler.wWDesinfecting  = EMS_VALUE_UINT_NOTSET;   // Warm Water desinfection on/off
+    EMS_Boiler.wWReadiness     = EMS_VALUE_UINT_NOTSET;   // Warm Water readiness on/off
+    EMS_Boiler.wWRecharging    = EMS_VALUE_UINT_NOTSET;   // Warm Water recharge on/off
+    EMS_Boiler.wWTemperatureOK = EMS_VALUE_UINT_NOTSET;   // Warm Water temperature ok on/off
 
     EMS_Boiler.wWCurFlow = EMS_VALUE_UINT_NOTSET; // WW current flow temp
 
@@ -218,7 +218,7 @@ void ems_init() {
     EMS_SolarModule.collectorTemp          = EMS_VALUE_SHORT_NOTSET; // collector temp from SM10/SM100/SM200
     EMS_SolarModule.bottomTemp             = EMS_VALUE_SHORT_NOTSET; // bottom temp from SM10/SM100/SM200
     EMS_SolarModule.bottomTemp2            = EMS_VALUE_SHORT_NOTSET; // bottom temp 2 from SM200
-    EMS_SolarModule.pumpModulation         = EMS_VALUE_UINT_NOTSET;   // modulation solar pump SM10/SM100/SM200
+    EMS_SolarModule.pumpModulation         = EMS_VALUE_UINT_NOTSET;  // modulation solar pump SM10/SM100/SM200
     EMS_SolarModule.pump                   = EMS_VALUE_BOOL_NOTSET;  // pump active
     EMS_SolarModule.valveStatus            = EMS_VALUE_BOOL_NOTSET;  // valve status from SM200
     EMS_SolarModule.EnergyLastHour         = EMS_VALUE_USHORT_NOTSET;
@@ -2989,9 +2989,8 @@ void ems_setSettingsDisplay(uint8_t ds) {
     EMS_TxTelegram.timestamp       = millis();            // set timestamp
     EMS_Sys_Status.txRetryCount    = 0;                   // reset retry counter
     uint8_t model    = ems_getThermostatFlags();
-    uint8_t dOffset  = -1;
     if (model == EMS_DEVICE_FLAG_RC30N) {
-        dOffset = EMS_OFFSET_IBASettings_Display;
+        EMS_TxTelegram.offset = EMS_OFFSET_IBASettings_Display;
         switch (ds) {
             case EMS_VALUE_IBASettings_DISPLAY_INTTEMP:
             case EMS_VALUE_IBASettings_DISPLAY_INTSETPOINT:
@@ -3007,7 +3006,7 @@ void ems_setSettingsDisplay(uint8_t ds) {
                 return; // invalid value
         }
     } else if (model == EMS_DEVICE_FLAG_RC35) {
-        dOffset = EMS_OFFSET_IBASettingsRC35_Display;
+        EMS_TxTelegram.offset = EMS_OFFSET_IBASettingsRC35_Display;
         switch (ds) {
             case EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME:
             case EMS_VALUE_IBASettings_DISPLAYRC35_EXTTEMP:
@@ -3025,7 +3024,6 @@ void ems_setSettingsDisplay(uint8_t ds) {
     EMS_TxTelegram.action        = EMS_TX_TELEGRAM_WRITE;
     EMS_TxTelegram.dest          = EMS_Thermostat.device_id;
     EMS_TxTelegram.type          = EMS_TYPE_IBASettingsMessage;
-    EMS_TxTelegram.offset        = dOffset;
     EMS_TxTelegram.dataValue     = ds;
     EMS_TxTelegram.length        = EMS_MIN_TELEGRAM_LENGTH;
     EMS_TxTelegram.type_validate = EMS_ID_NONE; // don't validate
