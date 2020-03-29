@@ -488,7 +488,7 @@ void showInfo() {
             _renderIntValue("Offset int. temperature", "K", EMS_Thermostat.ibaCalIntTemperature, 10); // offset int. temperature sensor, by * 0.1 Kelvin
         }
         if (EMS_Thermostat.ibaMinExtTemperature != EMS_VALUE_INT_NOTSET) {
-            _renderIntValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature, 0); // min ext temp for heating curve, in deg.
+            _renderIntValue("Min ext. temperature", "C", EMS_Thermostat.ibaMinExtTemperature); // min ext temp for heating curve, in deg.
         }
         if (EMS_Thermostat.ibaBuildingType != EMS_VALUE_UINT_NOTSET) {
             if (EMS_Thermostat.ibaBuildingType == EMS_VALUE_IBASettings_BUILDING_LIGHT) {
@@ -500,7 +500,7 @@ void showInfo() {
             }
         }
         if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_INT_NOTSET) {
-            _renderIntValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset, 0); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+            _renderIntValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset); // offset (in sec) to clock
         }
         if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
              _renderIntValue("Damped Outdoor temperatur", "C", EMS_Thermostat.dampedoutdoortemp);
