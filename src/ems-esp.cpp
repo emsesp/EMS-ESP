@@ -443,7 +443,6 @@ void showInfo() {
 
         // settings parameters
         if (EMS_Thermostat.ibaMainDisplay != EMS_VALUE_UINT_NOTSET) {
-            uint8_t              model      = ems_getThermostatFlags();
             if (model == EMS_DEVICE_FLAG_RC30N) {
                 if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
                     myDebug_P(PSTR("  Display: internal temperature"));
@@ -464,6 +463,15 @@ void showInfo() {
                 } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_SMOKETEMP) {
                     myDebug_P(PSTR("  Display: smoke temperature"));
                 }
+                if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_GERMAN) {
+                    myDebug_P(PSTR("  Language: German"));
+                } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_DUTCH) {
+                    myDebug_P(PSTR("  Language: Dutch"));
+                } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_FRENCH) {
+                    myDebug_P(PSTR("  Language: French"));
+                } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_ITALIAN) {
+                    myDebug_P(PSTR("  Language: Italian"));
+            }
             } else if (model == EMS_DEVICE_FLAG_RC35) {
                 if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_DATETIME) {
                     myDebug_P(PSTR("  Display: date/time"));
@@ -474,17 +482,6 @@ void showInfo() {
                 } else if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAYRC35_WWTEMP) {
                     myDebug_P(PSTR("  Display: WW temperature"));
                 }
-            }
-        }
-        if (EMS_Thermostat.ibaLanguage != EMS_VALUE_UINT_NOTSET) {
-            if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_GERMAN) {
-                myDebug_P(PSTR("  Language: German"));
-            } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_DUTCH) {
-                myDebug_P(PSTR("  Language: Dutch"));
-            } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_FRENCH) {
-                myDebug_P(PSTR("  Language: French"));
-            } else if (EMS_Thermostat.ibaLanguage == EMS_VALUE_IBASettings_LANG_ITALIAN) {
-                myDebug_P(PSTR("  Language: Italian"));
             }
         }
         if (EMS_Thermostat.ibaCalIntTemperature != EMS_VALUE_INT_NOTSET) {
@@ -504,6 +501,15 @@ void showInfo() {
         }
         if (EMS_Thermostat.ibaClockOffset != EMS_VALUE_INT_NOTSET) {
             _renderIntValue("Offset clock", "s", EMS_Thermostat.ibaClockOffset, 0); // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
+        }
+        if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
+             _renderIntValue("Damped Outdoor temperatur", "C", EMS_Thermostat.dampedoutdoortemp);
+        }
+        if (EMS_Thermostat.tempsensor1 != EMS_VALUE_USHORT_NOTSET) {
+            _renderShortValue("Tempsensor 1", "C",EMS_Thermostat.tempsensor1);
+        }
+        if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
+            _renderShortValue("Tempsensor 2", "C",EMS_Thermostat.tempsensor2);
         }
 
         uint8_t _m_setpoint, _m_curr;
@@ -889,15 +895,26 @@ bool publishEMSValues_thermostat() {
     JsonObject                                    rootThermostat = doc.to<JsonObject>();
     JsonObject                                    dataThermostat;
 
+    uint8_t model = ems_getThermostatFlags(); // fetch model flags
+   
+   if (model == EMS_DEVICE_FLAG_RC35) {
+        if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
+            rootThermostat[THERMOSTAT_DAMPEDTEMP] = EMS_Thermostat.dampedoutdoortemp;
+        }
+        if (EMS_Thermostat.tempsensor1 != EMS_VALUE_USHORT_NOTSET) {
+            rootThermostat[THERMOSTAT_TEMPSENSOR1] = (float)EMS_Thermostat.tempsensor1 / 10;
+        }
+        if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
+            rootThermostat[THERMOSTAT_TEMPSENSOR2] = (float)EMS_Thermostat.tempsensor2 / 10;
+        }
+    }
     bool has_data = false;
-
     for (uint8_t hc_v = 1; hc_v <= EMS_THERMOSTAT_MAXHC; hc_v++) {
         _EMS_Thermostat_HC * thermostat = &EMS_Thermostat.hc[hc_v - 1];
 
         // only send if we have an active Heating Circuit with an actual setpoint temp temperature values
         if ((thermostat->active) && (thermostat->setpoint_roomTemp > EMS_VALUE_SHORT_NOTSET)) {
-            uint8_t model = ems_getThermostatFlags(); // fetch model flags
-            has_data      = true;
+            has_data = true;
 
             if (myESP.mqttUseNestedJson()) {
                 // create nested json for each HC

@@ -101,8 +101,12 @@ void ems_init() {
 
     // thermostat
     strlcpy(EMS_Thermostat.datetime, "?", sizeof(EMS_Thermostat.datetime));
-    EMS_Thermostat.write_supported = false;
-    EMS_Thermostat.device_id       = EMS_ID_NONE;
+    EMS_Thermostat.write_supported   = false;
+    EMS_Thermostat.device_id         = EMS_ID_NONE;
+    EMS_Thermostat.dampedoutdoortemp = EMS_VALUE_INT_NOTSET;
+    EMS_Thermostat.tempsensor1       = EMS_VALUE_USHORT_NOTSET;
+    EMS_Thermostat.tempsensor2       = EMS_VALUE_USHORT_NOTSET;
+
     // settings
     EMS_Thermostat.ibaMainDisplay       = EMS_VALUE_UINT_NOTSET; // display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 boiler temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp
     EMS_Thermostat.ibaLanguage          = EMS_VALUE_UINT_NOTSET; // language on Thermostat: 0 german, 1 dutch, 2 french, 3 italian
@@ -1375,17 +1379,6 @@ void _process_MMStatusMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].valveStatus, EMS_OFFSET_MMStatusMessage_valve_status);
 }
 
-// Mixing Parameters - 0xAC
-// We assume MM10 is on HC2 and WM10 is using HC1
-void _process_MM10ParameterMessage(_EMS_RxTelegram * EMS_RxTelegram) {
-    //uint8_t hc                     = 1; // fixed to HC2
-    //EMS_MixingModule.hc[hc].active = true;
-
-    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].flowTemp, EMS_OFFSET_MMStatusMessage_flow_temp);
-    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].pumpMod, EMS_OFFSET_MMStatusMessage_pump_mod);
-    //_setValue(EMS_RxTelegram, &EMS_MixingModule.hc[hc].flowSetTemp, EMS_OFFSET_MMStatusMessage_flow_set);
-}
-
 /**
  * type 0x01A5 - data from the Nefit RC1010/3000 thermostat (0x18) and RC300/310s on 0x10
  * EMS+ messages may come in with different offsets so handle them here
@@ -1597,6 +1590,9 @@ void _process_RC35Set(_EMS_RxTelegram * EMS_RxTelegram) {
  */
 void _process_RCOutdoorTempMessage(_EMS_RxTelegram * EMS_RxTelegram) {
     // add support here if you're reading external sensors
+   _setValue(EMS_RxTelegram, &EMS_Thermostat.dampedoutdoortemp, EMS_OFFSET_RC35Status_dtemp);
+   _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor1, EMS_OFFSET_RC35Status_temp1);
+   _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor2, EMS_OFFSET_RC35Status_temp2);
 }
 
 /*
@@ -2167,6 +2163,11 @@ void ems_getMixingModuleValues() {
     if (ems_getMixingModuleEnabled()) {
         if (EMS_MixingModule.device_flags == EMS_DEVICE_FLAG_MMPLUS) {
             ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_HC1, EMS_MixingModule.device_id);
+            ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_HC2, EMS_MixingModule.device_id);
+            ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_HC3, EMS_MixingModule.device_id);
+            ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_HC4, EMS_MixingModule.device_id);
+            ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_WWC1, EMS_MixingModule.device_id);
+            ems_doReadCommand(EMS_TYPE_MMPLUSStatusMessage_WWC2, EMS_MixingModule.device_id);
         } else if (EMS_MixingModule.device_flags == EMS_DEVICE_FLAG_MM10) {
             ems_doReadCommand(EMS_TYPE_MMStatusMessage, EMS_MixingModule.device_id);
         }
@@ -2531,10 +2532,10 @@ void ems_setThermostatTemp(float temperature, uint8_t hc, _EMS_THERMOSTAT_MODE t
         case EMS_THERMOSTAT_MODE_AUTO: // automatic selection, if no type is defined, we use the standard code
             if (model == EMS_DEVICE_FLAG_RC35) {
                 switch(EMS_Thermostat.hc[hc - 1].mode) {
-                case 0:     // if in nightmode, change nighttemp, seltemp is set automatically
+                case EMS_VALUE_RC35Mode_night:    // if in nightmode, change nighttemp, seltemp is set automatically
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_night;
                     break;
-                case 1:     // if in daymode, change daytemp, seltemp is set automatically
+                case EMS_VALUE_RC35Mode_day:     // if in daymode, change daytemp, seltemp is set automatically
                     EMS_TxTelegram.offset = EMS_OFFSET_RC35Set_temp_day;
                     break;
                 default:    // in automode change only seltemp
@@ -3353,7 +3354,7 @@ const _EMS_Type EMS_Types[] = {
 
     // RC30
     {EMS_DEVICE_UPDATE_FLAG_THERMOSTAT, EMS_TYPE_RC30Set, "RC30Set", _process_RC30Set},
-    {EMS_DEVICE_UPDATE_FLAG_THERMOSTAT, EMS_TYPE_RC30StatusMessage, "RC30StatusMessage", _process_RC30StatusMessage},
+    {EMS_DEVICE_UPDATE_FLAG_THERMOSTAT, EMS_TYPE_RC30StatusMessage, "RC3xStatusMessage", _process_RC30StatusMessage},
 
     // RC35 and ES71
     {EMS_DEVICE_UPDATE_FLAG_THERMOSTAT, EMS_TYPE_RC35Set_HC1, "RC35Set_HC1", _process_RC35Set},
@@ -3392,8 +3393,7 @@ const _EMS_Type EMS_Types[] = {
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_HC4, "MMPLUSStatusMessage_HC4", _process_MMPLUSStatusMessage},
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_WWC1, "MMPLUSStatusMessage_WWC1", _process_MMPLUSStatusMessageWW},
     {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMPLUSStatusMessage_WWC2, "MMPLUSStatusMessage_WWC2", _process_MMPLUSStatusMessageWW},
-    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMStatusMessage, "MMStatusMessage", _process_MMStatusMessage},
-    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MM10ParameterMessage, "MM10ParameterMessage", _process_MM10ParameterMessage}};
+    {EMS_DEVICE_UPDATE_FLAG_MIXING, EMS_TYPE_MMStatusMessage, "MMStatusMessage", _process_MMStatusMessage}};
 
 // calculate sizes of arrays at compile time
 uint8_t _EMS_Types_max = ArraySize(EMS_Types);

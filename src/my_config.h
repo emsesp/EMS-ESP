@@ -45,6 +45,9 @@
 #define THERMOSTAT_CIRCUITCALCTEMP "circuitcalctemp"        // RC35 specific
 #define THERMOSTAT_OFFSETTEMP "offsettemp"                  // RC35 specific
 #define THERMOSTAT_DESIGNTEMP "designtemp"                  // RC35 specific
+#define THERMOSTAT_DAMPEDTEMP "dampedtemp"                  // RC35 specific
+#define THERMOSTAT_TEMPSENSOR1 "tempsensor1"                // RC35 specific
+#define THERMOSTAT_TEMPSENSOR2 "tempsensor2"                // RC35 specific
 
 // mixing module
 #define MIXING_HC "hc"   // which heating circuit number

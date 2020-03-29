@@ -51,7 +51,7 @@
 enum EMS_DEVICE_FLAG_TYPES : uint8_t {
     EMS_DEVICE_FLAG_NONE     = 0,
     EMS_DEVICE_FLAG_MMPLUS   = 20, // mixing EMS+
-    EMS_DEVICE_FLAG_MM10     = 21, // mixing MM10, MM50
+    EMS_DEVICE_FLAG_MM10     = 21, // mixing MM10
     EMS_DEVICE_FLAG_SM10     = 10,
     EMS_DEVICE_FLAG_SM100    = 11, // for SM100 and SM200
     EMS_DEVICE_FLAG_EASY     = 1,
@@ -434,6 +434,9 @@ typedef struct {
     char         version[10];
     char         datetime[25]; // HH:MM:SS DD/MM/YYYY
     bool         write_supported;
+    int8_t       dampedoutdoortemp;
+    uint16_t     tempsensor1;
+    uint16_t     tempsensor2;
 
     // Installation parameters (tested on RC30)
     uint8_t ibaMainDisplay;       // 00, display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 3 burner temp., 4 ww temp, 5 functioning mode, 6 time, 7 data, 9 smoke temp

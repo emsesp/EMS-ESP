@@ -188,6 +188,13 @@
 #define EMS_OFFSET_RC35Set_temp_offset 6      // position of thermostat heatingcurve offset temperature
 #define EMS_OFFSET_RC35Set_temp_design 17     // position of thermostat heatingcurve design temperature
 
+#define EMS_OFFSET_RC35Status_dtemp 0         // damped outdoor temp
+#define EMS_OFFSET_RC35Status_temp1 3         // sensor 1
+#define EMS_OFFSET_RC35Status_temp2 5         // sensor 2
+
+#define EMS_VALUE_RC35Mode_night 0
+#define EMS_VALUE_RC35Mode_day 1
+#define EMS_VALUE_RC35Mode_auto 2
 
 // Easy specific
 #define EMS_TYPE_EasyStatusMessage 0x0A          // reading values on an Easy Thermostat
@@ -285,7 +292,7 @@ static const _EMS_Device EMS_Devices[] = {
     {160, EMS_DEVICE_TYPE_MIXING, "MM100 Mixing Module", EMS_DEVICE_FLAG_MMPLUS},
     {161, EMS_DEVICE_TYPE_MIXING, "MM200 Mixing Module", EMS_DEVICE_FLAG_MMPLUS},
     {69, EMS_DEVICE_TYPE_MIXING, "MM10 Mixing Module", EMS_DEVICE_FLAG_MM10},
-    {159, EMS_DEVICE_TYPE_MIXING, "MM50 Mixing Module", EMS_DEVICE_FLAG_MM10},
+    {159, EMS_DEVICE_TYPE_MIXING, "MM50 Mixing Module", EMS_DEVICE_FLAG_MMPLUS},
 
     //
     // HeatPump - type 0x38
