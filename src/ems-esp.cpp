@@ -907,7 +907,16 @@ bool publishEMSValues_thermostat() {
         if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
             rootThermostat[THERMOSTAT_TEMPSENSOR2] = (float)EMS_Thermostat.tempsensor2 / 10;
         }
+        // if its not nested, send immediately
+        if (!myESP.mqttUseNestedJson()) {
+            char topic[30];
+            strlcpy(topic, TOPIC_THERMOSTAT_DATA, sizeof(topic));
+            char data[MYESP_JSON_MAXSIZE_SMALL];
+            serializeJson(doc, data);
+            myESP.mqttPublish(topic, data);
+        }
     }
+
     bool has_data = false;
     for (uint8_t hc_v = 1; hc_v <= EMS_THERMOSTAT_MAXHC; hc_v++) {
         _EMS_Thermostat_HC * thermostat = &EMS_Thermostat.hc[hc_v - 1];
