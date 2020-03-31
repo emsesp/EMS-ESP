@@ -894,21 +894,24 @@ bool publishEMSValues_thermostat() {
     StaticJsonDocument<MYESP_JSON_MAXSIZE_MEDIUM> doc;
     JsonObject                                    rootThermostat = doc.to<JsonObject>();
     JsonObject                                    dataThermostat;
+    uint8_t                                       model = ems_getThermostatFlags(); // fetch model flags
+    bool                                          has_data = false;
 
-    uint8_t model = ems_getThermostatFlags(); // fetch model flags
-   
    if (model == EMS_DEVICE_FLAG_RC35) {
         if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
             rootThermostat[THERMOSTAT_DAMPEDTEMP] = EMS_Thermostat.dampedoutdoortemp;
+            has_data = true;
         }
         if (EMS_Thermostat.tempsensor1 != EMS_VALUE_USHORT_NOTSET) {
             rootThermostat[THERMOSTAT_TEMPSENSOR1] = (float)EMS_Thermostat.tempsensor1 / 10;
+            has_data = true;
         }
         if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
             rootThermostat[THERMOSTAT_TEMPSENSOR2] = (float)EMS_Thermostat.tempsensor2 / 10;
+            has_data = true;
         }
         // if its not nested, send immediately
-        if (!myESP.mqttUseNestedJson()) {
+        if (!myESP.mqttUseNestedJson() && has_data) {
             char topic[30];
             strlcpy(topic, TOPIC_THERMOSTAT_DATA, sizeof(topic));
             char data[MYESP_JSON_MAXSIZE_SMALL];
@@ -917,7 +920,7 @@ bool publishEMSValues_thermostat() {
         }
     }
 
-    bool has_data = false;
+    has_data = false;
     for (uint8_t hc_v = 1; hc_v <= EMS_THERMOSTAT_MAXHC; hc_v++) {
         _EMS_Thermostat_HC * thermostat = &EMS_Thermostat.hc[hc_v - 1];
 
@@ -933,6 +936,7 @@ bool publishEMSValues_thermostat() {
                 strlcat(hc, _uint_to_char(s, thermostat->hc), sizeof(hc));
                 dataThermostat = rootThermostat.createNestedObject(hc);
             } else {
+                rootThermostat = doc.to<JsonObject>(); // clear for new entrys
                 dataThermostat = rootThermostat;
             }
 
@@ -1027,9 +1031,9 @@ bool publishEMSValues_settings() {
     const size_t        capacity = JSON_OBJECT_SIZE(6); // must recalculate if more objects added https://arduinojson.org/v6/assistant/
     DynamicJsonDocument doc(capacity);
     JsonObject          rootSettings = doc.to<JsonObject>();
+    uint8_t             model        = ems_getThermostatFlags();
 
     if (EMS_Thermostat.ibaMainDisplay != EMS_VALUE_UINT_NOTSET) {
-        uint8_t              model      = ems_getThermostatFlags();
         if (model == EMS_DEVICE_FLAG_RC30N) {
             if (EMS_Thermostat.ibaMainDisplay == EMS_VALUE_IBASettings_DISPLAY_INTTEMP) {
                 rootSettings["display"] = "int. temperature";
@@ -1100,25 +1104,45 @@ bool publishEMSValues_mixing() {
     char                                          s[20]; // for formatting strings
     StaticJsonDocument<MYESP_JSON_MAXSIZE_MEDIUM> doc;
     JsonObject                                    rootMixing = doc.to<JsonObject>();
+    JsonObject                                    dataMixing;
     bool                                          has_data   = false;
 
     for (uint8_t hc_v = 1; hc_v <= EMS_MIXING_MAXHC; hc_v++) {
         _EMS_MixingModule_HC * mixingHC = &EMS_MixingModule.hc[hc_v - 1];
 
         if (mixingHC->active) {
+            if (myESP.mqttUseNestedJson()) {
+                char hc[10]; // hc{1-4}
+                strlcpy(hc, MIXING_HC, sizeof(hc));
+                strlcat(hc, _uint_to_char(s, mixingHC->hc), sizeof(hc));
+                dataMixing = rootMixing.createNestedObject(hc);
+            } else {
+                rootMixing = doc.to<JsonObject>();
+                dataMixing = rootMixing;
+            }
             has_data = true;
-            char hc[10]; // hc{1-4}
-            strlcpy(hc, MIXING_HC, sizeof(hc));
-            strlcat(hc, _uint_to_char(s, mixingHC->hc), sizeof(hc));
-            JsonObject dataMixingHC = rootMixing.createNestedObject(hc);
-            if (mixingHC->flowTemp < EMS_VALUE_USHORT_NOTSET)
-                dataMixingHC["flowTemp"] = (float)mixingHC->flowTemp / 10;
-            if (mixingHC->flowSetTemp != EMS_VALUE_UINT_NOTSET)
-                dataMixingHC["setflowTemp"] = mixingHC->flowSetTemp;
-            if (mixingHC->pumpMod != EMS_VALUE_UINT_NOTSET)
-                dataMixingHC["pumpMod"] = mixingHC->pumpMod;
-            if (mixingHC->valveStatus != EMS_VALUE_UINT_NOTSET)
-                dataMixingHC["valveStatus"] = mixingHC->valveStatus;
+            if (mixingHC->flowTemp < EMS_VALUE_USHORT_NOTSET) {
+                dataMixing["flowTemp"] = (float)mixingHC->flowTemp / 10;
+            }
+            if (mixingHC->flowSetTemp != EMS_VALUE_UINT_NOTSET) {
+                dataMixing["setflowTemp"] = mixingHC->flowSetTemp;
+            }
+            if (mixingHC->pumpMod != EMS_VALUE_UINT_NOTSET) {
+                dataMixing["pumpMod"] = mixingHC->pumpMod;
+            }
+            if (mixingHC->valveStatus != EMS_VALUE_UINT_NOTSET) {
+                dataMixing["valveStatus"] = mixingHC->valveStatus;
+            }
+
+            if (!myESP.mqttUseNestedJson()) {
+                char topic[30];
+                strlcpy(topic, TOPIC_MIXING_DATA, sizeof(topic));
+                strlcat(topic,"_hc", sizeof(topic));
+                strlcat(topic, _uint_to_char(s, mixingHC->hc), sizeof(topic)); // append hc to topic
+                char data[MYESP_JSON_MAXSIZE_SMALL];
+                serializeJson(doc, data);
+                myESP.mqttPublish(topic, data);
+            }
         }
     }
 
@@ -1126,21 +1150,38 @@ bool publishEMSValues_mixing() {
         _EMS_MixingModule_WWC * mixingWWC = &EMS_MixingModule.wwc[wwc_v - 1];
 
         if (mixingWWC->active) {
-            has_data = true;
-            char wwc[10]; // wwc{1-2}
-            strlcpy(wwc, MIXING_WWC, sizeof(wwc));
-            strlcat(wwc, _uint_to_char(s, mixingWWC->wwc), sizeof(wwc));
-            JsonObject dataMixing = rootMixing.createNestedObject(wwc);
-            if (mixingWWC->flowTemp < EMS_VALUE_USHORT_NOTSET)
+             if (myESP.mqttUseNestedJson()) {
+                char wwc[10]; // wwc{1-2}
+                strlcpy(wwc, MIXING_WWC, sizeof(wwc));
+                strlcat(wwc, _uint_to_char(s, mixingWWC->wwc), sizeof(wwc));
+                dataMixing = rootMixing.createNestedObject(wwc);
+            } else {
+                rootMixing = doc.to<JsonObject>();
+                dataMixing = rootMixing;
+            }
+           has_data = true;
+            if (mixingWWC->flowTemp < EMS_VALUE_USHORT_NOTSET) {
                 dataMixing["wwTemp"] = (float)mixingWWC->flowTemp / 10;
-            if (mixingWWC->pumpMod != EMS_VALUE_UINT_NOTSET)
+            }
+            if (mixingWWC->pumpMod != EMS_VALUE_UINT_NOTSET)  {
                 dataMixing["pumpStatus"] = mixingWWC->pumpMod;
-            if (mixingWWC->tempStatus != EMS_VALUE_UINT_NOTSET)
+            }
+            if (mixingWWC->tempStatus != EMS_VALUE_UINT_NOTSET) {
                 dataMixing["tempStatus"] = mixingWWC->tempStatus;
+            }
+            if (!myESP.mqttUseNestedJson()) {
+                char topic[30];
+                strlcpy(topic, TOPIC_MIXING_DATA, sizeof(topic));
+                strlcat(topic,"_wwc", sizeof(topic));
+                strlcat(topic, _uint_to_char(s, mixingWWC->wwc), sizeof(topic)); // append wwc to topic
+                char data[MYESP_JSON_MAXSIZE_SMALL];
+                serializeJson(doc, data);
+                myESP.mqttPublish(topic, data);
+            }
         }
     }
 
-    if (has_data) {
+    if (myESP.mqttUseNestedJson() && has_data) {
         myESP.mqttPublish(TOPIC_MIXING_DATA, doc);
         return true;
     }
