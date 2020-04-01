@@ -435,8 +435,8 @@ typedef struct {
     char         datetime[25];    // HH:MM:SS DD/MM/YYYY
     bool         write_supported;
     int8_t       dampedoutdoortemp;
-    uint16_t     tempsensor1;     // corrected temperature
-    uint16_t     tempsensor2;
+    uint16_t     tempsensor1;     // corrected temperature affected by ibaCalIntTemperature  
+    uint16_t     tempsensor2;     // second internal RC35 sensor 
 
     // Installation parameters (tested on RC30)
     uint8_t ibaMainDisplay;       // 00, display on Thermostat: 0 int. temp, 1 int. setpoint, 2 ext. temp., 
