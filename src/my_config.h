@@ -33,6 +33,7 @@
 #define TOPIC_THERMOSTAT_CMD_DESIGNTEMP "designtemp"        // RC35 specific
 #define TOPIC_THERMOSTAT_CMD_OFFSETTEMP "offsettemp"        // RC35 specific
 
+#define THERMOSTAT_DATETIME "time"                          // current hermostat date, time setting 
 #define THERMOSTAT_CURRTEMP "currtemp"                      // current temperature
 #define THERMOSTAT_SELTEMP "seltemp"                        // selected temperature
 #define THERMOSTAT_HC "hc"                                  // which heating circuit number

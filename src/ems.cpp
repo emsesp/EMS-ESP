@@ -1588,12 +1588,13 @@ void _process_RC35Set(_EMS_RxTelegram * EMS_RxTelegram) {
 
 /**
  * type 0xA3 - for external temp settings from the the RC* thermostats
+ * 10 00 A3 00 07 01 00 01 48 01 4E 01 4E 83 00 83 00 
+ * damped outdoor temp(0), two flags (1,2), 4 temperature sensors (3,5,7,9)
  */
 void _process_RCOutdoorTempMessage(_EMS_RxTelegram * EMS_RxTelegram) {
-    // add support here if you're reading external sensors
    _setValue(EMS_RxTelegram, &EMS_Thermostat.dampedoutdoortemp, EMS_OFFSET_RC35Status_dtemp);
-   _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor1, EMS_OFFSET_RC35Status_temp1);
-   _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor2, EMS_OFFSET_RC35Status_temp2);
+   // _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor1, EMS_OFFSET_RC35Status_temp1); // same as room temp if RC used as roomcontroller otherwise useless
+   // _setValue(EMS_RxTelegram, &EMS_Thermostat.tempsensor2, EMS_OFFSET_RC35Status_temp2); // second internal sensor 
 }
 
 /*

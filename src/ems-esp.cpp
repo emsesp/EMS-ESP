@@ -431,12 +431,12 @@ void showInfo() {
 
     // Thermostat data
     if (ems_getThermostatEnabled()) {
+        uint8_t model = ems_getThermostatFlags();
         myDebug_P(PSTR("")); // newline
         myDebug_P(PSTR("%sThermostat data:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
         myDebug_P(PSTR("  Thermostat: %s"), ems_getDeviceDescription(EMS_DEVICE_TYPE_THERMOSTAT, buffer_type, false));
 
         // Render Thermostat Date & Time
-        uint8_t model = ems_getThermostatFlags();
         if (strlen(EMS_Thermostat.datetime) > 2) {
             myDebug_P(PSTR("  Thermostat time is %s"), EMS_Thermostat.datetime);
         }
@@ -894,33 +894,34 @@ bool publishEMSValues_thermostat() {
     StaticJsonDocument<MYESP_JSON_MAXSIZE_MEDIUM> doc;
     JsonObject                                    rootThermostat = doc.to<JsonObject>();
     JsonObject                                    dataThermostat;
-    uint8_t                                       model = ems_getThermostatFlags(); // fetch model flags
-    bool                                          has_data = false;
+    uint8_t                                       model          = ems_getThermostatFlags();
+    bool                                          has_data       = false;
 
-   if (model == EMS_DEVICE_FLAG_RC35) {
-        if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
-            rootThermostat[THERMOSTAT_DAMPEDTEMP] = EMS_Thermostat.dampedoutdoortemp;
-            has_data = true;
-        }
-        if (EMS_Thermostat.tempsensor1 != EMS_VALUE_USHORT_NOTSET) {
-            rootThermostat[THERMOSTAT_TEMPSENSOR1] = (float)EMS_Thermostat.tempsensor1 / 10;
-            has_data = true;
-        }
-        if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
-            rootThermostat[THERMOSTAT_TEMPSENSOR2] = (float)EMS_Thermostat.tempsensor2 / 10;
-            has_data = true;
-        }
-        // if its not nested, send immediately
-        if (!myESP.mqttUseNestedJson() && has_data) {
-            char topic[30];
-            strlcpy(topic, TOPIC_THERMOSTAT_DATA, sizeof(topic));
-            char data[MYESP_JSON_MAXSIZE_SMALL];
-            serializeJson(doc, data);
-            myESP.mqttPublish(topic, data);
-        }
+    if (strlen(EMS_Thermostat.datetime) > 2) {
+        rootThermostat[THERMOSTAT_DATETIME] = EMS_Thermostat.datetime;
+        has_data = true;
+    }
+    if (EMS_Thermostat.dampedoutdoortemp != EMS_VALUE_INT_NOTSET) {
+        rootThermostat[THERMOSTAT_DAMPEDTEMP] = EMS_Thermostat.dampedoutdoortemp;
+        has_data = true;
+    }
+    if (EMS_Thermostat.tempsensor1 != EMS_VALUE_USHORT_NOTSET) {
+        rootThermostat[THERMOSTAT_TEMPSENSOR1] = (float)EMS_Thermostat.tempsensor1 / 10;
+        has_data = true;
+    }
+    if (EMS_Thermostat.tempsensor2 != EMS_VALUE_USHORT_NOTSET) {
+        rootThermostat[THERMOSTAT_TEMPSENSOR2] = (float)EMS_Thermostat.tempsensor2 / 10;
+        has_data = true;
+    }
+    // if its not nested, send immediately
+    if (!myESP.mqttUseNestedJson() && has_data) {
+        char topic[30];
+        strlcpy(topic, TOPIC_THERMOSTAT_DATA, sizeof(topic));
+        char data[MYESP_JSON_MAXSIZE_SMALL];
+        serializeJson(doc, data);
+        myESP.mqttPublish(topic, data);
     }
 
-    has_data = false;
     for (uint8_t hc_v = 1; hc_v <= EMS_THERMOSTAT_MAXHC; hc_v++) {
         _EMS_Thermostat_HC * thermostat = &EMS_Thermostat.hc[hc_v - 1];
 
@@ -939,7 +940,6 @@ bool publishEMSValues_thermostat() {
                 rootThermostat = doc.to<JsonObject>(); // clear for new entrys
                 dataThermostat = rootThermostat;
             }
-
             // different logic depending on thermostat types
             if (model == EMS_DEVICE_FLAG_EASY) {
                 if (thermostat->setpoint_roomTemp > EMS_VALUE_SHORT_NOTSET)
