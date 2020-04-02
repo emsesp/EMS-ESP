@@ -1311,8 +1311,8 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t ar
 			int8_t flow_i = -1;
 			int8_t flow_d = -1;
 			if (argc > 1) flow_p = atoi(argv[1]);
-			if (argc > 2) flow_p = atoi(argv[2]);
-			if (argc > 3) flow_p = atoi(argv[3]);
+			if (argc > 2) flow_i = atoi(argv[2]);
+			if (argc > 3) flow_d = atoi(argv[3]);
 
 			myDebug_P(PSTR("flow_pid %d %d %d"), flow_p, flow_i, flow_d);
 		}

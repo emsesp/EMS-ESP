@@ -399,10 +399,11 @@ class MyESP {
     void                     _telnetConnected();
     void                     _telnetDisconnected();
     void                     _telnetHandle();
-    void                     _telnetCommand(char * commandLine);
+    void                     _telnetCommand(char * commandLine, int argc, char **argv);
+    void                     _telnetCommandParser(char * commandLine);
     char *                   _telnet_readWord(bool allow_all_chars);
     void                     _telnet_setup();
-    char                     _command[TELNET_MAX_COMMAND_LENGTH]; // the input command from either Serial or Telnet
+    char                     _command[TELNET_MAX_COMMAND_LENGTH + 1]; // the input command from either Serial or Telnet
     void                     _consoleShowHelp();
     telnetcommand_callback_f _telnetcommand_callback_f; // Callable for projects commands
     telnet_callback_f        _telnet_callback_f;        // callback for connect/disconnect

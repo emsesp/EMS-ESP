@@ -1140,45 +1140,12 @@ void MyESP::setUseSerial(bool b) {
     SerialAndTelnet.setSerial(b ? &Serial : nullptr);
 }
 
-void MyESP::_telnetCommand(char * commandLine) {
-    char * str   = commandLine;
-    bool   state = false;
-
-    if (strlen(commandLine) == 0)
-        return;
-
-    // count the number of arguments
-    unsigned wc = 0;
-    while (*str) {
-        if (*str == ' ' || *str == '\n' || *str == '\t') {
-            state = false;
-        } else if (state == false) {
-            state = true;
-            ++wc;
-        }
-        ++str;
-    }
+void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
 
     // check first for reserved commands
-	char *temp             = strdup(commandLine);         // because strotok kills original string buffer
-
-	#define MAX_ARGVS 10
-	char *argv[MAX_ARGVS];
-	size_t argc;
-
-	argc = _parse_cmd_line(temp, argv, MAX_ARGVS);
-	if (argc < 1) {
-		myDebug_P(PSTR("Failed to parse CMD line, no data."));
-		free(temp);
-		return;
-	}
-	char *ptrToCommandName = argv[0];
-
-
-//    char * ptrToCommandName = strtok((char *)temp, " \n"); // space and newline
 
 	// set command
-	if (strcmp(ptrToCommandName, "set") == 0) {
+	if (strcmp(argv[0], "set") == 0) {
 		bool ok = false;
 		if (argc <= 1) {
 			_printSetCommands();
@@ -1195,8 +1162,11 @@ void MyESP::_telnetCommand(char * commandLine) {
 		return;
 	}
     // command to set water temp
-    if (strcmp(ptrToCommandName, "set_water") == 0) {
-        if (wc == 1) {
+	if (strcmp(argv[0], "set_water") == 0) {
+		irt_set_water_temp(argc - 1, argv[1], argv[2]);
+		return;
+	}
+/*        if (argc == 1) {
 				irt_set_water_temp(0, nullptr, nullptr);
         } else if (wc == 2) { // set <something>
             char * setting = _telnet_readWord(false);
@@ -1208,45 +1178,45 @@ void MyESP::_telnetCommand(char * commandLine) {
         }
 
         return;
-    }
+    } */
     // help command
-    if ((strcmp(ptrToCommandName, "help") == 0) && (wc == 1)) {
+    if ((strcmp(argv[0], "help") == 0) && (argc == 1)) {
         _consoleShowHelp();
         return;
     }
 
     // kick command
-    if ((strcmp(ptrToCommandName, "kick") == 0) && (wc == 1)) {
+    if ((strcmp(argv[0], "kick") == 0) && (argc == 1)) {
         _kick();
         return;
     }
 
     // restart command
-    if (((strcmp(ptrToCommandName, "restart") == 0) || (strcmp(ptrToCommandName, "reboot") == 0)) && (wc == 1)) {
+    if (((strcmp(argv[0], "restart") == 0) || (strcmp(argv[0], "reboot") == 0)) && (argc == 1)) {
         resetESP();
         return;
     }
 
     // print mqtt log command
-    if (strcmp(ptrToCommandName, "mqttlog") == 0) {
+    if (strcmp(argv[0], "mqttlog") == 0) {
         _printMQTTLog();
         return;
     }
 
     // show system status
-    if ((strcmp(ptrToCommandName, "system") == 0) && (wc == 1)) {
+    if ((strcmp(argv[0], "system") == 0) && (argc == 1)) {
         showSystemStats();
         return;
     }
 
     // save everything
-    if ((strcmp(ptrToCommandName, "save") == 0) && (wc == 1)) {
+    if ((strcmp(argv[0], "save") == 0) && (argc == 1)) {
         saveSettings();
         return;
     }
 
     // quit
-    if ((strcmp(ptrToCommandName, "quit") == 0) && (wc == 1)) {
+    if ((strcmp(argv[0], "quit") == 0) && (argc == 1)) {
         myDebug_P(PSTR("[TELNET] exiting telnet session"));
         SerialAndTelnet.disconnectClient();
         return;
@@ -1254,7 +1224,7 @@ void MyESP::_telnetCommand(char * commandLine) {
 
 #ifdef CRASH
     // crash command
-    if ((strcmp(ptrToCommandName, "crash") == 0) && (wc >= 2)) {
+    if ((strcmp(argv[0], "crash") == 0) && (argc >= 2)) {
         char * cmd = _telnet_readWord(false);
         if (strcmp(cmd, "dump") == 0) {
             crashDump();
@@ -1269,7 +1239,7 @@ void MyESP::_telnetCommand(char * commandLine) {
 
     // call callback function
     if (_telnetcommand_callback_f) {
-        (_telnetcommand_callback_f)(wc, commandLine);
+        (_telnetcommand_callback_f)(argc, commandLine);
     }
 }
 
@@ -1698,7 +1668,32 @@ void MyESP::heartbeatPrint() {
 
     );
 }
+void MyESP::_telnetCommandParser(char * commandLine)
+{
+	// buffer to store null terminated parts
+	char parsed_command[TELNET_MAX_COMMAND_LENGTH + 1];
 
+	#define MAX_ARGVS 10
+
+	char *argv[MAX_ARGVS];
+	size_t argc;
+
+	// check for empty line
+	if (commandLine[0] <' ') {
+		myDebug_P(PSTR("->"));
+		return;
+	}
+
+	strncpy(parsed_command, commandLine, TELNET_MAX_COMMAND_LENGTH);
+	parsed_command[TELNET_MAX_COMMAND_LENGTH] = 0;
+
+	argc = _parse_cmd_line(parsed_command, argv, MAX_ARGVS);
+	if (argc < 1) {
+		myDebug_P(PSTR("Failed to parse CMD line, no data."));
+		return;
+	}
+	_telnetCommand(commandLine, argc, argv);
+}
 // handler for Telnet
 void MyESP::_telnetHandle() {
     SerialAndTelnet.handle();
@@ -1729,7 +1724,7 @@ void MyESP::_telnetHandle() {
                 */
                 SerialAndTelnet.write('\n'); // force NL
 
-                _telnetCommand(_command);
+                _telnetCommandParser(_command);
             }
             break;
         case '\b': // (^H)
