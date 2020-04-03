@@ -86,7 +86,8 @@ static const command_t project_cmds[] PROGMEM = {
     {true, "publish_time <seconds>", "set frequency for publishing data to MQTT (-1=off, 0=automatic)"},
     {true, "tx_mode <n>", "changes Tx logic. 1=ems generic, 2=ems+, 3=Junkers HT3, 4=iRT, 5=Active iRT"},
     {true, "master_thermostat [product id]", "set default thermostat to use. No argument lists options"},
-    {true, "flow_pid [p] [i] [d]", "Set PID values for flow temp controller (0-100)"},
+    {true, "flow_pid [p] [i] [d]", "Set PID values for flow temperature controller (0-100)"},
+    {true, "max_flow_temp [temp]", "Set max. flow temperature (10-90)"},
 
     {false, "info", "show current values deciphered from the EMS messages"},
     {false, "log <n | b | t | s | r | j | v | w [ID] | d [ID]>", "logging: none, basic, thermo, solar, raw, jabber, verbose, watch a type or device"},
@@ -1137,6 +1138,10 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
         settings["bus_id"]            = EMSESP_Settings.bus_id;
         settings["master_thermostat"] = EMSESP_Settings.master_thermostat;
         settings["known_devices"]     = EMSESP_Settings.known_devices;
+		 settings["flow_temp_p"]			= EMSESP_Settings.flow_temp_P;
+		 settings["flow_temp_i"]			= EMSESP_Settings.flow_temp_I;
+		 settings["flow_temp_d"]			= EMSESP_Settings.flow_temp_D;
+		 settings["max_flow_temp"]			= EMSESP_Settings.max_flow_temp;
 
         return true;
     }
@@ -1314,7 +1319,14 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t ar
 			if (argc > 2) flow_i = atoi(argv[2]);
 			if (argc > 3) flow_d = atoi(argv[3]);
 
-			myDebug_P(PSTR("flow_pid %d %d %d"), flow_p, flow_i, flow_d);
+			irt_setFlowPID(flow_p, flow_i, flow_d);
+			ok = MYESP_FSACTION_OK;
+		}
+		if ((strcmp(argv[0], "max_flow_temp") == 0) && (argc >= 1)) {
+			int8_t flow_temp = -1;
+			if (argc > 1) flow_temp = atoi(argv[1]);
+			irt_setMaxFlowTemp(flow_temp);
+			ok = MYESP_FSACTION_OK;
 		}
     }
         // flow_pid
@@ -1343,6 +1355,8 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t ar
         } else {
             myDebug_P(PSTR("  master_thermostat=0 (use first detected)"));
         }
+		myDebug_P(PSTR("  flow_temp_pid=%d/%d/%d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+		myDebug_P(PSTR("  max_flow_temp=%d C"), EMSESP_Settings.max_flow_temp);
     }
 
     return ok;
@@ -1417,36 +1431,39 @@ void saveEMSDevices() {
 
 // extra commands options for telnet debug window
 // wc is the word count, i.e. number of arguments. Everything is in lower case.
-void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
-    bool ok = false;
-    // get first command argument
-    char * first_cmd = strtok((char *)commandLine, ", \n");
+void TelnetCommandCallback(char *commandLine, int argc, char **argv) {
 
-    if (strcmp(first_cmd, "info") == 0) {
+	if (argc < 1) return;
+	if (argv[0] == 0) return;
+
+
+    bool ok = false;
+
+
+    if (strcmp(argv[0], "info") == 0) {
         showInfo();
         ok = true;
     }
 
-    if (strcmp(first_cmd, "publish") == 0) {
+    if (strcmp(argv[0], "publish") == 0) {
         do_publishValues();
         ok = true;
     }
 
-    if (strcmp(first_cmd, "refresh") == 0) {
+    if (strcmp(argv[0], "refresh") == 0) {
         do_regularUpdates();
         ok = true;
     }
 
-    if (strcmp(first_cmd, "devices") == 0) {
-        if (wc == 1) {
+    if (strcmp(argv[0], "devices") == 0) {
+        if (argc == 1) {
 //            ems_printDevices();
             return;
         }
 
         // wc = 2 or more. check for "scan"
-        char * second_cmd = _readWord();
-        if (strcmp(second_cmd, "scan") == 0) {
-            if (wc == 2) {
+        if (strcmp(argv[1], "scan") == 0) {
+            if (argc == 2) {
                 // just scan use UBA 0x07 telegram
                 myDebug_P(PSTR("Requesting EMS bus master for its device list and scanning for external sensors..."));
                 scanDallas();
@@ -1456,14 +1473,13 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
             }
 
             // wc is 3 or more. check for additional "force" argument
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "deep") == 0) {
+            if (strcmp(argv[2], "deep") == 0) {
                 myDebug_P(PSTR("Started deep scan of EMS bus for our known devices. This can take up to 10 seconds..."));
                 Devices.clear(); // init the device map
 //                ems_scanDevices();
                 return;
             }
-        } else if (strcmp(second_cmd, "save") == 0) {
+        } else if (strcmp(argv[1], "save") == 0) {
             saveEMSDevices();
             return;
         }
@@ -1472,118 +1488,111 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
     }
 
 
-    if (strcmp(first_cmd, "queue") == 0) {
+    if (strcmp(argv[0], "queue") == 0) {
 //        ems_printTxQueue();
         ok = true;
     }
 
     // logging
-    if ((strcmp(first_cmd, "log") == 0) && (wc >= 2)) {
-        char * second_cmd = _readWord();
-        if (strcmp(second_cmd, "v") == 0) {
+    if ((strcmp(argv[0], "log") == 0) && (argc >= 2)) {
+        if (strcmp(argv[1], "v") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_VERBOSE);
             ok = true;
-        } else if (strcmp(second_cmd, "b") == 0) {
+        } else if (strcmp(argv[1], "b") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_BASIC);
             ok = true;
-        } else if (strcmp(second_cmd, "t") == 0) {
+        } else if (strcmp(argv[1], "t") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_THERMOSTAT);
             ok = true;
-        } else if (strcmp(second_cmd, "s") == 0) {
+        } else if (strcmp(argv[1], "s") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_SOLARMODULE);
             ok = true;
-        } else if (strcmp(second_cmd, "r") == 0) {
+        } else if (strcmp(argv[1], "r") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_RAW);
             ok = true;
-        } else if (strcmp(second_cmd, "n") == 0) {
+        } else if (strcmp(argv[1], "n") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_NONE);
             ok = true;
-        } else if (strcmp(second_cmd, "j") == 0) {
+        } else if (strcmp(argv[1], "j") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_JABBER);
             ok = true;
-        } else if ((strcmp(second_cmd, "w") == 0) && (wc == 3)) {
-            ems_setLogging(EMS_SYS_LOGGING_WATCH, _readHexNumber()); // get type_id
+        } else if ((strcmp(argv[1], "w") == 0) && (argc == 3)) {
+            ems_setLogging(EMS_SYS_LOGGING_WATCH, strtol(argv[2], 0, 16)); // get type_id
             ok = true;
-        } else if ((strcmp(second_cmd, "d") == 0) && (wc == 3)) {
-            ems_setLogging(EMS_SYS_LOGGING_DEVICE, _readHexNumber()); // get device_id
+        } else if ((strcmp(argv[1], "d") == 0) && (argc == 3)) {
+            ems_setLogging(EMS_SYS_LOGGING_DEVICE, strtol(argv[2], 0, 16)); // get device_id
             ok = true;
-        } else if (strcmp(second_cmd, "m") == 0) {
+        } else if (strcmp(argv[1], "m") == 0) {
             ems_setLogging(EMS_SYS_LOGGING_MQTT);
             ok = true;
         }
     }
 
     // thermostat commands
-    if ((strcmp(first_cmd, "thermostat") == 0) && (wc >= 3)) {
-        char *  second_cmd = _readWord();
+    if ((strcmp(argv[0], "thermostat") == 0) && (argc >= 3)) {
         uint8_t hc         = EMS_THERMOSTAT_DEFAULTHC;
 
-        if (strcmp(second_cmd, "temp") == 0) {
-            if (wc == 4) {
-                hc = _readIntNumber(); // next parameter is the heating circuit
+        if (strcmp(argv[1], "temp") == 0) {
+            if (argc == 4) {
+                hc = atoi(argv[2]); // next parameter is the heating circuit
             }
 //            ems_setThermostatTemp(_readFloatNumber(), hc);
             ok = true;
-        } else if (strcmp(second_cmd, "mode") == 0) {
-            if (wc == 4) {
-                hc = _readIntNumber(); // next parameter is the heating circuit
+        } else if (strcmp(argv[1], "mode") == 0) {
+            if (argc == 4) {
+                hc = atoi(argv[2]); // next parameter is the heating circuit
             }
 //            ems_setThermostatMode(_readIntNumber(), hc);
             ok = true;
-        } else if (strcmp(second_cmd, "read") == 0) {
+        } else if (strcmp(argv[1], "read") == 0) {
 //            ems_doReadCommand(_readHexNumber(), EMS_Thermostat.device_id);
             ok = true;
         }
     }
 
     // boiler commands
-    if ((strcmp(first_cmd, "boiler") == 0) && (wc == 3)) {
-        char * second_cmd = _readWord();
-        if (strcmp(second_cmd, "wwtemp") == 0) {
-            ems_setWarmWaterTemp(_readIntNumber());
+    if ((strcmp(argv[0], "boiler") == 0) && (argc == 3)) {
+        if (strcmp(argv[1], "wwtemp") == 0) {
+            ems_setWarmWaterTemp(atoi(argv[2]));
             ok = true;
-        } else if (strcmp(second_cmd, "comfort") == 0) {
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "hot") == 0) {
+        } else if (strcmp(argv[1], "comfort") == 0) {
+            if (strcmp(argv[2], "hot") == 0) {
 //                ems_setWarmWaterModeComfort(1);
                 ok = true;
-            } else if (strcmp(third_cmd, "eco") == 0) {
+            } else if (strcmp(argv[2], "eco") == 0) {
 //                ems_setWarmWaterModeComfort(2);
                 ok = true;
-            } else if (strcmp(third_cmd, "intelligent") == 0) {
+            } else if (strcmp(argv[2], "intelligent") == 0) {
 //                ems_setWarmWaterModeComfort(3);
                 ok = true;
             }
-        } else if (strcmp(second_cmd, "read") == 0) {
+        } else if (strcmp(argv[1], "read") == 0) {
 //            ems_doReadCommand(_readHexNumber(), EMS_Boiler.device_id);
             ok = true;
-        } else if (strcmp(second_cmd, "tapwater") == 0) {
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "on") == 0) {
+        } else if (strcmp(argv[1], "tapwater") == 0) {
+            if (strcmp(argv[2], "on") == 0) {
 //                ems_setWarmTapWaterActivated(true);
                 ok = true;
-            } else if (strcmp(third_cmd, "off") == 0) {
+            } else if (strcmp(argv[2], "off") == 0) {
 //                ems_setWarmTapWaterActivated(false);
                 ok = true;
             }
-        } else if (strcmp(second_cmd, "flowtemp") == 0) {
-            irt_setFlowTemp(_readIntNumber());
+        } else if (strcmp(argv[1], "flowtemp") == 0) {
+            irt_setFlowTemp(atoi(argv[2]));
             ok = true;
-        } else if (strcmp(second_cmd, "wwactive") == 0) {
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "on") == 0) {
+        } else if (strcmp(argv[1], "wwactive") == 0) {
+            if (strcmp(argv[2], "on") == 0) {
                 irt_setWarmWaterActivated(true);
                 ok = true;
-            } else if (strcmp(third_cmd, "off") == 0) {
+            } else if (strcmp(argv[2], "off") == 0) {
                 irt_setWarmWaterActivated(false);
                 ok = true;
             }
-        } else if (strcmp(second_cmd, "wwonetime") == 0) {
-            char * third_cmd = _readWord();
-            if (strcmp(third_cmd, "on") == 0) {
+        } else if (strcmp(argv[1], "wwonetime") == 0) {
+            if (strcmp(argv[2], "on") == 0) {
 //                ems_setWarmWaterOnetime(true);
                 ok = true;
-            } else if (strcmp(third_cmd, "off") == 0) {
+            } else if (strcmp(argv[2], "off") == 0) {
 //                ems_setWarmWaterOnetime(false);
                 ok = true;
             }
@@ -1591,14 +1600,14 @@ void TelnetCommandCallback(uint8_t wc, const char * commandLine) {
     }
 
     // send raw
-    if ((strcmp(first_cmd, "send") == 0) && (wc > 1)) {
+    if ((strcmp(argv[0], "send") == 0) && (argc > 1)) {
         irt_sendRawTelegram((char *)&commandLine[5]);
         ok = true;
     }
 
     // test commands
-    if ((strcmp(first_cmd, "test") == 0) && (wc == 2)) {
-        runUnitTest(_readIntNumber());
+    if ((strcmp(argv[0], "test") == 0) && (argc == 2)) {
+        runUnitTest(atoi(argv[1]));
         ok = true;
     }
 
@@ -2177,6 +2186,11 @@ void initEMSESP() {
     EMSESP_Settings.bus_id            = EMS_BUSID_DEFAULT;  // Service Key is default
     EMSESP_Settings.master_thermostat = 0;
     EMSESP_Settings.known_devices     = nullptr;
+
+	EMSESP_Settings.flow_temp_P			= IRT_FLOW_PID_P_DEFAULT;
+	EMSESP_Settings.flow_temp_I			= IRT_FLOW_PID_I_DEFAULT;
+	EMSESP_Settings.flow_temp_D			= IRT_FLOW_PID_D_DEFAULT;
+	EMSESP_Settings.max_flow_temp			= IRT_FLOW_MAX_TEMP_DEFAULT;
 /*
     // shower settings
     EMSESP_Shower.timerStart    = 0;

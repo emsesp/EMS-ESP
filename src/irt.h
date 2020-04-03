@@ -12,7 +12,7 @@
 
 #include <Arduino.h>
 #include <list> // std::list
-//#include <ems.h>
+#include "pid.h"
 
 // clang-format on
 
@@ -43,9 +43,11 @@ typedef struct {
 	uint8_t				poll_step;					// the status poll is send in several steps
 	uint8_t				my_address;					// address used to identify myself
 	uint8_t				req_water_temp;			// requested water temperature
+	uint8_t				cur_set_burner_power;	// Current burner power we have set
 	unsigned long		last_boiler_poll;			// last time
 	uint8_t				cur_flow_temp;				// last reported flow temp in Celsius
 	unsigned long		last_flow_update;			// last time the flow temp was reported
+	struct PID_DATA	flowPidData;				// PID calculation for flow temp.
 } _IRT_Sys_Status;
 
 #define IRT_MAX_SUB_MSGS 5 // max 5 messages in a single go
@@ -79,6 +81,8 @@ extern void irt_parseTelegram(uint8_t * telegram, uint8_t len);
 
 void irt_setFlowTemp(uint8_t temperature);
 void irt_setWarmWaterActivated(bool activated);
+void irt_setFlowPID(int8_t flow_p, int8_t flow_i, int8_t flow_d);
+void irt_setMaxFlowTemp(int8_t temp);
 
 void irt_init_uart();
 void irt_init();

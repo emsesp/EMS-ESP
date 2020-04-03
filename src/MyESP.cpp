@@ -1014,7 +1014,7 @@ void MyESP::resetESP() {
     ESP.restart();
 #endif
 }
-
+#ifdef nuniet
 // read next word from string buffer
 // if parameter true then a word is only terminated by a newline
 char * MyESP::_telnet_readWord(bool allow_all_chars) {
@@ -1024,11 +1024,11 @@ char * MyESP::_telnet_readWord(bool allow_all_chars) {
         return (strtok(nullptr, ", \n")); // allow space and comma
     }
 }
-
+#endif
 // change settings - always as strings
 // messy code but effective since we don't have too many settings
 // wc is word count, number of parameters after the 'set' command
-bool MyESP::_changeSetting(char **argv, size_t argc) {
+bool MyESP::_changeSetting(int argc, char **argv) {
     bool save_config = false;
     bool restart     = false;
 
@@ -1109,12 +1109,13 @@ bool MyESP::_changeSetting(char **argv, size_t argc) {
     // if we were able to recognize the set command, continue
     if ((save_config || save_custom_config != MYESP_FSACTION_ERR)) {
         // check for 2 params
-        if (value == nullptr) {
-            myDebug_P(PSTR("%s has been reset to its default value."), setting);
-        } else {
-            // must be 3 params
-            myDebug_P(PSTR("%s changed."), setting);
-        }
+//        if (value == nullptr) {
+//            myDebug_P(PSTR("%s has been reset to its default value."), setting);
+//        } else {
+//            // must be 3 params
+//            myDebug_P(PSTR("%s changed."), setting);
+//        }
+        myDebug_P(PSTR("set '%s' ok."), setting);
     }
 
     // now do the saving for system config if something has changed
@@ -1140,7 +1141,10 @@ void MyESP::setUseSerial(bool b) {
     SerialAndTelnet.setSerial(b ? &Serial : nullptr);
 }
 
-void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
+void MyESP::_telnetCommand(char *commandLine, int argc, char **argv) {
+
+	if (argc < 1) return;
+	if (argv[0] == 0) return;
 
     // check first for reserved commands
 
@@ -1151,7 +1155,7 @@ void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
 			_printSetCommands();
 			ok = true;
 		} else {
-			ok = _changeSetting(&argv[1], argc-1);
+			ok = _changeSetting(argc-1, &argv[1]) ;
 		}
 
 		if (!ok) {
@@ -1166,33 +1170,21 @@ void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
 		irt_set_water_temp(argc - 1, argv[1], argv[2]);
 		return;
 	}
-/*        if (argc == 1) {
-				irt_set_water_temp(0, nullptr, nullptr);
-        } else if (wc == 2) { // set <something>
-            char * setting = _telnet_readWord(false);
-            irt_set_water_temp(wc - 1, setting, nullptr);
-        } else { // set <something> <values...>
-            char * setting = _telnet_readWord(false);
-            char * value   = _telnet_readWord(true); // allow strange characters
-            irt_set_water_temp(wc - 1, setting, value);
-        }
 
-        return;
-    } */
     // help command
-    if ((strcmp(argv[0], "help") == 0) && (argc == 1)) {
+    if (strcmp(argv[0], "help") == 0) {
         _consoleShowHelp();
         return;
     }
 
     // kick command
-    if ((strcmp(argv[0], "kick") == 0) && (argc == 1)) {
+    if (strcmp(argv[0], "kick") == 0) {
         _kick();
         return;
     }
 
     // restart command
-    if (((strcmp(argv[0], "restart") == 0) || (strcmp(argv[0], "reboot") == 0)) && (argc == 1)) {
+    if ((strcmp(argv[0], "restart") == 0) || (strcmp(argv[0], "reboot") == 0))  {
         resetESP();
         return;
     }
@@ -1204,19 +1196,19 @@ void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
     }
 
     // show system status
-    if ((strcmp(argv[0], "system") == 0) && (argc == 1)) {
+    if (strcmp(argv[0], "system") == 0) {
         showSystemStats();
         return;
     }
 
     // save everything
-    if ((strcmp(argv[0], "save") == 0) && (argc == 1)) {
+    if (strcmp(argv[0], "save") == 0) {
         saveSettings();
         return;
     }
 
     // quit
-    if ((strcmp(argv[0], "quit") == 0) && (argc == 1)) {
+    if (strcmp(argv[0], "quit") == 0) {
         myDebug_P(PSTR("[TELNET] exiting telnet session"));
         SerialAndTelnet.disconnectClient();
         return;
@@ -1225,10 +1217,9 @@ void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
 #ifdef CRASH
     // crash command
     if ((strcmp(argv[0], "crash") == 0) && (argc >= 2)) {
-        char * cmd = _telnet_readWord(false);
-        if (strcmp(cmd, "dump") == 0) {
+        if (strcmp(argv[1], "dump") == 0) {
             crashDump();
-        } else if (strcmp(cmd, "clear") == 0) {
+        } else if (strcmp(argv[1], "clear") == 0) {
             crashClear();
         } else {
             myDebug_P(PSTR("Error. Usage: crash <dump | clear | test [n]>"));
@@ -1239,7 +1230,7 @@ void MyESP::_telnetCommand(char * commandLine, int argc, char **argv) {
 
     // call callback function
     if (_telnetcommand_callback_f) {
-        (_telnetcommand_callback_f)(argc, commandLine);
+        (_telnetcommand_callback_f)(commandLine, argc, argv);
     }
 }
 
@@ -1678,6 +1669,9 @@ void MyESP::_telnetCommandParser(char * commandLine)
 	char *argv[MAX_ARGVS];
 	size_t argc;
 
+//	myDebug_P(PSTR("%02x %02x %02x %02x %02x"), commandLine[0], commandLine[1], commandLine[2], commandLine[3], commandLine[4]);
+
+
 	// check for empty line
 	if (commandLine[0] <' ') {
 		myDebug_P(PSTR("->"));
@@ -1714,18 +1708,16 @@ void MyESP::_telnetHandle() {
         case '\n':
             _command[charsRead] = '\0'; // null terminate our command char array
 
-            if (charsRead > 0) {
-                charsRead      = 0; // is static, so have to reset
-                _suspendOutput = false;
-                /*
-                if (_general_serial) {
-                    SerialAndTelnet.serialPrint('\n'); // force newline if in Serial
-                }
-                */
-                SerialAndTelnet.write('\n'); // force NL
-
-                _telnetCommandParser(_command);
+            charsRead      = 0; // is static, so have to reset
+            _suspendOutput = false;
+             /*
+            if (_general_serial) {
+                SerialAndTelnet.serialPrint('\n'); // force newline if in Serial
             }
+            */
+            SerialAndTelnet.write('\n'); // force NL
+
+            _telnetCommandParser(_command);
             break;
         case '\b': // (^H)
         case 0x7F: // (^?)

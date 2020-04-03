@@ -13,6 +13,8 @@
 #include "irtuart.h"
 #include <CircularBuffer.h> // https://github.com/rlogiacco/CircularBuffer
 
+#include <Ticker.h> // https://github.com/esp8266/Arduino/tree/master/libraries/Ticker
+
 // MyESP class for logging to telnet and serial
 #define myDebug(...) myESP.myDebug(__VA_ARGS__)
 #define myDebug_P(...) myESP.myDebug_P(__VA_ARGS__)
@@ -30,6 +32,7 @@ _EMS_Sys_Status EMS_Sys_Status; // EMS Status
 
 CircularBuffer<_IRT_TxTelegram, IRT_TX_TELEGRAM_QUEUE_MAX> IRT_TxQueue; // FIFO queue for Tx send buffer
 
+Ticker updateFlowTempTimer;
 
 char * _hextoa(uint8_t value, char * buffer);
 char * _smallitoa(uint8_t value, char * buffer);
@@ -959,12 +962,48 @@ void irt_loop()
 	}
 }
 
+void irt_setup_flow_temp_pid()
+{
+	pid_Init((EMSESP_Settings.flow_temp_P * SCALING_FACTOR) / 100,
+				(EMSESP_Settings.flow_temp_I * SCALING_FACTOR) / 100,
+				(EMSESP_Settings.flow_temp_D * SCALING_FACTOR) / 100,
+				 &IRT_Sys_Status.flowPidData);
+
+}
+
+/**
+ * Called every minute to update the burner power for the requested
+ * flow temp.
+ */
+void irt_doFlowTempTicker()
+{
+	unsigned long now_millis = millis();
+
+	myDebug_P(PSTR("flow ticker."));
+
+	// we can only set burner power in active mode
+	if (EMSESP_Settings.tx_mode != 5) {
+		IRT_Sys_Status.cur_set_burner_power = 0;
+		return;
+	}
+
+	// make sure the current reported flow temp is valid
+	if ((now_millis - IRT_Sys_Status.last_flow_update) >= IRT_BOILER_POLL_TIMEOUT) {
+		IRT_Sys_Status.cur_set_burner_power = 0;
+		return;
+	}
+
+}
 
 /**
  * Set the boiler flow temp
  */
 void irt_setFlowTemp(uint8_t temperature) {
 
+	if (temperature > EMSESP_Settings.max_flow_temp) {
+		myDebug_P(PSTR("Maximum boiler flow temperature is %d C, ignoring set of %d C"), EMSESP_Settings.max_flow_temp, temperature);
+		return;
+	}
 	if (EMSESP_Settings.tx_mode == 5) {
 		myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
 		IRT_Sys_Status.req_water_temp = temperature;
@@ -981,7 +1020,57 @@ void irt_setWarmWaterActivated(bool activated) {
     myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
 }
 
+void irt_setFlowPID(int8_t flow_p, int8_t flow_i, int8_t flow_d)
+{
+	int8_t changed;
+	if (flow_p < 0) {
+		myDebug_P(PSTR("Current flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+		return;
+	}
+	changed = 0;
+	if ((flow_p >= 0) && (flow_p <= 100)) {
+		if ((uint16_t)flow_p != EMSESP_Settings.flow_temp_P) {
+			changed = 1;
+			EMSESP_Settings.flow_temp_P = (uint16_t)flow_p;
+		}
+	}
+	if ((flow_i >= 0) && (flow_i <= 100)) {
+		if ((uint16_t)flow_i != EMSESP_Settings.flow_temp_I) {
+			changed = 1;
+			EMSESP_Settings.flow_temp_I = (uint16_t)flow_i;
+		}
+	}
+	if ((flow_d >= 0) && (flow_d <= 100)) {
+		if ((uint16_t)flow_d != EMSESP_Settings.flow_temp_D) {
+			changed = 1;
+			EMSESP_Settings.flow_temp_D = (uint16_t)flow_d;
+		}
+	}
+	if (changed) {
+		irt_setup_flow_temp_pid();
+		myDebug_P(PSTR("Changed to, flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+	} else {
+		myDebug_P(PSTR("No Change, Current flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+	}
 
+}
+void irt_setMaxFlowTemp(int8_t temp)
+{
+	if (temp < 0) {
+		myDebug_P(PSTR("Current max. flow Temp.: %d C."), EMSESP_Settings.max_flow_temp);
+		return;
+	}
+	if (temp > 90) {
+		myDebug_P(PSTR("Invalid temperature of %d C, ignoring."), temp);
+		return;
+	}
+	if (temp == EMSESP_Settings.max_flow_temp) {
+		myDebug_P(PSTR("New max. flow temperature is the same (%d C)."), temp);
+	} else {
+		myDebug_P(PSTR("Setting new max. flow temperature of %d C."), temp);
+		EMSESP_Settings.max_flow_temp = (uint8_t)temp;
+	}
+}
 
 void irt_set_water_temp(uint8_t wc, const char *setting, const char *value)
 {
@@ -1083,6 +1172,10 @@ void irt_init()
 
 	IRT_Sys_Status.cur_flow_temp = 20; // setup a default
 	IRT_Sys_Status.last_flow_update = 0;
+	IRT_Sys_Status.cur_set_burner_power = 0;
+
+	irt_setup_flow_temp_pid();
+	updateFlowTempTimer.attach(20, irt_doFlowTempTicker); // update requested flow temp
 }
 
 void irt_setup()

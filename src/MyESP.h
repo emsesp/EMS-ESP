@@ -239,7 +239,7 @@ typedef enum {
 typedef std::function<void(unsigned int, const char *, const char *)>                          mqtt_callback_f;
 typedef std::function<void()>                                                                  wifi_callback_f;
 typedef std::function<void()>                                                                  ota_callback_f;
-typedef std::function<void(uint8_t, const char *)>                                             telnetcommand_callback_f;
+typedef std::function<void(char *commandLine, int argc, char **argv)>                          telnetcommand_callback_f;
 typedef std::function<void(uint8_t)>                                                           telnet_callback_f;
 typedef std::function<bool(MYESP_FSACTION_t, JsonObject json)>                                 fs_loadsave_callback_f;
 typedef std::function<MYESP_FSACTION_t(MYESP_FSACTION_t, char **, size_t)> fs_setlist_callback_f;
@@ -401,13 +401,13 @@ class MyESP {
     void                     _telnetHandle();
     void                     _telnetCommand(char * commandLine, int argc, char **argv);
     void                     _telnetCommandParser(char * commandLine);
-    char *                   _telnet_readWord(bool allow_all_chars);
+    //char *                   _telnet_readWord(bool allow_all_chars);
     void                     _telnet_setup();
     char                     _command[TELNET_MAX_COMMAND_LENGTH + 1]; // the input command from either Serial or Telnet
     void                     _consoleShowHelp();
     telnetcommand_callback_f _telnetcommand_callback_f; // Callable for projects commands
     telnet_callback_f        _telnet_callback_f;        // callback for connect/disconnect
-    bool                     _changeSetting(char **argv, size_t argc);
+    bool                     _changeSetting(int argc, char **argv);
 
     // syslog
     void _syslog_setup();

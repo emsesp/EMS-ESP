@@ -264,7 +264,7 @@ char * _smallitoa3(uint16_t value, char * buffer) {
     buffer[3] = '\0';
     return buffer;
 }
-
+#ifdef nuniet
 // used to read the next string from an input buffer and convert to an 8 bit int
 uint8_t _readIntNumber() {
     char * numTextPtr = strtok(nullptr, ", \n");
@@ -297,7 +297,7 @@ char * _readWord() {
     char * word = strtok(nullptr, ", \n");
     return word;
 }
-
+#endif
 
 size_t _parse_cmd_line(char *cmd_line, char **argv, size_t max_argv)
 {
