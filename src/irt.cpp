@@ -834,7 +834,7 @@ void irt_send_next_poll_to_boiler()
 	if (EMSESP_Settings.tx_mode != 5) return;
 
 	IRT_Sys_Status.poll_step++;
-
+#ifdef nuniet
 	uint16_t burner_power = 0;
 	uint8_t water_temp = 0x35; // default
 
@@ -856,7 +856,7 @@ void irt_send_next_poll_to_boiler()
 		burner_power = 0x50 + burner_power;
 		water_temp = IRT_Sys_Status.req_water_temp;
 	}
-
+#endif
 	// prepare the next batch of status poll messages
 	switch (IRT_Sys_Status.poll_step) {
 	case 1:
@@ -887,7 +887,16 @@ void irt_send_next_poll_to_boiler()
 		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
 		irt_add_sub_msg(&IRT_Tx, 0x78, 0x01, 0xFF, 2);
-		irt_add_sub_msg(&IRT_Tx, 0x01, water_temp, 0xF6, 2); // set max cv water temp
+
+		// if we are at the minimum burn power, use the temp. limit of the boiler
+		// this keel keep the pump running, but switches off the burner
+		if ((IRT_Sys_Status.cur_set_burner_power > 0) &&
+				(IRT_Sys_Status.cur_set_burner_power <= IRT_MIN_USABLE_BURN_POWER) &&
+				(IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOW_TEMP)) {
+			irt_add_sub_msg(&IRT_Tx, 0x01, IRT_Sys_Status.req_water_temp, 0xF6, 2); // set max cv water temp
+		} else {
+			irt_add_sub_msg(&IRT_Tx, 0x01, EMSESP_Settings.max_flow_temp, 0xF6, 2); // set max cv water temp
+		}
 		IRT_TxQueue.push(IRT_Tx);
 		break;
 	case 6:
@@ -895,7 +904,7 @@ void irt_send_next_poll_to_boiler()
 		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
 		irt_add_sub_msg(&IRT_Tx, 0x78, 0x07, 0xFF, 2);
-		irt_add_sub_msg(&IRT_Tx, 0x07, (uint8_t)burner_power, 0xD0, 2); // set burner power
+		irt_add_sub_msg(&IRT_Tx, 0x07, IRT_Sys_Status.cur_set_burner_power, 0xD0, 2); // set burner power
 		IRT_TxQueue.push(IRT_Tx);
 		break;
 	case 8:
@@ -987,11 +996,49 @@ void irt_doFlowTempTicker()
 		return;
 	}
 
+	// is there any request for flow water ?
+	if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOW_TEMP) {
+		IRT_Sys_Status.cur_set_burner_power = 0;
+		return;
+	}
+
+	// if there is no MQTT connection, reset request
+	if (!myESP.isMQTTHealthy()) {
+		if (IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOW_TEMP) {
+			myDebug_P(PSTR("Resetting boiler flow temp. because of MQTT error."));
+		}
+		IRT_Sys_Status.req_water_temp = 0;
+		IRT_Sys_Status.cur_set_burner_power = 0;
+		return;
+	}
+
 	// make sure the current reported flow temp is valid
 	if ((now_millis - IRT_Sys_Status.last_flow_update) >= IRT_BOILER_POLL_TIMEOUT) {
 		IRT_Sys_Status.cur_set_burner_power = 0;
 		return;
 	}
+
+	int16_t err, new_power;
+
+
+	new_power = IRT_Sys_Status.cur_set_burner_power;
+
+	err = pid_Controller(IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flow_temp, &IRT_Sys_Status.flowPidData);
+
+	if (IRT_Sys_Status.cur_set_burner_power == 0) {
+		// start burn cycle with a half of power
+		new_power = 0x80;
+		pid_Reset_Integrator(&IRT_Sys_Status.flowPidData);
+	} else {
+		new_power = new_power + err;
+	}
+	// limit power to valid range
+	if (new_power < IRT_MIN_USABLE_BURN_POWER) new_power = IRT_MIN_USABLE_BURN_POWER; // any lower and the boiler stops running
+	if (new_power > 0xCF) new_power = 0xCF; // max power
+
+	myDebug_P(PSTR("Req %d C Cur %d Err %d old pwr: %d new pwr: %d (0x%02x)"), IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flow_temp, err, IRT_Sys_Status.cur_set_burner_power, new_power, new_power);
+
+	IRT_Sys_Status.cur_set_burner_power = (uint8_t)new_power;
 
 }
 
@@ -1007,6 +1054,10 @@ void irt_setFlowTemp(uint8_t temperature) {
 	if (EMSESP_Settings.tx_mode == 5) {
 		myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
 		IRT_Sys_Status.req_water_temp = temperature;
+		if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOW_TEMP) {
+			// reset burner directly
+			IRT_Sys_Status.cur_set_burner_power = 0;
+		}
 	} else {
 		myDebug_P(PSTR("Cannot set boiler flow temperature to %d C, not in active mode"), temperature);
 		IRT_Sys_Status.req_water_temp = 0;
@@ -1175,7 +1226,7 @@ void irt_init()
 	IRT_Sys_Status.cur_set_burner_power = 0;
 
 	irt_setup_flow_temp_pid();
-	updateFlowTempTimer.attach(20, irt_doFlowTempTicker); // update requested flow temp
+	updateFlowTempTimer.attach(60, irt_doFlowTempTicker); // update requested flow temp
 }
 
 void irt_setup()

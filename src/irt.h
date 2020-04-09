@@ -27,6 +27,8 @@
 #define IRT_TX_TELEGRAM_QUEUE_MAX 50 // max size of Tx FIFO queue. Number of Tx records to send.
 
 #define IRT_BOILER_POLL_TIMEOUT 30000 // If we do not receive a boiler poll in 30s stop sending data
+#define IRT_MIN_USABLE_BURN_POWER 0x4d // Any lower and the pump stops.
+#define IRT_MIN_FLOW_TEMP 10 // any request below 10 C is assumed inactive
 
 /* iRT UART transfer status */
 typedef enum {

@@ -1674,7 +1674,6 @@ void MyESP::_telnetCommandParser(char * commandLine)
 
 	// check for empty line
 	if (commandLine[0] <' ') {
-		myDebug_P(PSTR("->"));
 		return;
 	}
 
@@ -1718,6 +1717,7 @@ void MyESP::_telnetHandle() {
             SerialAndTelnet.write('\n'); // force NL
 
             _telnetCommandParser(_command);
+            myDebug_P(PSTR("->"));
             break;
         case '\b': // (^H)
         case 0x7F: // (^?)
