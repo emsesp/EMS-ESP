@@ -86,8 +86,8 @@ static const command_t project_cmds[] PROGMEM = {
     {true, "publish_time <seconds>", "set frequency for publishing data to MQTT (-1=off, 0=automatic)"},
     {true, "tx_mode <n>", "changes Tx logic. 1=ems generic, 2=ems+, 3=Junkers HT3, 4=iRT, 5=Active iRT"},
     {true, "master_thermostat [product id]", "set default thermostat to use. No argument lists options"},
-    {true, "flow_pid [p] [i] [d]", "Set PID values for flow temperature controller (0-100)"},
-    {true, "max_flow_temp [temp]", "Set max. flow temperature (10-90)"},
+    {true, "flowtemp_pid [p] [i] [d]", "Set PID values for flow temperature controller (0.0-9.9)"},
+    {true, "max_flowtemp [temp]", "Set max. flow temperature (10-90)"},
 
     {false, "info", "show current values deciphered from the EMS messages"},
     {false, "log <n | b | t | s | r | j | v | w [ID] | d [ID]>", "logging: none, basic, thermo, solar, raw, jabber, verbose, watch a type or device"},
@@ -365,12 +365,10 @@ void showInfo() {
     }
 
 	if (EMSESP_Settings.tx_mode == 5) {
-		myDebug_P(PSTR("  Flow temp. PID: %d %d %d"),
-							EMSESP_Settings.flow_temp_P,
-							EMSESP_Settings.flow_temp_I,
-							EMSESP_Settings.flow_temp_D);
+		char text_buf[30];
+		myDebug_P(PSTR("  Flow temp. PID: %s"), irt_format_flowtemp_pid_text(text_buf, sizeof(text_buf)));
 		myDebug_P(PSTR("  Max. flow temp.: %d C"),
-							EMSESP_Settings.max_flow_temp);
+							EMSESP_Settings.max_flowtemp);
 	}
 
 #ifdef nuniet
@@ -1116,10 +1114,10 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
         EMSESP_Settings.known_devices = strdup(settings["known_devices"] | "");
 
 
-		EMSESP_Settings.flow_temp_P = settings["flow_temp_p"] | IRT_FLOW_PID_P_DEFAULT;
-		EMSESP_Settings.flow_temp_I = settings["flow_temp_i"] | IRT_FLOW_PID_I_DEFAULT;
-		EMSESP_Settings.flow_temp_D = settings["flow_temp_d"] | IRT_FLOW_PID_D_DEFAULT;
-		EMSESP_Settings.max_flow_temp = settings["max_flow_temp"] | IRT_FLOW_MAX_TEMP_DEFAULT;
+		EMSESP_Settings.flowtemp_P = settings["flowtemp_p"] | IRT_FLOWTEMP_PID_P_DEFAULT;
+		EMSESP_Settings.flowtemp_I = settings["flowtemp_i"] | IRT_FLOWTEMP_PID_I_DEFAULT;
+		EMSESP_Settings.flowtemp_D = settings["flowtemp_d"] | IRT_FLOWTEMP_PID_D_DEFAULT;
+		EMSESP_Settings.max_flowtemp = settings["max_flowtemp"] | IRT_MAX_FLOWTEMP_DEFAULT;
 
 
         return true;
@@ -1138,10 +1136,10 @@ bool LoadSaveCallback(MYESP_FSACTION_t action, JsonObject settings) {
         settings["bus_id"]            = EMSESP_Settings.bus_id;
         settings["master_thermostat"] = EMSESP_Settings.master_thermostat;
         settings["known_devices"]     = EMSESP_Settings.known_devices;
-		 settings["flow_temp_p"]			= EMSESP_Settings.flow_temp_P;
-		 settings["flow_temp_i"]			= EMSESP_Settings.flow_temp_I;
-		 settings["flow_temp_d"]			= EMSESP_Settings.flow_temp_D;
-		 settings["max_flow_temp"]			= EMSESP_Settings.max_flow_temp;
+		 settings["flowtemp_p"]			= EMSESP_Settings.flowtemp_P;
+		 settings["flowtemp_i"]			= EMSESP_Settings.flowtemp_I;
+		 settings["flowtemp_d"]			= EMSESP_Settings.flowtemp_D;
+		 settings["max_flowtemp"]			= EMSESP_Settings.max_flowtemp;
 
         return true;
     }
@@ -1311,25 +1309,25 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t ar
                 ok = MYESP_FSACTION_OK;
             }
         }
-		if ((strcmp(argv[0], "flow_pid") == 0) && (argc >= 1)) {
-			int8_t flow_p = -1;
-			int8_t flow_i = -1;
-			int8_t flow_d = -1;
-			if (argc > 1) flow_p = atoi(argv[1]);
-			if (argc > 2) flow_i = atoi(argv[2]);
-			if (argc > 3) flow_d = atoi(argv[3]);
+		if ((strcmp(argv[0], "flowtemp_pid") == 0) && (argc >= 1)) {
+			float flow_p = -1.0;
+			float flow_i = -1.0;
+			float flow_d = -1.0;
+			if (argc > 1) flow_p = atof(argv[1]);
+			if (argc > 2) flow_i = atof(argv[2]);
+			if (argc > 3) flow_d = atof(argv[3]);
 
 			irt_setFlowPID(flow_p, flow_i, flow_d);
 			ok = MYESP_FSACTION_OK;
 		}
-		if ((strcmp(argv[0], "max_flow_temp") == 0) && (argc >= 1)) {
-			int8_t flow_temp = -1;
-			if (argc > 1) flow_temp = atoi(argv[1]);
-			irt_setMaxFlowTemp(flow_temp);
+		if ((strcmp(argv[0], "max_flowtemp") == 0) && (argc >= 1)) {
+			int8_t flowtemp = -1;
+			if (argc > 1) flowtemp = atoi(argv[1]);
+			irt_setMaxFlowTemp(flowtemp);
 			ok = MYESP_FSACTION_OK;
 		}
     }
-        // flow_pid
+        // flowtemp_pid
 
     if (action == MYESP_FSACTION_LIST) {
         myDebug_P(PSTR("  led=%s"), EMSESP_Settings.led ? "on" : "off");
@@ -1355,8 +1353,9 @@ MYESP_FSACTION_t SetListCallback(MYESP_FSACTION_t action, char **argv, size_t ar
         } else {
             myDebug_P(PSTR("  master_thermostat=0 (use first detected)"));
         }
-		myDebug_P(PSTR("  flow_temp_pid=%d/%d/%d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
-		myDebug_P(PSTR("  max_flow_temp=%d C"), EMSESP_Settings.max_flow_temp);
+		char text_buf[30];
+		myDebug_P(PSTR("  flowtemp_pid=%s"), irt_format_flowtemp_pid_text(text_buf, sizeof(text_buf)));
+		myDebug_P(PSTR("  max_flowtemp=%d C"), EMSESP_Settings.max_flowtemp);
     }
 
     return ok;
@@ -2187,10 +2186,10 @@ void initEMSESP() {
     EMSESP_Settings.master_thermostat = 0;
     EMSESP_Settings.known_devices     = nullptr;
 
-	EMSESP_Settings.flow_temp_P			= IRT_FLOW_PID_P_DEFAULT;
-	EMSESP_Settings.flow_temp_I			= IRT_FLOW_PID_I_DEFAULT;
-	EMSESP_Settings.flow_temp_D			= IRT_FLOW_PID_D_DEFAULT;
-	EMSESP_Settings.max_flow_temp			= IRT_FLOW_MAX_TEMP_DEFAULT;
+	EMSESP_Settings.flowtemp_P			= IRT_FLOWTEMP_PID_P_DEFAULT;
+	EMSESP_Settings.flowtemp_I			= IRT_FLOWTEMP_PID_I_DEFAULT;
+	EMSESP_Settings.flowtemp_D			= IRT_FLOWTEMP_PID_D_DEFAULT;
+	EMSESP_Settings.max_flowtemp		= IRT_MAX_FLOWTEMP_DEFAULT;
 /*
     // shower settings
     EMSESP_Shower.timerStart    = 0;

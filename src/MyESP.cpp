@@ -1717,7 +1717,7 @@ void MyESP::_telnetHandle() {
             SerialAndTelnet.write('\n'); // force NL
 
             _telnetCommandParser(_command);
-            myDebug_P(PSTR("->"));
+            if (c == '\n') myDebug_P(PSTR("->"));
             break;
         case '\b': // (^H)
         case 0x7F: // (^?)

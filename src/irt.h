@@ -28,7 +28,7 @@
 
 #define IRT_BOILER_POLL_TIMEOUT 30000 // If we do not receive a boiler poll in 30s stop sending data
 #define IRT_MIN_USABLE_BURN_POWER 0x4d // Any lower and the pump stops.
-#define IRT_MIN_FLOW_TEMP 10 // any request below 10 C is assumed inactive
+#define IRT_MIN_FLOWTEMP 10 // any request below 10 C is assumed inactive
 
 /* iRT UART transfer status */
 typedef enum {
@@ -47,7 +47,7 @@ typedef struct {
 	uint8_t				req_water_temp;			// requested water temperature
 	uint8_t				cur_set_burner_power;	// Current burner power we have set
 	unsigned long		last_boiler_poll;			// last time
-	uint8_t				cur_flow_temp;				// last reported flow temp in Celsius
+	uint8_t				cur_flowtemp;				// last reported flow temp in Celsius
 	unsigned long		last_flow_update;			// last time the flow temp was reported
 	struct PID_DATA	flowPidData;				// PID calculation for flow temp.
 } _IRT_Sys_Status;
@@ -83,7 +83,8 @@ extern void irt_parseTelegram(uint8_t * telegram, uint8_t len);
 
 void irt_setFlowTemp(uint8_t temperature);
 void irt_setWarmWaterActivated(bool activated);
-void irt_setFlowPID(int8_t flow_p, int8_t flow_i, int8_t flow_d);
+char *irt_format_flowtemp_pid_text(char *buf, size_t buf_len);
+void irt_setFlowPID(float flow_p, float flow_i, float flow_d);
 void irt_setMaxFlowTemp(int8_t temp);
 
 void irt_init_uart();
@@ -130,11 +131,11 @@ void irt_set_water_temp(uint8_t wc, const char *setting, const char *value);
 // define maximum setable tapwater temperature
 #define EMS_BOILER_TAPWATER_TEMPERATURE_MAX 60
 
-#define IRT_FLOW_PID_P_DEFAULT 50
-#define IRT_FLOW_PID_I_DEFAULT 40
-#define IRT_FLOW_PID_D_DEFAULT 30
+#define IRT_FLOWTEMP_PID_P_DEFAULT 50
+#define IRT_FLOWTEMP_PID_I_DEFAULT 10
+#define IRT_FLOWTEMP_PID_D_DEFAULT 0
 
-#define IRT_FLOW_MAX_TEMP_DEFAULT 60
+#define IRT_MAX_FLOWTEMP_DEFAULT 60
 
 
 
@@ -300,11 +301,11 @@ typedef struct {
     char *  known_devices;     // list of known deviceIDs for quick boot
 
 	// PID flow settings
-	uint16_t	flow_temp_P;		// P value of PID for flow temp control
-	uint16_t	flow_temp_I;		// I value of PID for flow temp control
-	uint16_t	flow_temp_D;		// D value of PID for flow temp control
+	uint16_t	flowtemp_P;		// P value of PID for flow temp control
+	uint16_t	flowtemp_I;		// I value of PID for flow temp control
+	uint16_t	flowtemp_D;		// D value of PID for flow temp control
 
-	uint8_t	max_flow_temp;		// safety value, system will always limit to this max temp
+	uint8_t	max_flowtemp;		// safety value, system will always limit to this max temp
 
 
 } _EMSESP_Settings;

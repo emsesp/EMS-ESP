@@ -388,7 +388,7 @@ uint8_t irt_handle_0xA4(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	EMS_Boiler.curFlowTemp = (data[4] * 10);
 	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 
-	IRT_Sys_Status.cur_flow_temp = data[4];
+	IRT_Sys_Status.cur_flowtemp = data[4];
 	IRT_Sys_Status.last_flow_update = millis();
 	return 0;
 }
@@ -892,10 +892,10 @@ void irt_send_next_poll_to_boiler()
 		// this keel keep the pump running, but switches off the burner
 		if ((IRT_Sys_Status.cur_set_burner_power > 0) &&
 				(IRT_Sys_Status.cur_set_burner_power <= IRT_MIN_USABLE_BURN_POWER) &&
-				(IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOW_TEMP)) {
+				(IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOWTEMP)) {
 			irt_add_sub_msg(&IRT_Tx, 0x01, IRT_Sys_Status.req_water_temp, 0xF6, 2); // set max cv water temp
 		} else {
-			irt_add_sub_msg(&IRT_Tx, 0x01, EMSESP_Settings.max_flow_temp, 0xF6, 2); // set max cv water temp
+			irt_add_sub_msg(&IRT_Tx, 0x01, EMSESP_Settings.max_flowtemp, 0xF6, 2); // set max cv water temp
 		}
 		IRT_TxQueue.push(IRT_Tx);
 		break;
@@ -971,11 +971,12 @@ void irt_loop()
 	}
 }
 
-void irt_setup_flow_temp_pid()
+void irt_setup_flowtemp_pid()
 {
-	pid_Init((EMSESP_Settings.flow_temp_P * SCALING_FACTOR) / 100,
-				(EMSESP_Settings.flow_temp_I * SCALING_FACTOR) / 100,
-				(EMSESP_Settings.flow_temp_D * SCALING_FACTOR) / 100,
+//	myDebug_P(PSTR("Setup PID: %d %d %d"), EMSESP_Settings.flowtemp_P, EMSESP_Settings.flowtemp_I, EMSESP_Settings.flowtemp_D);
+	pid_Init((EMSESP_Settings.flowtemp_P * SCALING_FACTOR) / 100,
+				(EMSESP_Settings.flowtemp_I * SCALING_FACTOR) / 100,
+				(EMSESP_Settings.flowtemp_D * SCALING_FACTOR) / 100,
 				 &IRT_Sys_Status.flowPidData);
 
 }
@@ -988,7 +989,7 @@ void irt_doFlowTempTicker()
 {
 	unsigned long now_millis = millis();
 
-	myDebug_P(PSTR("flow ticker."));
+//	myDebug_P(PSTR("flow ticker."));
 
 	// we can only set burner power in active mode
 	if (EMSESP_Settings.tx_mode != 5) {
@@ -997,14 +998,14 @@ void irt_doFlowTempTicker()
 	}
 
 	// is there any request for flow water ?
-	if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOW_TEMP) {
+	if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOWTEMP) {
 		IRT_Sys_Status.cur_set_burner_power = 0;
 		return;
 	}
 
 	// if there is no MQTT connection, reset request
 	if (!myESP.isMQTTHealthy()) {
-		if (IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOW_TEMP) {
+		if (IRT_Sys_Status.req_water_temp >= IRT_MIN_FLOWTEMP) {
 			myDebug_P(PSTR("Resetting boiler flow temp. because of MQTT error."));
 		}
 		IRT_Sys_Status.req_water_temp = 0;
@@ -1023,20 +1024,20 @@ void irt_doFlowTempTicker()
 
 	new_power = IRT_Sys_Status.cur_set_burner_power;
 
-	err = pid_Controller(IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flow_temp, &IRT_Sys_Status.flowPidData);
+	err = pid_Controller(IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flowtemp, &IRT_Sys_Status.flowPidData);
 
 	if (IRT_Sys_Status.cur_set_burner_power == 0) {
-		// start burn cycle with a half of power
-		new_power = 0x80;
-		pid_Reset_Integrator(&IRT_Sys_Status.flowPidData);
+		// Pick a starting point based on requested temp
+		new_power = 60 + (IRT_Sys_Status.req_water_temp << 1);
+		irt_setup_flowtemp_pid();
 	} else {
 		new_power = new_power + err;
 	}
 	// limit power to valid range
 	if (new_power < IRT_MIN_USABLE_BURN_POWER) new_power = IRT_MIN_USABLE_BURN_POWER; // any lower and the boiler stops running
-	if (new_power > 0xCF) new_power = 0xCF; // max power
+	if (new_power > 0xF0) new_power = 0xF0; // max power
 
-	myDebug_P(PSTR("Req %d C Cur %d Err %d old pwr: %d new pwr: %d (0x%02x)"), IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flow_temp, err, IRT_Sys_Status.cur_set_burner_power, new_power, new_power);
+	myDebug_P(PSTR("Req %d C Cur %d Err %d old pwr: %d new pwr: %d (0x%02x)"), IRT_Sys_Status.req_water_temp, IRT_Sys_Status.cur_flowtemp, err, IRT_Sys_Status.cur_set_burner_power, new_power, new_power);
 
 	IRT_Sys_Status.cur_set_burner_power = (uint8_t)new_power;
 
@@ -1047,14 +1048,14 @@ void irt_doFlowTempTicker()
  */
 void irt_setFlowTemp(uint8_t temperature) {
 
-	if (temperature > EMSESP_Settings.max_flow_temp) {
-		myDebug_P(PSTR("Maximum boiler flow temperature is %d C, ignoring set of %d C"), EMSESP_Settings.max_flow_temp, temperature);
+	if (temperature > EMSESP_Settings.max_flowtemp) {
+		myDebug_P(PSTR("Maximum boiler flow temperature is %d C, ignoring set of %d C"), EMSESP_Settings.max_flowtemp, temperature);
 		return;
 	}
 	if (EMSESP_Settings.tx_mode == 5) {
 		myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
 		IRT_Sys_Status.req_water_temp = temperature;
-		if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOW_TEMP) {
+		if (IRT_Sys_Status.req_water_temp < IRT_MIN_FLOWTEMP) {
 			// reset burner directly
 			IRT_Sys_Status.cur_set_burner_power = 0;
 		}
@@ -1071,55 +1072,68 @@ void irt_setWarmWaterActivated(bool activated) {
     myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
 }
 
-void irt_setFlowPID(int8_t flow_p, int8_t flow_i, int8_t flow_d)
+char *irt_format_flowtemp_pid_text(char *buf, size_t buf_len)
+{
+	snprintf(buf, buf_len, PSTR("%d.%02d %d.%02d %d.%02d"),
+				(EMSESP_Settings.flowtemp_P / 100), (EMSESP_Settings.flowtemp_P % 100),
+				(EMSESP_Settings.flowtemp_I / 100), (EMSESP_Settings.flowtemp_I % 100),
+				(EMSESP_Settings.flowtemp_D / 100), (EMSESP_Settings.flowtemp_D % 100));
+	return buf;
+}
+
+void irt_setFlowPID(float flow_p, float flow_i, float flow_d)
 {
 	int8_t changed;
-	if (flow_p < 0) {
-		myDebug_P(PSTR("Current flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+	char text_buf[30];
+	if (flow_p < 0.0) {
+		myDebug_P(PSTR("Current flow PID: %s"), irt_format_flowtemp_pid_text(text_buf, sizeof(text_buf)));
 		return;
 	}
 	changed = 0;
-	if ((flow_p >= 0) && (flow_p <= 100)) {
-		if ((uint16_t)flow_p != EMSESP_Settings.flow_temp_P) {
+	if ((flow_p >= 0.0) && (flow_p <= 9.9)) {
+		uint16_t f_flow_p = (uint16_t)(flow_p * 100.0);
+		if (f_flow_p != EMSESP_Settings.flowtemp_P) {
 			changed = 1;
-			EMSESP_Settings.flow_temp_P = (uint16_t)flow_p;
+			EMSESP_Settings.flowtemp_P = f_flow_p;
 		}
 	}
-	if ((flow_i >= 0) && (flow_i <= 100)) {
-		if ((uint16_t)flow_i != EMSESP_Settings.flow_temp_I) {
+	if ((flow_i >= 0.0) && (flow_i <= 9.9)) {
+		uint16_t f_flow_i = (uint16_t)(flow_i * 100.0);
+		if (f_flow_i != EMSESP_Settings.flowtemp_I) {
 			changed = 1;
-			EMSESP_Settings.flow_temp_I = (uint16_t)flow_i;
+			EMSESP_Settings.flowtemp_I = f_flow_i;
 		}
 	}
-	if ((flow_d >= 0) && (flow_d <= 100)) {
-		if ((uint16_t)flow_d != EMSESP_Settings.flow_temp_D) {
+	if ((flow_d >= 0.0) && (flow_d <= 9.9)) {
+		uint16_t f_flow_d = (uint16_t)(flow_d * 100.0);
+		if (f_flow_d != EMSESP_Settings.flowtemp_D) {
 			changed = 1;
-			EMSESP_Settings.flow_temp_D = (uint16_t)flow_d;
+			EMSESP_Settings.flowtemp_D = f_flow_d;
 		}
 	}
 	if (changed) {
-		irt_setup_flow_temp_pid();
-		myDebug_P(PSTR("Changed to, flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+		irt_setup_flowtemp_pid();
+		myDebug_P(PSTR("Changed to, flow PID: %s"), irt_format_flowtemp_pid_text(text_buf, sizeof(text_buf)));
 	} else {
-		myDebug_P(PSTR("No Change, Current flow PID: %d %d %d"), EMSESP_Settings.flow_temp_P, EMSESP_Settings.flow_temp_I, EMSESP_Settings.flow_temp_D);
+		myDebug_P(PSTR("No Change, Current flow PID: %s"), irt_format_flowtemp_pid_text(text_buf, sizeof(text_buf)));
 	}
 
 }
 void irt_setMaxFlowTemp(int8_t temp)
 {
 	if (temp < 0) {
-		myDebug_P(PSTR("Current max. flow Temp.: %d C."), EMSESP_Settings.max_flow_temp);
+		myDebug_P(PSTR("Current max. flow Temp.: %d C."), EMSESP_Settings.max_flowtemp);
 		return;
 	}
 	if (temp > 90) {
 		myDebug_P(PSTR("Invalid temperature of %d C, ignoring."), temp);
 		return;
 	}
-	if (temp == EMSESP_Settings.max_flow_temp) {
+	if (temp == EMSESP_Settings.max_flowtemp) {
 		myDebug_P(PSTR("New max. flow temperature is the same (%d C)."), temp);
 	} else {
 		myDebug_P(PSTR("Setting new max. flow temperature of %d C."), temp);
-		EMSESP_Settings.max_flow_temp = (uint8_t)temp;
+		EMSESP_Settings.max_flowtemp = (uint8_t)temp;
 	}
 }
 
@@ -1221,11 +1235,11 @@ void irt_init()
 	IRT_Sys_Status.my_address = 1;
 	IRT_Sys_Status.req_water_temp = 0;
 
-	IRT_Sys_Status.cur_flow_temp = 20; // setup a default
+	IRT_Sys_Status.cur_flowtemp = 20; // setup a default
 	IRT_Sys_Status.last_flow_update = 0;
 	IRT_Sys_Status.cur_set_burner_power = 0;
 
-	irt_setup_flow_temp_pid();
+	irt_setup_flowtemp_pid();
 	updateFlowTempTimer.attach(60, irt_doFlowTempTicker); // update requested flow temp
 }
 
