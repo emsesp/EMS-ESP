@@ -45,6 +45,7 @@ typedef struct {
 	uint8_t				poll_step;					// the status poll is send in several steps
 	uint8_t				my_address;					// address used to identify myself
 	uint8_t				req_water_temp;			// requested water temperature
+	uint8_t				warm_water_mode;			// 0 - warm water prod off, 1- warm water prod. on
 	uint8_t				cur_set_burner_power;	// Current burner power we have set
 	unsigned long		last_boiler_poll;			// last time
 	uint8_t				cur_flowtemp;				// last reported flow temp in Celsius

@@ -178,7 +178,7 @@ uint8_t irt_handle_0x78(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	/* 78 07 FF A1 */
 	/* 78 07 FF A1 */
 
-	irt_update_single_status(0x10 + (data[1] & 0x0F), data[2]);
+//	irt_update_single_status(0x10 + (data[1] & 0x0F), data[2]);
 
 	return 0;
 }
@@ -423,7 +423,7 @@ uint8_t irt_handle_0xF0(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
 	/* extra msgs */
 
-	irt_update_single_status(0xE0 + (data[2] & 0x0F), data[4]);
+//	irt_update_single_status(0xE0 + (data[2] & 0x0F), data[4]);
 
 	return 0;
 }
@@ -920,7 +920,11 @@ void irt_send_next_poll_to_boiler()
 		irt_add_sub_msg(&IRT_Tx, 0x90, 0, 0, 0);
 		irt_add_sub_msg(&IRT_Tx, 0x73, 0x52, 0x25, 2);
 		irt_add_sub_msg(&IRT_Tx, 0x78, 0x05, 0x04, 2);
-		irt_add_sub_msg(&IRT_Tx, 0x05, 0x04, 0xE2, 2);
+		if (IRT_Sys_Status.warm_water_mode) {
+			irt_add_sub_msg(&IRT_Tx, 0x05, 0x04, 0xE2, 2);
+		} else {
+			irt_add_sub_msg(&IRT_Tx, 0x05, 0x00, 0xE2, 2);
+		}
 		IRT_TxQueue.push(IRT_Tx);
 		break;
 	case 12:
@@ -1070,6 +1074,12 @@ void irt_setFlowTemp(uint8_t temperature) {
  */
 void irt_setWarmWaterActivated(bool activated) {
     myDebug_P(PSTR("Setting boiler warm water %s"), activated ? "on" : "off");
+
+	if (activated) {
+		IRT_Sys_Status.warm_water_mode = 1;
+	} else {
+		IRT_Sys_Status.warm_water_mode = 0;
+	}
 }
 
 char *irt_format_flowtemp_pid_text(char *buf, size_t buf_len)
@@ -1234,6 +1244,7 @@ void irt_init()
 	IRT_Sys_Status.poll_step = 0;
 	IRT_Sys_Status.my_address = 1;
 	IRT_Sys_Status.req_water_temp = 0;
+	IRT_Sys_Status.warm_water_mode = 1; // switch on by default
 
 	IRT_Sys_Status.cur_flowtemp = 20; // setup a default
 	IRT_Sys_Status.last_flow_update = 0;
