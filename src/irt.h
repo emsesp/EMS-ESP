@@ -219,8 +219,8 @@ typedef struct {
     // UBAParameterWW
     uint8_t wWActivated;     // Warm Water activated
     uint8_t wWSelTemp;       // Warm Water selected temperature
-    uint8_t wWCircPump;      // Warm Water circulation pump Available
-    uint8_t wWDesinfectTemp; // Warm Water desinfection temperature
+//    uint8_t wWCircPump;      // Warm Water circulation pump Available
+//    uint8_t wWDesinfectTemp; // Warm Water desinfection temperature
     uint8_t wWComfort;       // Warm water comfort or ECO mode
 
     // UBAMonitorFast
@@ -234,11 +234,11 @@ typedef struct {
     uint8_t  ignWork;            // Ignition on/off
     uint8_t  heatPmp;            // Circulating pump on/off
     uint8_t  wWHeat;             // 3-way valve on WW
-    uint8_t  wWCirc;             // Circulation on/off
+//    uint8_t  wWCirc;             // Circulation on/off
     uint8_t  selBurnPow;         // Burner max power
-    uint8_t  curBurnPow;         // Burner current power
-    uint16_t flameCurr;          // Flame current in micro amps
-    uint8_t  sysPress;           // System pressure
+//    uint8_t  curBurnPow;         // Burner current power
+//    uint16_t flameCurr;          // Flame current in micro amps
+//    uint8_t  sysPress;           // System pressure
     char     serviceCodeChar[3]; // 2 character status/service code
     uint16_t serviceCode;        // error/service code
 
@@ -254,18 +254,18 @@ typedef struct {
 
     // UBAMonitorWWMessage
     uint16_t wWCurTmp;  // Warm Water current temperature
-    uint32_t wWStarts;  // Warm Water # starts
-    uint32_t wWWorkM;   // Warm Water # minutes
+//    uint32_t wWStarts;  // Warm Water # starts
+//    uint32_t wWWorkM;   // Warm Water # minutes
     uint8_t  wWOneTime; // Warm Water one time function on/off
-    uint8_t  wWCurFlow; // Warm Water current flow in l/min
+//    uint8_t  wWCurFlow; // Warm Water current flow in l/min
 
     // UBATotalUptimeMessage
     uint32_t UBAuptime; // Total UBA working hours
 
     // UBAParametersMessage
     uint8_t heating_temp; // Heating temperature setting on the boiler
-    uint8_t pump_mod_max; // Boiler circuit pump modulation max. power
-    uint8_t pump_mod_min; // Boiler circuit pump modulation min. power
+//    uint8_t pump_mod_max; // Boiler circuit pump modulation max. power
+//    uint8_t pump_mod_min; // Boiler circuit pump modulation min. power
 
     // calculated values
     uint8_t tapwaterActive; // Hot tap water is on/off

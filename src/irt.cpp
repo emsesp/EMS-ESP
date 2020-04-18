@@ -160,6 +160,12 @@ uint8_t irt_handle_0x07(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 //	EMS_Thermostat.hc[hc].active = true;
 //	EMS_Thermostat.hc[hc].setpoint_roomTemp = (data[1] * 3);
 
+	uint16_t temp = data[3];
+
+	temp = (temp * 100) / 255;
+
+	EMS_Boiler.selBurnPow = (uint8_t)temp;
+
 	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_THERMOSTAT);
 	return 0;
 }
@@ -201,6 +207,14 @@ uint8_t irt_handle_0x78(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
     EMS_Boiler.wWHeat      = EMS_VALUE_INT_NOTSET;    // 3-way valve on WW
     EMS_Boiler.wWCirc      = EMS_VALUE_INT_NOTSET;    // Circulation on/off
    */
+uint8_t irt_handle_0x81(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	/* 81 C3 79 E3 35 */
+	/* 81 ?? ?? ?? tt */
+	EMS_Boiler.heating_temp = data[4];
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
+	return 0;
+}
 
 uint8_t irt_handle_0x82(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
@@ -411,6 +425,17 @@ uint8_t irt_handle_0xA8(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
 	return 0;
 }
+
+uint8_t irt_handle_0xAC(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
+{
+	// target water temp.
+	/* AC A5 F0 10 41 */
+	/* AC ?? ?? cc ww */
+	EMS_Boiler.wWSelTemp = (data[4] * 10);
+	ems_Device_add_flags(EMS_DEVICE_UPDATE_FLAG_BOILER);
+	return 0;
+}
+
 #include <limits.h>
 uint8_t irt_handle_0xC9(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 {
@@ -510,6 +535,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	case 0x78:
 		return irt_handle_0x78(msg, data, length);
 		break;
+	case 0x81:
+		return irt_handle_0x81(msg, data, length);
+		break;
 	case 0x82:
 		return irt_handle_0x82(msg, data, length);
 		break;
@@ -539,6 +567,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 		break;
 	case 0xA8:
 		return irt_handle_0xA8(msg, data, length);
+		break;
+	case 0xAC:
+		return irt_handle_0xAC(msg, data, length);
 		break;
 	case 0xC9:
 		return irt_handle_0xC9(msg, data, length);
@@ -1056,6 +1087,8 @@ void irt_setFlowTemp(uint8_t temperature) {
 		myDebug_P(PSTR("Maximum boiler flow temperature is %d C, ignoring set of %d C"), EMSESP_Settings.max_flowtemp, temperature);
 		return;
 	}
+	EMS_Boiler.selFlowTemp = temperature;
+
 	if (EMSESP_Settings.tx_mode == 5) {
 		myDebug_P(PSTR("Setting boiler flow temperature to %d C"), temperature);
 		IRT_Sys_Status.req_water_temp = temperature;

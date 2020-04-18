@@ -209,7 +209,7 @@ _EMS_THERMOSTAT_MODE _getThermostatMode2(uint8_t hc_num) {
 void showInfo() {
 //    static char buffer_type[200] = {0};
 
-    myDebug_P(PSTR("%sEMS-ESP system status:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
+    myDebug_P(PSTR("%sIRT-ESP system status:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
     _EMS_SYS_LOGGING sysLog = ems_getLogging();
     if (sysLog == EMS_SYS_LOGGING_BASIC) {
         myDebug_P(PSTR("  System logging set to Basic"));
@@ -244,7 +244,7 @@ void showInfo() {
               ((EMSESP_Settings.shower_timer) ? "enabled" : "disabled"),
               ((EMSESP_Settings.shower_alert) ? "enabled" : "disabled"));
 */
-    myDebug_P(PSTR("\n%sEMS Bus stats:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
+    myDebug_P(PSTR("\n%siRT Bus stats:%s"), COLOR_BOLD_ON, COLOR_BOLD_OFF);
 
     if (ems_getBusConnected()) {
 //        myDebug_P(PSTR("  Bus is connected, protocol: %s"), ((EMS_Sys_Status.emsIDMask == 0x80) ? "Junkers HT3" : "Buderus"));
@@ -261,7 +261,7 @@ void showInfo() {
         }
 #endif
     } else {
-        myDebug_P(PSTR("  No connection can be made to the EMS bus"));
+        myDebug_P(PSTR("  No connection can be made to the iRT bus"));
         myDebug_P(PSTR("  Rx: # successful read requests=%d, # CRC errors=%d"), EMS_Sys_Status.emsRxPgks, EMS_Sys_Status.emxCrcErr);
     }
 
@@ -284,7 +284,7 @@ void showInfo() {
 
     // UBAParameterWW
     _renderBoolValue("Warm Water activated", EMS_Boiler.wWActivated);
-    _renderBoolValue("Warm Water circulation pump available", EMS_Boiler.wWCircPump);
+//    _renderBoolValue("Warm Water circulation pump available", EMS_Boiler.wWCircPump);
 /*
     if (EMS_Boiler.wWComfort == EMS_VALUE_UBAParameterWW_wwComfort_Hot) {
         myDebug_P(PSTR("  Warm Water comfort setting: Hot"));
@@ -295,19 +295,19 @@ void showInfo() {
     }
 */
         _renderIntValue("Warm Water selected temperature", "C", EMS_Boiler.wWSelTemp);
-        _renderIntValue("Warm Water desinfection temperature", "C", EMS_Boiler.wWDesinfectTemp);
-        _renderBoolValue("Warm Water Circulation active", EMS_Boiler.wWCirc);
+//        _renderIntValue("Warm Water desinfection temperature", "C", EMS_Boiler.wWDesinfectTemp);
+//        _renderBoolValue("Warm Water Circulation active", EMS_Boiler.wWCirc);
 
     // UBAMonitorWWMessage
     _renderUShortValue("Warm Water current temperature", "C", EMS_Boiler.wWCurTmp);
-    _renderIntValue("Warm Water current tap water flow", "l/min", EMS_Boiler.wWCurFlow, 10);
-    _renderLongValue("Warm Water # starts", "times", EMS_Boiler.wWStarts);
-    if (EMS_Boiler.wWWorkM != EMS_VALUE_LONG_NOTSET) {
-        myDebug_P(PSTR("  Warm Water active time: %d days %d hours %d minutes"),
-                  EMS_Boiler.wWWorkM / 1440,
-                  (EMS_Boiler.wWWorkM % 1440) / 60,
-                  EMS_Boiler.wWWorkM % 60);
-    }
+//    _renderIntValue("Warm Water current tap water flow", "l/min", EMS_Boiler.wWCurFlow, 10);
+//    _renderLongValue("Warm Water # starts", "times", EMS_Boiler.wWStarts);
+//    if (EMS_Boiler.wWWorkM != EMS_VALUE_LONG_NOTSET) {
+//        myDebug_P(PSTR("  Warm Water active time: %d days %d hours %d minutes"),
+//                  EMS_Boiler.wWWorkM / 1440,
+//                  (EMS_Boiler.wWWorkM % 1440) / 60,
+//                  EMS_Boiler.wWWorkM % 60);
+//    }
     _renderBoolValue("Warm Water 3-way valve", EMS_Boiler.wWHeat);
 
     // UBAMonitorFast
@@ -318,11 +318,11 @@ void showInfo() {
     _renderBoolValue("Boiler pump", EMS_Boiler.heatPmp);
     _renderBoolValue("Fan", EMS_Boiler.fanWork);
     _renderBoolValue("Ignition", EMS_Boiler.ignWork);
-    _renderBoolValue("Circulation pump", EMS_Boiler.wWCirc);
+//    _renderBoolValue("Circulation pump", EMS_Boiler.wWCirc);
     _renderIntValue("Burner selected max power", "%", EMS_Boiler.selBurnPow);
-    _renderIntValue("Burner current power", "%", EMS_Boiler.curBurnPow);
-    _renderShortValue("Flame current", "uA", EMS_Boiler.flameCurr);
-    _renderIntValue("System pressure", "bar", EMS_Boiler.sysPress, 10);
+//    _renderIntValue("Burner current power", "%", EMS_Boiler.curBurnPow);
+//    _renderShortValue("Flame current", "uA", EMS_Boiler.flameCurr);
+//    _renderIntValue("System pressure", "bar", EMS_Boiler.sysPress, 10);
     if (EMS_Boiler.serviceCode == EMS_VALUE_USHORT_NOTSET) {
         myDebug_P(PSTR("  System service code: %s"), EMS_Boiler.serviceCodeChar);
     } else {
@@ -331,8 +331,8 @@ void showInfo() {
 
     // UBAParametersMessage
     _renderIntValue("Heating temperature setting on the boiler", "C", EMS_Boiler.heating_temp);
-    _renderIntValue("Boiler circuit pump modulation max power", "%", EMS_Boiler.pump_mod_max);
-    _renderIntValue("Boiler circuit pump modulation min power", "%", EMS_Boiler.pump_mod_min);
+//    _renderIntValue("Boiler circuit pump modulation max power", "%", EMS_Boiler.pump_mod_max);
+//    _renderIntValue("Boiler circuit pump modulation min power", "%", EMS_Boiler.pump_mod_min);
 
         // UBAMonitorSlow
         if (EMS_Boiler.extTemp > EMS_VALUE_SHORT_NOTSET) {
@@ -616,33 +616,33 @@ void publishEMSValues_boiler() {
     if (EMS_Boiler.wWSelTemp != EMS_VALUE_INT_NOTSET) {
         rootBoiler["wWSelTemp"] = EMS_Boiler.wWSelTemp;
     }
-    if (EMS_Boiler.wWDesinfectTemp != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["wWDesinfectionTemp"] = EMS_Boiler.wWDesinfectTemp;
-    }
+//    if (EMS_Boiler.wWDesinfectTemp != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["wWDesinfectionTemp"] = EMS_Boiler.wWDesinfectTemp;
+//    }
     if (EMS_Boiler.selFlowTemp != EMS_VALUE_INT_NOTSET) {
         rootBoiler["selFlowTemp"] = EMS_Boiler.selFlowTemp;
     }
     if (EMS_Boiler.selBurnPow != EMS_VALUE_INT_NOTSET) {
         rootBoiler["selBurnPow"] = EMS_Boiler.selBurnPow;
     }
-    if (EMS_Boiler.curBurnPow != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["curBurnPow"] = EMS_Boiler.curBurnPow;
-    }
+//    if (EMS_Boiler.curBurnPow != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["curBurnPow"] = EMS_Boiler.curBurnPow;
+//    }
     if (EMS_Boiler.pumpMod != EMS_VALUE_INT_NOTSET) {
         rootBoiler["pumpMod"] = EMS_Boiler.pumpMod;
     }
-    if (EMS_Boiler.wWCircPump != EMS_VALUE_BOOL_NOTSET) {
-        rootBoiler["wWCircPump"] = EMS_Boiler.wWCircPump;
-    }
+//    if (EMS_Boiler.wWCircPump != EMS_VALUE_BOOL_NOTSET) {
+//        rootBoiler["wWCircPump"] = EMS_Boiler.wWCircPump;
+//    }
     if (EMS_Boiler.extTemp > EMS_VALUE_SHORT_NOTSET) {
         rootBoiler["outdoorTemp"] = (float)EMS_Boiler.extTemp / 10;
     }
     if (EMS_Boiler.wWCurTmp < EMS_VALUE_USHORT_NOTSET) {
         rootBoiler["wWCurTmp"] = (float)EMS_Boiler.wWCurTmp / 10;
     }
-    if (EMS_Boiler.wWCurFlow != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["wWCurFlow"] = (float)EMS_Boiler.wWCurFlow / 10;
-    }
+//    if (EMS_Boiler.wWCurFlow != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["wWCurFlow"] = (float)EMS_Boiler.wWCurFlow / 10;
+//    }
     if (EMS_Boiler.curFlowTemp < EMS_VALUE_USHORT_NOTSET) {
         rootBoiler["curFlowTemp"] = (float)EMS_Boiler.curFlowTemp / 10;
     }
@@ -652,9 +652,9 @@ void publishEMSValues_boiler() {
     if (EMS_Boiler.switchTemp < EMS_VALUE_USHORT_NOTSET) {
         rootBoiler["switchTemp"] = (float)EMS_Boiler.switchTemp / 10;
     }
-    if (EMS_Boiler.sysPress != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["sysPress"] = (float)EMS_Boiler.sysPress / 10;
-    }
+//    if (EMS_Boiler.sysPress != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["sysPress"] = (float)EMS_Boiler.sysPress / 10;
+//    }
     if (EMS_Boiler.boilTemp < EMS_VALUE_USHORT_NOTSET) {
         rootBoiler["boilTemp"] = (float)EMS_Boiler.boilTemp / 10;
     }
@@ -673,15 +673,15 @@ void publishEMSValues_boiler() {
     if (EMS_Boiler.wWActivated != EMS_VALUE_BOOL_NOTSET) {
         rootBoiler["wWOnetime"] = _bool_to_char(s, EMS_Boiler.wWOneTime);
     }
-    if (EMS_Boiler.wWCirc != EMS_VALUE_BOOL_NOTSET) {
-        rootBoiler["wWCirc"] = _bool_to_char(s, EMS_Boiler.wWCirc);
-    }
+//    if (EMS_Boiler.wWCirc != EMS_VALUE_BOOL_NOTSET) {
+//        rootBoiler["wWCirc"] = _bool_to_char(s, EMS_Boiler.wWCirc);
+//    }
     if (EMS_Boiler.burnGas != EMS_VALUE_BOOL_NOTSET) {
         rootBoiler["burnGas"] = _bool_to_char(s, EMS_Boiler.burnGas);
     }
-    if (EMS_Boiler.flameCurr < EMS_VALUE_USHORT_NOTSET) {
-        rootBoiler["flameCurr"] = (float)(int16_t)EMS_Boiler.flameCurr / 10;
-    }
+//    if (EMS_Boiler.flameCurr < EMS_VALUE_USHORT_NOTSET) {
+//        rootBoiler["flameCurr"] = (float)(int16_t)EMS_Boiler.flameCurr / 10;
+//    }
     if (EMS_Boiler.heatPmp != EMS_VALUE_BOOL_NOTSET) {
         rootBoiler["heatPmp"] = _bool_to_char(s, EMS_Boiler.heatPmp);
     }
@@ -694,21 +694,21 @@ void publishEMSValues_boiler() {
     if (EMS_Boiler.heating_temp != EMS_VALUE_INT_NOTSET) {
         rootBoiler["heating_temp"] = EMS_Boiler.heating_temp;
     }
-    if (EMS_Boiler.pump_mod_max != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["pump_mod_max"] = EMS_Boiler.pump_mod_max;
-    }
-    if (EMS_Boiler.pump_mod_min != EMS_VALUE_INT_NOTSET) {
-        rootBoiler["pump_mod_min"] = EMS_Boiler.pump_mod_min;
-    }
+//    if (EMS_Boiler.pump_mod_max != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["pump_mod_max"] = EMS_Boiler.pump_mod_max;
+//    }
+//    if (EMS_Boiler.pump_mod_min != EMS_VALUE_INT_NOTSET) {
+//        rootBoiler["pump_mod_min"] = EMS_Boiler.pump_mod_min;
+//    }
     if (EMS_Boiler.wWHeat != EMS_VALUE_BOOL_NOTSET) {
         rootBoiler["wWHeat"] = _bool_to_char(s, EMS_Boiler.wWHeat);
     }
-    if (abs(EMS_Boiler.wWStarts) != EMS_VALUE_LONG_NOTSET) {
-        rootBoiler["wWStarts"] = (float)EMS_Boiler.wWStarts;
-    }
-    if (abs(EMS_Boiler.wWWorkM) != EMS_VALUE_LONG_NOTSET) {
-        rootBoiler["wWWorkM"] = (float)EMS_Boiler.wWWorkM;
-    }
+//    if (abs(EMS_Boiler.wWStarts) != EMS_VALUE_LONG_NOTSET) {
+//        rootBoiler["wWStarts"] = (float)EMS_Boiler.wWStarts;
+//    }
+//    if (abs(EMS_Boiler.wWWorkM) != EMS_VALUE_LONG_NOTSET) {
+//        rootBoiler["wWWorkM"] = (float)EMS_Boiler.wWWorkM;
+//    }
     if (abs(EMS_Boiler.UBAuptime) != EMS_VALUE_LONG_NOTSET) {
         rootBoiler["UBAuptime"] = (float)EMS_Boiler.UBAuptime;
     }
@@ -1697,7 +1697,7 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
         // these three need to be unique topics
         myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWACTIVATED);
         myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWONETIME);
-        myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWCIRCULATION);
+//        myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWCIRCULATION);
         myESP.mqttSubscribe(TOPIC_BOILER_CMD_WWTEMP);
 
         // generic incoming MQTT command for EMS-ESP
@@ -1836,14 +1836,14 @@ void MQTTCallback(unsigned int type, const char * topic, const char * message) {
     }
 
     // wwCirculation
-    if (strcmp(topic, TOPIC_BOILER_CMD_WWCIRCULATION) == 0) {
-        if (message[0] == '1' || strcmp(message, "on") == 0) {
+//    if (strcmp(topic, TOPIC_BOILER_CMD_WWCIRCULATION) == 0) {
+//        if (message[0] == '1' || strcmp(message, "on") == 0) {
 //            ems_setWarmWaterCirculation(true);
-        } else if (message[0] == '0' || strcmp(message, "off") == 0) {
+//        } else if (message[0] == '0' || strcmp(message, "off") == 0) {
 //            ems_setWarmWaterCirculation(false);
-        }
-        return;
-    }
+//        }
+//        return;
+//    }
 
     // boiler wwtemp changes
     if (strcmp(topic, TOPIC_BOILER_CMD_WWTEMP) == 0) {
@@ -2323,7 +2323,7 @@ void setup() {
     // at this point we have all the settings from our internall SPIFFS config file
     // fire up the UART now
     if (myESP.getUseSerial()) {
-        myDebug_P(PSTR("Warning! EMS bus communication disabled when Serial mode enabled. Use 'set serial off' to start communication."));
+        myDebug_P(PSTR("Warning! iRT bus communication disabled when Serial mode enabled. Use 'set serial off' to start communication."));
     } else {
         Serial.println("Note: Serial output will now be disabled. Please use Telnet.");
         Serial.flush();
