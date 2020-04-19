@@ -160,7 +160,7 @@ uint8_t irt_handle_0x07(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 //	EMS_Thermostat.hc[hc].active = true;
 //	EMS_Thermostat.hc[hc].setpoint_roomTemp = (data[1] * 3);
 
-	uint16_t temp = data[3];
+	uint16_t temp = data[1];
 
 	temp = (temp * 100) / 255;
 

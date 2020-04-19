@@ -15,6 +15,8 @@
 EEPROM_Rotate EEPROMr;
 #endif
 
+extern _EMS_Sys_Status  EMS_Sys_Status;
+
 union system_rtcmem_t {
     struct {
         uint8_t stability_counter;
@@ -465,9 +467,9 @@ bool MyESP::_mqttQueue(const char * topic, const char * payload, bool retain) {
     if (payload != NULL) {
         element.payload = strdup(payload);
     }
-#ifdef MYESP_DEBUG
-    myDebug_P(PSTR("[MQTT] Adding to queue: #%d [%s] %s"), _mqtt_queue.size(), element.topic, element.payload);
-#endif
+	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_MQTT) {
+		myDebug_P(PSTR("[MQTT] Adding to queue: #%d [%s] %s"), _mqtt_queue.size(), element.topic, element.payload);
+	}
     _mqtt_queue.push_back(element);
 
     return true;
@@ -493,9 +495,9 @@ bool MyESP::_mqttQueue(const char * topic, JsonDocument payload, bool retain) {
         serializeJson(payload, (char *)element.payload, capacity);
     }
 
-#ifdef MYESP_DEBUG
-    myDebug_P(PSTR("[MQTT] Adding to queue: #%d [%s] %s"), _mqtt_queue.size(), element.topic, element.payload);
-#endif
+	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_MQTT) {
+		myDebug_P(PSTR("[MQTT] Adding to queue: #%d [%s] %s"), _mqtt_queue.size(), element.topic, element.payload);
+	}
     _mqtt_queue.push_back(element);
 
     return true;

@@ -226,8 +226,8 @@ typedef struct {
     // UBAMonitorFast
     uint8_t  selFlowTemp;        // Selected flow temperature
     uint16_t curFlowTemp;        // Current flow temperature
-    uint16_t wwStorageTemp1;     // warm water storage temp 1
-    uint16_t wwStorageTemp2;     // warm water storage temp 2
+//    uint16_t wwStorageTemp1;     // warm water storage temp 1
+//    uint16_t wwStorageTemp2;     // warm water storage temp 2
     uint16_t retTemp;            // Return temperature
     uint8_t  burnGas;            // Gas on/off
     uint8_t  fanWork;            // Fan on/off
