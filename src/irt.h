@@ -245,12 +245,12 @@ typedef struct {
     // UBAMonitorSlow
     int16_t  extTemp;     // Outside temperature
     uint16_t boilTemp;    // Boiler temperature
-    uint16_t exhaustTemp; // Exhaust temperature
+//    uint16_t exhaustTemp; // Exhaust temperature
     uint8_t  pumpMod;     // Pump modulation
     uint32_t burnStarts;  // # burner starts
     uint32_t burnWorkMin; // Total burner operating time
-    uint32_t heatWorkMin; // Total heat operating time
-    uint16_t switchTemp;  // Switch temperature
+//    uint32_t heatWorkMin; // Total heat operating time
+//    uint16_t switchTemp;  // Switch temperature
 
     // UBAMonitorWWMessage
     uint16_t wWCurTmp;  // Warm Water current temperature
@@ -260,7 +260,7 @@ typedef struct {
 //    uint8_t  wWCurFlow; // Warm Water current flow in l/min
 
     // UBATotalUptimeMessage
-    uint32_t UBAuptime; // Total UBA working hours
+//    uint32_t UBAuptime; // Total UBA working hours
 
     // UBAParametersMessage
     uint8_t heating_temp; // Heating temperature setting on the boiler
