@@ -22,6 +22,7 @@ _IRTRxBuf * pIRTRxBuf;
 _IRTRxBuf * paIRTRxBuf[IRT_MAXBUFFERS];
 uint8_t     irtRxBufIdx  = 0;
 _IRTTxBuf * pIRTTxBuf;
+uint8_t		_disable_rxtx = 0;
 
 os_event_t irtRecvTaskQueue[IRTUART_recvTaskQueueLen]; // our Rx queue
 
@@ -353,6 +354,7 @@ void ICACHE_FLASH_ATTR irtuart_setup() {
  */
 void ICACHE_FLASH_ATTR irtuart_stop() {
     ETS_UART_INTR_DISABLE();
+    _disable_rxtx = 1;
 }
 
 /*
@@ -360,6 +362,7 @@ void ICACHE_FLASH_ATTR irtuart_stop() {
  */
 void ICACHE_FLASH_ATTR irtuart_start() {
     ETS_UART_INTR_ENABLE();
+    _disable_rxtx = 0;
 }
 
 /*
@@ -400,6 +403,8 @@ uint16_t ICACHE_FLASH_ATTR irtuart_check_tx(uint8_t reset_if_done)
 
 	unsigned long now_millis = millis();
 
+	if (_disable_rxtx) return 0x0100;
+
 	ETS_UART_INTR_DISABLE(); // disable rx interrupt
 	tx_valid = 0;
 	tx_state = 0;
@@ -434,6 +439,7 @@ uint16_t ICACHE_FLASH_ATTR irtuart_send_tx_buffer(uint8_t address, uint8_t *tele
 
 	if ((pIRTTxBuf == NULL) || (len >= IRT_MAXTXBUFFERSIZE)) return 0xFF00;
 
+	if (_disable_rxtx) return 0xFF00;
 
 	status = irtuart_check_tx(1);
 	// if we are still processing or there is a finished buffer

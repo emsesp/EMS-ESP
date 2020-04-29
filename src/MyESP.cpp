@@ -2751,11 +2751,16 @@ void MyESP::_webserver_setup() {
                            return;
                        }
                        if (!index) {
-                           ETS_UART_INTR_DISABLE(); // disable all UART interrupts to be safe
+                           //ETS_UART_INTR_DISABLE(); // disable all UART interrupts to be safe
+									 if (myESP._ota_pre_callback_f) {
+										  (myESP._ota_pre_callback_f)();
+									 }
                            myESP.myDebug_P(PSTR("[UPDATE] Firmware update started"));
+                           myESP.writeLogEvent(MYESP_SYSLOG_INFO, "[UPDATE] Firmware update started");
                            Update.runAsync(true);
                            if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
                                myESP.myDebug_P(PSTR("[UPDATE] Not enough space to update"));
+										 myESP.writeLogEvent(MYESP_SYSLOG_INFO, "[UPDATE] Not enough space to update");
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif
@@ -2764,6 +2769,7 @@ void MyESP::_webserver_setup() {
                        if (!Update.hasError()) {
                            if (Update.write(data, len) != len) {
                                myESP.myDebug_P(PSTR("[UPDATE] Writing to flash failed"));
+										 myESP.writeLogEvent(MYESP_SYSLOG_INFO, "[UPDATE] Writing to flash failed");
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif
@@ -2772,13 +2778,18 @@ void MyESP::_webserver_setup() {
                        if (final) {
                            if (Update.end(true)) {
                                myESP.myDebug_P(PSTR("[UPDATE] Firmware update finished"));
+										 myESP.writeLogEvent(MYESP_SYSLOG_INFO, "[UPDATE] Firmware update finished");
                                _shouldRestart = !Update.hasError();
                            } else {
                                myESP.myDebug_P(PSTR("[UPDATE] Firmware update failed"));
+										 myESP.writeLogEvent(MYESP_SYSLOG_INFO, "[UPDATE] Firmware update failed");
 #ifdef MYESP_DEBUG
                                Update.printError(Serial);
 #endif
                            }
+                            if (myESP._ota_post_callback_f) {
+										  (myESP._ota_post_callback_f)();
+									 }
                        }
                    });
 
