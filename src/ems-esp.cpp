@@ -2038,10 +2038,10 @@ void WebCallback(JsonObject root) {
 */
     // send over Thermostat data
     JsonObject thermostat = root.createNestedObject("thermostat");
-
+#ifdef nuniet
     if (ems_getThermostatEnabled()) {
         thermostat["ok"] = true;
-#ifdef nuniet
+
         char buffer[200];
         thermostat["tm"] = ems_getDeviceDescription(EMS_DEVICE_TYPE_THERMOSTAT, buffer, true);
 
@@ -2080,10 +2080,11 @@ void WebCallback(JsonObject root) {
         } else if (thermoMode == EMS_THERMOSTAT_MODE_NIGHT) {
             thermostat["tmode"] = "night";
         }
-#endif
+
     } else {
+#endif
         thermostat["ok"] = false;
-    }
+//    }
 
     JsonObject boiler = root.createNestedObject("boiler");
     if (ems_getBoilerEnabled()) {
