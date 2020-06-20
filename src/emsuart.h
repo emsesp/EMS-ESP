@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <ems.h>
+#include "ems.h"
 
 #define EMSUART_UART 0      // UART 0
 #define EMSUART_CONFIG 0x1C // 8N1 (8 bits, no stop bits, 1 parity)

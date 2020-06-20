@@ -9,7 +9,7 @@
 #ifndef TIMEZONE_H_INCLUDED
 #define TIMEZONE_H_INCLUDED
 #include <Arduino.h>
-#include <TimeLib.h>
+#include "TimeLib.h"
 
 // convenient constants for TimeChangeRules
 enum week_t { Last, First, Second, Third, Fourth };
