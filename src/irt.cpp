@@ -287,6 +287,18 @@ uint8_t irt_handle_0x8A(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	 * tt 0x67 - 6.93kOhm resistor
 	 */
 
+	int16_t temp;
+	if (data[4] < 0xF8) {
+		temp = 0;
+		if (data[4] <= 0x80) {
+			temp = (0x80 - data[4]);
+			temp = ((temp * 100) / 26) + 250;
+		} else {
+			temp = data[4] - 0x80;
+			temp = 250 - ((temp * 100) / 26);
+		}
+		EMS_Boiler.extTemp = temp;
+	}
 	return 0;
 }
 uint8_t irt_handle_0x90(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
