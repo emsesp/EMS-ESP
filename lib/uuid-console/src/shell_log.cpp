@@ -67,10 +67,10 @@ void Shell::maximum_log_messages(size_t count) {
 
 void Shell::output_logs() {
     if (!log_messages_.empty()) {
-        if (mode_ != Mode::DELAY) {
+        // if (mode_ != Mode::DELAY) {
             erase_current_line();
             prompt_displayed_ = false;
-        }
+        // }
 
         while (!log_messages_.empty()) {
             auto message = std::move(log_messages_.front());
@@ -96,9 +96,8 @@ void Shell::output_logs() {
             }
 
             ::yield();
-
-            display_prompt();
         }
+        display_prompt();
     }
 }
 

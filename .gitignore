@@ -16,4 +16,4 @@ scripts/stackdmp.txt
 firmware
 *.bin
 emsesp
-
+interface/

@@ -126,6 +126,7 @@ void Network::sta_mode_disconnected(const WiFiEventStationModeDisconnected & eve
 #elif defined(ESP32)
 void Network::sta_mode_disconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
     // LOG_ERROR(F("Failed to connect to WiFi %s, reason code %d"), info.disconnected.ssid, info.disconnected.reason);
+    System::restart(false);
 }
 #endif
 

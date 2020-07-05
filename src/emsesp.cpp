@@ -584,6 +584,7 @@ void EMSESP::send_write_request(const uint16_t type_id,
 // we check if its a complete telegram or just a single byte (which could be a poll or a return status)
 // the CRC check is not done here, only when it's added to the Rx queue with add()
 void EMSESP::incoming_telegram(uint8_t * data, const uint8_t length) {
+#define EMSESP_DEBUG
 #ifdef EMSESP_DEBUG
     static uint32_t rx_time_ = 0;
 #endif
@@ -593,7 +594,7 @@ void EMSESP::incoming_telegram(uint8_t * data, const uint8_t length) {
         // if we ask ourself at roomcontrol for version e.g. 0B 98 02 00 20
         Roomctrl::check((data[1] ^ 0x80 ^ rxservice_.ems_mask()), data);
 #ifdef EMSESP_DEBUG
-        LOG_TRACE(F("[DEBUG] Echo after %d ms: %s"), ::millis() - rx_time_, Helpers::data_to_hex(data, length).c_str());
+        LOG_DEBUG(F("[DEBUG] Echo after %d ms: %s"), ::millis() - rx_time_, Helpers::data_to_hex(data, length).c_str());
 #endif
         return; // it's an echo
     }
@@ -662,8 +663,10 @@ void EMSESP::incoming_telegram(uint8_t * data, const uint8_t length) {
         return;
     } else {
 #ifdef EMSESP_DEBUG
-        LOG_TRACE(F("[DEBUG] Reply after %d ms: %s"), ::millis() - rx_time_, Helpers::data_to_hex(data, length).c_str());
+        LOG_DEBUG(F("[DEBUG] Reply after %d ms: %s"), ::millis() - rx_time_, Helpers::data_to_hex(data, length).c_str());
 #endif
+#undef EMSESP_DEBUG
+
         // check if there is a message for the roomcontroller
         Roomctrl::check((data[1] ^ 0x80 ^ rxservice_.ems_mask()), data);
         // add to RxQueue, what ever it is.
