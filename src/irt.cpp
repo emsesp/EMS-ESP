@@ -538,6 +538,9 @@ uint8_t irt_handleMsg(_IRT_RxTelegram *msg, uint8_t *data, uint8_t length)
 	if (EMS_Sys_Status.emsLogging == EMS_SYS_LOGGING_RAW) irt_dumpBuffer("irt_raw: ", data, length);
 
 	switch (data[0]) {
+	case 0x05:
+		return irt_handle_0x05(msg, data, length);
+		break;
 	case 0x07:
 		return irt_handle_0x07(msg, data, length);
 		break;
