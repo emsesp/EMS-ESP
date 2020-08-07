@@ -47,16 +47,6 @@ class EMSdevice {
 
     virtual ~EMSdevice() = default; // destructor of base class must always be virtual because it's a polymorphic class
 
-    /*
-    // https://github.com/proddy/EMS-ESP/issues/434#issuecomment-667840531
-    inline uint8_t device_id(uint8_t hc = 0) const {
-        if (((device_id_ & 0x7F) >= 0x18) && ((device_id_ & 0x7F) <= 0x1B)) {
-            return ((device_id_ & 0x80) + 0x18 + hc);
-        }
-        return device_id_;
-    }
-    */
-
     inline uint8_t device_id() const {
         return device_id_;
     }

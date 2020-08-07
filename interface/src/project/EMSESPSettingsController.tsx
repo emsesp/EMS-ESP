@@ -63,6 +63,19 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 onChange={handleValueChange('tx_mode')}
                 margin="normal"
             />
+            <SelectValidator name="ems_bus_id"
+                label="Bus Id"
+                value={data.ems_bus_id}
+                fullWidth
+                variant="outlined"
+                onChange={handleValueChange('ems_bus_id')}
+                margin="normal">
+                <MenuItem value={0x0B}>Servicekey (0x0B)</MenuItem>
+                <MenuItem value={0x0D}>Modem (0x0D)</MenuItem>
+                <MenuItem value={0x0A}>Terminal (0x0A)</MenuItem>
+                <MenuItem value={0x0F}>Time module (0x0F)</MenuItem>
+                <MenuItem value={0x12}>Alarm module (0x12)</MenuItem>
+            </SelectValidator>
             <BlockFormControlLabel
                 control={
                     <Checkbox

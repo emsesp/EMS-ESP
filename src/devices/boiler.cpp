@@ -99,8 +99,9 @@ void Boiler::device_info(JsonArray & root) {
 
 // publish values via MQTT
 void Boiler::publish_values() {
-    const size_t        capacity = JSON_OBJECT_SIZE(56); // must recalculate if more objects addded https://arduinojson.org/v6/assistant/
-    DynamicJsonDocument doc(capacity);
+    // const size_t        capacity = JSON_OBJECT_SIZE(56); // must recalculate if more objects addded https://arduinojson.org/v6/assistant/
+    // DynamicJsonDocument doc(capacity);
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_LARGE> doc;
 
     char s[10]; // for formatting strings
 

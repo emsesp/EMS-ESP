@@ -106,7 +106,8 @@ void Solar::show_values(uuid::console::Shell & shell) {
 
 // publish values via MQTT
 void Solar::publish_values() {
-    DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_MEDIUM);
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+    // DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_MEDIUM);
 
     char s[10]; // for formatting strings
 

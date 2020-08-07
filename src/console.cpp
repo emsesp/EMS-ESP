@@ -198,6 +198,7 @@ void EMSESPShell::add_console_commands() {
                           flash_string_vector{F_(deep_optional)},
                           [](Shell & shell, const std::vector<std::string> & arguments) {
                               if (arguments.size() == 0) {
+                                  EMSESP::clear_all_devices();
                                   EMSESP::send_read_request(EMSdevice::EMS_TYPE_UBADevices, EMSdevice::EMS_DEVICE_ID_BOILER);
                               } else {
                                   shell.printfln(F("Performing a deep scan..."));
@@ -223,6 +224,7 @@ void EMSESPShell::add_console_commands() {
                                   Device_Ids.push_back(0x1B); // Thermostat remote - 0x1B
                                   Device_Ids.push_back(0x11); // Switches - 0x11
 
+                                  EMSESP::clear_all_devices();
                                   // send the read command with Version command
                                   for (const uint8_t device_id : Device_Ids) {
                                       EMSESP::send_read_request(EMSdevice::EMS_TYPE_VERSION, device_id);

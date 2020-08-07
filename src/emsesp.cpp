@@ -88,12 +88,37 @@ uint8_t EMSESP::count_devices(const uint8_t device_type) {
     return count;
 }
 
+void EMSESP::clear_all_devices() {
+    emsdevices.clear();
+}
+
 void EMSESP::actual_master_thermostat(const uint8_t device_id) {
     actual_master_thermostat_ = device_id;
 }
 
 uint8_t EMSESP::actual_master_thermostat() {
     return actual_master_thermostat_;
+}
+
+/**
+* if thermostat master is 0x18 it handles only ww and hc1, hc2..hc4 handled by devices 0x19..0x1B
+* we send to right device and match all reads to 0x18
+*/
+uint8_t EMSESP::check_master_device(const uint8_t device_id, const uint16_t type_id, const bool read) {
+    uint16_t mon_id[4] = {0x02A5, 0x02A6, 0x02A7, 0x02A8};
+    uint16_t set_id[4] = {0x02B9, 0x02BA, 0x02BB, 0x02BC};
+    if (actual_master_thermostat_  == 0x18) {
+        for (uint8_t i = 0; i < 4; i++) {
+            if (type_id == mon_id[i] || type_id == set_id[i]) {
+                if(read) {
+                    return 0x18;
+                } else {
+                    return 0x18 + i;
+                }
+            }
+        }
+    }
+    return device_id;
 }
 
 // to watch both type IDs and device IDs

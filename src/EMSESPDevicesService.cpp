@@ -39,6 +39,7 @@ EMSESPDevicesService::EMSESPDevicesService(AsyncWebServer * server, SecurityMana
 }
 
 void EMSESPDevicesService::scan_devices(AsyncWebServerRequest * request) {
+    EMSESP::clear_all_devices();
     EMSESP::send_read_request(EMSdevice::EMS_TYPE_UBADevices, EMSdevice::EMS_DEVICE_ID_BOILER);
     request->send(200);
 }

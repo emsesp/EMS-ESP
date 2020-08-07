@@ -28,7 +28,7 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
     // common telegram handlers
     register_telegram_type(EMS_TYPE_RCOutdoorTemp, F("RCOutdoorTemp"), false, std::bind(&Thermostat::process_RCOutdoorTemp, this, _1));
-    register_telegram_type(EMS_TYPE_RCTime, F("RCTime"), true, std::bind(&Thermostat::process_RCTime, this, _1)); // 0x06
+    register_telegram_type(EMS_TYPE_RCTime, F("RCTime"), false, std::bind(&Thermostat::process_RCTime, this, _1)); // 0x06
 
     // RC10
     if (flags == EMSdevice::EMS_DEVICE_FLAG_RC10) {
@@ -136,15 +136,16 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
         init_mqtt();
     } else {
         LOG_DEBUG(F("Adding new thermostat with device ID 0x%02X"), device_id);
+        return;
     }
 
-    // for the thermostat, go a query all the heating circuits. This is only done once. The automatic fetch will from now on
-    // only update the active heating circuits
-    for (uint8_t i = 0; i < monitor_typeids.size(); i++) {
-        EMSESP::send_read_request(set_typeids[i], device_id);
-    }
+    // only for for the master-thermostat, go a query all the heating circuits. This is only done once.
+    // The automatic fetch will from now on only update the active heating circuits
     for (uint8_t i = 0; i < monitor_typeids.size(); i++) {
         EMSESP::send_read_request(monitor_typeids[i], device_id);
+    }
+    for (uint8_t i = 0; i < set_typeids.size(); i++) {
+        EMSESP::send_read_request(set_typeids[i], device_id);
     }
 }
 
@@ -1208,7 +1209,7 @@ void Thermostat::set_remotetemp(const char * value, const int8_t id) {
         return;
     }
 
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     if (f > 100 || f < 0) {
         Roomctrl::set_remotetemp(hc_num - 1, EMS_VALUE_SHORT_NOTSET);
@@ -1260,7 +1261,7 @@ void Thermostat::set_control(const char * value, const int8_t id) {
         return;
     }
 
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     std::shared_ptr<Thermostat::HeatingCircuit> hc = heating_circuit(hc_num);
     if (hc == nullptr) {
@@ -1311,7 +1312,7 @@ void Thermostat::set_holiday(const char * value, const int8_t id) {
     if (!Helpers::value2string(value, hd)) {
         return;
     }
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     std::shared_ptr<Thermostat::HeatingCircuit> hc = heating_circuit(hc_num);
     if (hc == nullptr) {
@@ -1339,7 +1340,7 @@ void Thermostat::set_pause(const char * value, const int8_t id) {
     if (!Helpers::value2number(value, hrs)) {
         return;
     }
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     std::shared_ptr<Thermostat::HeatingCircuit> hc = heating_circuit(hc_num);
     if (hc == nullptr) {
@@ -1360,7 +1361,7 @@ void Thermostat::set_party(const char * value, const int8_t id) {
     if (!Helpers::value2number(value, hrs)) {
         return;
     }
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     std::shared_ptr<Thermostat::HeatingCircuit> hc = heating_circuit(hc_num);
     if (hc == nullptr) {
@@ -1429,7 +1430,7 @@ void Thermostat::set_mode(const char * value, const int8_t id) {
         return;
     }
 
-    uint8_t hc_num = (id == -1) ? DEFAULT_HEATING_CIRCUIT : id;
+    uint8_t hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
 
     if (mode_tostring(HeatingCircuit::Mode::OFF) == mode) {
         set_mode_n(HeatingCircuit::Mode::OFF, hc_num);

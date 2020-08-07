@@ -87,11 +87,14 @@ class EMSESP {
 
     static uint8_t actual_master_thermostat();
     static void    actual_master_thermostat(const uint8_t device_id);
+    static uint8_t check_master_device(const uint8_t device_id, const uint16_t type_id, const bool read);
 
     static void show_device_values(uuid::console::Shell & shell);
     static void show_sensor_values(uuid::console::Shell & shell);
 
     static void show_devices(uuid::console::Shell & shell);
+    static void clear_all_devices();
+
     static void show_ems(uuid::console::Shell & shell);
 
     static void add_context_menus();
