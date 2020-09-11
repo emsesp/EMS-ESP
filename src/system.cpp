@@ -112,17 +112,19 @@ void System::syslog_init() {
     });
 
 #ifndef EMSESP_STANDALONE
-    syslog_.start(); // syslog service re-start
+    if (syslog_level_ != uuid::log::OFF) {
+        syslog_.start(); // syslog service re-start
 
-    // configure syslog
-    IPAddress addr;
-    if (!addr.fromString(syslog_host_.c_str())) {
-        addr = (uint32_t)0;
+        // configure syslog
+        IPAddress addr;
+        if (!addr.fromString(syslog_host_.c_str())) {
+            addr = (uint32_t)0;
+        }
+        syslog_.log_level((uuid::log::Level)syslog_level_);
+        syslog_.mark_interval(syslog_mark_interval_);
+        syslog_.destination(addr);
+        EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & wifiSettings) { syslog_.hostname(wifiSettings.hostname.c_str()); });
     }
-    syslog_.log_level((uuid::log::Level)syslog_level_);
-    syslog_.mark_interval(syslog_mark_interval_);
-    syslog_.destination(addr);
-    EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & wifiSettings) { syslog_.hostname(wifiSettings.hostname.c_str()); });
 #endif
 }
 

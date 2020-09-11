@@ -98,7 +98,7 @@ class System {
     // settings
     bool           system_heartbeat_;
     static bool    hide_led_;
-    uint8_t        syslog_level_;
+    int8_t         syslog_level_;
     uint32_t       syslog_mark_interval_;
     String         syslog_host_;
     static uint8_t led_gpio_;
