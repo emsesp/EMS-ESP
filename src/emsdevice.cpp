@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,8 @@
 
 #include "emsdevice.h"
 #include "emsesp.h"
-#include "mqtt.h" // for the mqtt_function_p
 
 namespace emsesp {
-
-uuid::log::Logger EMSdevice::logger_{F_(emsesp), uuid::log::Facility::CONSOLE};
 
 std::string EMSdevice::brand_to_string() const {
     switch (brand_) {
@@ -54,80 +51,96 @@ std::string EMSdevice::brand_to_string() const {
 }
 
 // returns the name of the MQTT topic to use for a specific device
-std::string EMSdevice::device_type_topic_name(const uint8_t device_type) {
+std::string EMSdevice::device_type_2_device_name(const uint8_t device_type) {
     switch (device_type) {
-    case DeviceType::SERVICEKEY:
-        return read_flash_string(F("system_cmd"));
+    case DeviceType::SYSTEM:
+        return read_flash_string(F_(system));
         break;
 
     case DeviceType::BOILER:
-        return read_flash_string(F("boiler_cmd"));
+        return read_flash_string(F_(boiler));
         break;
 
     case DeviceType::THERMOSTAT:
-        return read_flash_string(F("thermostat_cmd"));
+        return read_flash_string(F_(thermostat));
         break;
 
     case DeviceType::HEATPUMP:
-        return read_flash_string(F("heatpump_cmd"));
+        return read_flash_string(F_(heatpump));
         break;
 
     case DeviceType::SOLAR:
-        return read_flash_string(F("solar_cmd"));
+        return read_flash_string(F_(solar));
         break;
 
-    case DeviceType::MIXING:
-        return read_flash_string(F("mixing_cmd"));
+    case DeviceType::CONNECT:
+        return read_flash_string(F_(connect));
+        break;
+
+    case DeviceType::MIXER:
+        return read_flash_string(F_(mixer));
+        break;
+
+    case DeviceType::DALLASSENSOR:
+        return read_flash_string(F_(dallassensor));
+        break;
+
+    case DeviceType::CONTROLLER:
+        return read_flash_string(F_(controller));
+        break;
+
+    case DeviceType::SWITCH:
+        return read_flash_string(F_(switch));
+        break;
+
+    case DeviceType::GATEWAY:
+        return read_flash_string(F_(gateway));
         break;
 
     default:
-        return std::string{};
+        return read_flash_string(F_(unknown));
         break;
     }
 }
 
-std::string EMSdevice::device_type_name() const {
-    switch (device_type_) {
-    case DeviceType::BOILER:
-        return read_flash_string(F("Boiler"));
-        break;
-
-    case DeviceType::THERMOSTAT:
-        return read_flash_string(F("Thermostat"));
-        break;
-
-    case DeviceType::HEATPUMP:
-        return read_flash_string(F("Heat Pump"));
-        break;
-
-    case DeviceType::SOLAR:
-        return read_flash_string(F("Solar Module"));
-        break;
-
-    case DeviceType::CONNECT:
-        return read_flash_string(F("Connect Module"));
-        break;
-
-    case DeviceType::CONTROLLER:
-        return read_flash_string(F("Controller"));
-        break;
-
-    case DeviceType::MIXING:
-        return read_flash_string(F("Mixing Module"));
-        break;
-
-    case DeviceType::SWITCH:
-        return read_flash_string(F("Switching Module"));
-        break;
-
-    case DeviceType::GATEWAY:
-        return read_flash_string(F("Gateway Module"));
-        break;
-
-    default:
-        return read_flash_string(F("Unknown"));
-        break;
+// returns device_type from a string
+uint8_t EMSdevice::device_name_2_device_type(const char * topic) {
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(boiler)))) {
+        return DeviceType::BOILER;
     }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(thermostat)))) {
+        return DeviceType::THERMOSTAT;
+    }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(system)))) {
+        return DeviceType::SYSTEM;
+    }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(heatpump)))) {
+        return DeviceType::HEATPUMP;
+    }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(solar)))) {
+        return DeviceType::SOLAR;
+    }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(mixer)))) {
+        return DeviceType::MIXER;
+    }
+
+    if (!strcmp_P(topic, reinterpret_cast<PGM_P>(F_(dallassensor)))) {
+        return DeviceType::DALLASSENSOR;
+    }
+
+    return DeviceType::UNKNOWN;
+}
+
+// return name of the device type, capitalized
+std::string EMSdevice::device_type_name() const {
+    std::string s = device_type_2_device_name(device_type_);
+    s[0]          = toupper(s[0]);
+    return s;
 }
 
 // 0=unknown, 1=bosch, 2=junkers, 3=buderus, 4=nefit, 5=sieger, 11=worcester
@@ -202,7 +215,7 @@ void EMSdevice::show_values(uuid::console::Shell & shell) {
 
 // for each telegram that has the fetch value set (true) do a read request
 void EMSdevice::fetch_values() {
-    LOG_DEBUG(F("Fetching values for device ID 0x%02X"), get_device_id());
+    EMSESP::logger().debug(F("Fetching values for device ID 0x%02X"), device_id());
 
     for (const auto & tf : telegram_functions_) {
         if (tf.fetch_) {
@@ -213,7 +226,7 @@ void EMSdevice::fetch_values() {
 
 // toggle on/off automatic fetch for a telegram id
 void EMSdevice::toggle_fetch(uint16_t telegram_id, bool toggle) {
-    LOG_DEBUG(F("Toggling fetch for device ID 0x%02X, telegram ID 0x%02X to %d"), get_device_id(), telegram_id, toggle);
+    EMSESP::logger().debug(F("Toggling fetch for device ID 0x%02X, telegram ID 0x%02X to %d"), device_id(), telegram_id, toggle);
 
     for (auto & tf : telegram_functions_) {
         if (tf.telegram_type_id_ == telegram_id) {
@@ -221,6 +234,17 @@ void EMSdevice::toggle_fetch(uint16_t telegram_id, bool toggle) {
         }
     }
 }
+
+// get status of automatic fetch for a telegram id
+bool EMSdevice::get_toggle_fetch(uint16_t telegram_id) {
+    for (auto & tf : telegram_functions_) {
+        if (tf.telegram_type_id_ == telegram_id) {
+            return tf.fetch_;
+        }
+    }
+    return false;
+}
+
 
 // list all the telegram type IDs for this device
 void EMSdevice::show_telegram_handlers(uuid::console::Shell & shell) {
@@ -235,18 +259,41 @@ void EMSdevice::show_telegram_handlers(uuid::console::Shell & shell) {
     shell.println();
 }
 
+// list all the telegram type IDs for this device, outputting to a string (max size 200)
+char * EMSdevice::show_telegram_handlers(char * result) {
+    strlcpy(result, "", 200);
+
+    if (telegram_functions_.size() == 0) {
+        return result;
+    }
+
+    char    str[10];
+    uint8_t i    = 0;
+    size_t  size = telegram_functions_.size();
+    for (const auto & tf : telegram_functions_) {
+        snprintf_P(str, sizeof(str), PSTR("0x%02X"), tf.telegram_type_id_);
+        strlcat(result, str, 200);
+        if (++i < size) {
+            strlcat(result, " ", 200);
+        }
+    }
+
+    return result;
+}
+
+
 // list all the mqtt handlers for this device
 void EMSdevice::show_mqtt_handlers(uuid::console::Shell & shell) {
     Mqtt::show_topic_handlers(shell, this->device_type_);
 }
 
 void EMSdevice::register_mqtt_topic(const std::string & topic, mqtt_subfunction_p f) {
-    LOG_DEBUG(F("Registering MQTT topic %s for device ID %02X and type %s"), topic.c_str(), this->device_id_, this->device_type_name().c_str());
     Mqtt::subscribe(this->device_type_, topic, f);
 }
 
-void EMSdevice::register_mqtt_cmd(const __FlashStringHelper * cmd, mqtt_cmdfunction_p f) {
-    Mqtt::add_command(this->device_type_, this->device_id_, cmd, f);
+// add command to library
+void EMSdevice::register_mqtt_cmd(const __FlashStringHelper * cmd, cmdfunction_p f) {
+    Command::add(this->device_type_, this->device_id_, cmd, f);
 }
 
 // register a call back function for a specific telegram type
@@ -264,7 +311,7 @@ std::string EMSdevice::telegram_type_name(std::shared_ptr<const Telegram> telegr
     }
 
     for (const auto & tf : telegram_functions_) {
-        if ((tf.telegram_type_id_ == telegram->type_id) && ((telegram->type_id & 0xF0) != 0xF0)) {
+        if ((tf.telegram_type_id_ == telegram->type_id) && (telegram->type_id != 0xFF)) {
             return uuid::read_flash_string(tf.telegram_type_name_);
         }
     }
@@ -279,13 +326,13 @@ bool EMSdevice::handle_telegram(std::shared_ptr<const Telegram> telegram) {
         if (tf.telegram_type_id_ == telegram->type_id) {
             // if the data block is empty, assume that this telegram is not recognized by the bus master
             // so remove it from the automatic fetch list
-            if (telegram->message_length == 0) {
-                LOG_DEBUG(F("This telegram (%s) is not recognized by the EMS bus"), uuid::read_flash_string(tf.telegram_type_name_).c_str());
+            if (telegram->message_length == 0 && telegram->offset == 0) {
+                EMSESP::logger().debug(F("This telegram (%s) is not recognized by the EMS bus"), uuid::read_flash_string(tf.telegram_type_name_).c_str());
                 toggle_fetch(tf.telegram_type_id_, false);
                 return false;
             }
 
-            LOG_DEBUG(F("Received %s"), uuid::read_flash_string(tf.telegram_type_name_).c_str());
+            EMSESP::logger().debug(F("Received %s"), uuid::read_flash_string(tf.telegram_type_name_).c_str());
             tf.process_function_(telegram);
             return true;
         }
@@ -295,22 +342,22 @@ bool EMSdevice::handle_telegram(std::shared_ptr<const Telegram> telegram) {
 
 // send Tx write with a data block
 void EMSdevice::write_command(const uint16_t type_id, const uint8_t offset, uint8_t * message_data, const uint8_t message_length, const uint16_t validate_typeid) {
-    EMSESP::send_write_request(type_id, this->get_device_id(), offset, message_data, message_length, validate_typeid);
+    EMSESP::send_write_request(type_id, this->device_id(), offset, message_data, message_length, validate_typeid);
 }
 
 // send Tx write with a single value
 void EMSdevice::write_command(const uint16_t type_id, const uint8_t offset, const uint8_t value, const uint16_t validate_typeid) {
-    EMSESP::send_write_request(type_id, this->get_device_id(), offset, value, validate_typeid);
+    EMSESP::send_write_request(type_id, this->device_id(), offset, value, validate_typeid);
 }
 
 // send Tx write with a single value, with no post validation
 void EMSdevice::write_command(const uint16_t type_id, const uint8_t offset, const uint8_t value) {
-    EMSESP::send_write_request(type_id, this->get_device_id(), offset, value, 0);
+    EMSESP::send_write_request(type_id, this->device_id(), offset, value, 0);
 }
 
 // send Tx read command to the device
 void EMSdevice::read_command(const uint16_t type_id) {
-    EMSESP::send_read_request(type_id, get_device_id());
+    EMSESP::send_read_request(type_id, device_id());
 }
 
 // prints a string value to the console
@@ -322,66 +369,95 @@ void EMSdevice::print_value(uuid::console::Shell & shell, uint8_t padding, const
 void EMSdevice::print_value(uuid::console::Shell & shell, uint8_t padding, const __FlashStringHelper * name, const char * value) {
     uint8_t i = padding;
     while (i-- > 0) {
-        shell.print(F(" "));
+        shell.print(F_(1space));
     }
 
     shell.printfln(PSTR("%s: %s"), uuid::read_flash_string(name).c_str(), value);
 }
 
-// given a context, automatically add the commands taken them from the MQTT registry for "<device_type>_cmd" topics
-void EMSdevice::add_context_commands(unsigned int context) {
-    // if we're adding commands for a thermostat or mixing, then include an additional optional paramter called heating circuit
-    flash_string_vector params;
-    if ((context == ShellContext::THERMOSTAT) || (context == ShellContext::MIXING)) {
-        params = flash_string_vector{F_(cmd_optional), F_(data_optional), F_(hc_optional)};
-    } else {
-        params = flash_string_vector{F_(cmd_optional), F_(data_optional)};
+// print value to shell from the json doc
+void EMSdevice::print_value_json(uuid::console::Shell &      shell,
+                                 const __FlashStringHelper * key,
+                                 const __FlashStringHelper * prefix,
+                                 const __FlashStringHelper * name,
+                                 const __FlashStringHelper * suffix,
+                                 JsonObject &                json) {
+    JsonVariant data = json[uuid::read_flash_string(key)];
+    if (data == nullptr) {
+        return; // doesn't exist
     }
 
-    EMSESPShell::commands->add_command(
-        context,
-        CommandFlags::ADMIN,
-        flash_string_vector{F_(call)},
-        params,
-        [&](Shell & shell, const std::vector<std::string> & arguments) {
-            uint8_t device_type_ = device_type();
-            if (arguments.empty()) {
-                // list options
-                shell.print("Available commands:");
-                for (const auto & cf : Mqtt::commands()) {
-                    if (cf.device_type_ == device_type_) {
-                        shell.printf(" %s", uuid::read_flash_string(cf.cmd_).c_str());
-                    }
-                }
-                shell.println();
-                return;
-            }
+    if (prefix != nullptr) {
+        shell.printf(PSTR("  %s%s: "), uuid::read_flash_string(prefix).c_str(), uuid::read_flash_string(name).c_str());
+    } else {
+        shell.printf(PSTR("  %s: "), uuid::read_flash_string(name).c_str());
+    }
 
-            const char * cmd = arguments[0].c_str();
-            if (arguments.size() == 1) {
-                // no value specified
-                Mqtt::call_command(device_type_, cmd, nullptr, -1);
-            } else if (arguments.size() == 2) {
-                // has a value but no id
-                Mqtt::call_command(device_type_, cmd, arguments.back().c_str(), -1);
-            } else {
-                // use value, which could be an id or hc
-                Mqtt::call_command(device_type_, cmd, arguments[1].c_str(), atoi(arguments[2].c_str()));
-            }
-        },
-        [&](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments) -> std::vector<std::string> {
-            if (arguments.size() > 0) {
-                return {};
-            }
-            std::vector<std::string> commands;
-            for (const auto & cf : Mqtt::commands()) {
-                if (cf.device_type_ == device_type()) {
-                    commands.emplace_back(uuid::read_flash_string(cf.cmd_));
-                }
-            }
-            return commands;
-        });
+    if (data.is<char *>()) {
+        shell.printf(PSTR("%s"), data.as<char *>());
+    } else if (data.is<int>()) {
+        shell.printf(PSTR("%d"), data.as<int>());
+    } else if (data.is<float>()) {
+        char data_str[10];
+        shell.printf(PSTR("%s"), Helpers::render_value(data_str, (float)data.as<float>(), 1));
+    } else if (data.is<bool>()) {
+        char data_str[10];
+        shell.printf(PSTR("%s"), Helpers::render_boolean(data_str, data.as<bool>()));
+    }
+
+    if (suffix != nullptr) {
+        shell.print(' ');
+        shell.print(uuid::read_flash_string(suffix).c_str());
+    }
+
+    shell.println();
 }
 
+// print value to shell from the json doc into a name/value pair
+void EMSdevice::print_value_json(JsonArray &                 root,
+                                 const __FlashStringHelper * key,
+                                 const __FlashStringHelper * prefix,
+                                 const __FlashStringHelper * name,
+                                 const __FlashStringHelper * suffix,
+                                 JsonObject &                json) {
+    JsonVariant data = json[uuid::read_flash_string(key)];
+    if (data == nullptr) {
+        return; // doesn't exist
+    }
+
+    JsonObject dataElement = root.createNestedObject();
+    // add prefix to name
+    if (prefix != nullptr) {
+        char name_text[100];
+        snprintf_P(name_text, sizeof(name_text), PSTR("%s%s"), uuid::read_flash_string(prefix).c_str(), uuid::read_flash_string(name).c_str());
+        dataElement["n"] = name_text;
+    } else {
+        dataElement["n"] = name;
+    }
+
+    // convert to string and add the suffix, this is to save space when sending to the web as json
+    // which is why we use n and v instead of name and value
+    std::string suffix_string(10, '\0');
+    if (suffix == nullptr) {
+        suffix_string = "";
+    } else {
+        suffix_string = " " + uuid::read_flash_string(suffix);
+    }
+
+    char data_string[20];
+    if (data.is<char *>()) {
+        snprintf_P(data_string, sizeof(data_string), PSTR("%s%s"), data.as<char *>(), suffix_string.c_str());
+    } else if (data.is<int>()) {
+        snprintf_P(data_string, sizeof(data_string), PSTR("%d%s"), data.as<int>(), suffix_string.c_str());
+    } else if (data.is<float>()) {
+        char s[10];
+        snprintf_P(data_string, sizeof(data_string), PSTR("%s%s"), Helpers::render_value(s, (float)data.as<float>(), 1), suffix_string.c_str());
+    } else if (data.is<bool>()) {
+        char s[10];
+        snprintf_P(data_string, sizeof(data_string), PSTR("%s%s"), Helpers::render_boolean(s, data.as<bool>()), suffix_string.c_str());
+    }
+
+    dataElement["v"] = data_string;
+}
 
 } // namespace emsesp

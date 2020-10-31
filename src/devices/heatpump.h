@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <uuid/log.h>
 
 #include "emsdevice.h"
+#include "emsesp.h"
 #include "telegram.h"
 #include "helpers.h"
 #include "mqtt.h"
@@ -36,15 +37,21 @@ class Heatpump : public EMSdevice {
     Heatpump(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
     virtual void show_values(uuid::console::Shell & shell);
-    virtual void publish_values();
+    virtual void publish_values(JsonObject & json, bool force);
+    virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
     virtual bool updated_values();
-    virtual void add_context_menu();
 
   private:
     static uuid::log::Logger logger_;
 
-    void console_commands();
+    void register_mqtt_ha_config(bool force);
+
+    uint8_t airHumidity_    = EMS_VALUE_UINT_NOTSET;
+    uint8_t dewTemperature_ = EMS_VALUE_UINT_NOTSET;
+
+    bool changed_        = false;
+    bool mqtt_ha_config_ = false; // for HA MQTT Discovery
 
     void process_HPMonitor1(std::shared_ptr<const Telegram> telegram);
     void process_HPMonitor2(std::shared_ptr<const Telegram> telegram);

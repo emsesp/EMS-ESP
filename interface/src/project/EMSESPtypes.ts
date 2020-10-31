@@ -13,6 +13,9 @@ export interface EMSESPSettings {
   dallas_parasite: boolean;
   led_gpio: number;
   hide_led: boolean;
+  api_enabled: boolean;
+  bool_format: number;
+  analog_enabled: boolean;
 }
 
 export enum busConnectionStatus {
@@ -25,8 +28,8 @@ export interface EMSESPStatus {
   status: busConnectionStatus;
   rx_received: number;
   tx_sent: number;
-  crc_errors: number;
-  tx_errors: number;
+  rx_quality: number;
+  tx_quality: number;
 }
 
 export interface Device {
@@ -40,8 +43,9 @@ export interface Device {
 }
 
 export interface Sensor {
+  no: number;
   id: string;
-  temp: number;
+  temp: string;
 }
 
 export interface EMSESPDevices {
@@ -50,8 +54,8 @@ export interface EMSESPDevices {
 }
 
 export interface DeviceData {
-  name: string;
-  value: string;
+  n: string;
+  v: string;
 }
 
 export interface EMSESPDeviceData {

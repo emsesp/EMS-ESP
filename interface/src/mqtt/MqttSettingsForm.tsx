@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextValidator, ValidatorForm, SelectValidator } from 'react-material-ui-form-validator';
 
-import { Checkbox, TextField } from '@material-ui/core';
+import { Checkbox, TextField, Typography } from '@material-ui/core';
 import SaveIcon from '@material-ui/icons/Save';
 import MenuItem from '@material-ui/core/MenuItem';
 
@@ -30,7 +30,7 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
               value="enabled"
             />
           }
-          label="Enable MQTT?"
+          label="Enable MQTT"
         />
         <TextValidator
           validators={['required', 'isIPOrHostname']}
@@ -94,16 +94,6 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           onChange={handleValueChange('keep_alive')}
           margin="normal"
         />
-        <BlockFormControlLabel
-          control={
-            <Checkbox
-              checked={data.clean_session}
-              onChange={handleValueChange('clean_session')}
-              value="clean_session"
-            />
-          }
-          label="Clean Session?"
-        />
         <TextValidator
           validators={['required', 'isNumber', 'minNumber:1', 'maxNumber:65535']}
           errorMessages={['Max topic length is required', "Must be a number", "Must be greater than 0", "Max value is 65535"]}
@@ -116,18 +106,8 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           onChange={handleValueChange('max_topic_length')}
           margin="normal"
         />
-        <BlockFormControlLabel
-          control={
-            <Checkbox
-              checked={data.system_heartbeat}
-              onChange={handleValueChange('system_heartbeat')}
-              value="system_heartbeat"
-            />
-          }
-          label="MQTT Heartbeat"
-        />
         <SelectValidator name="mqtt_format"
-          label="MQTT Format"
+          label="Format"
           value={data.mqtt_format}
           fullWidth
           variant="outlined"
@@ -136,24 +116,47 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           <MenuItem value={1}>Single</MenuItem>
           <MenuItem value={2}>Nested</MenuItem>
           <MenuItem value={3}>Home Assistant</MenuItem>
-          <MenuItem value={4}>Custom</MenuItem>
         </SelectValidator>
         <SelectValidator name="mqtt_qos"
-          label="MQTT QoS"
+          label="QoS"
           value={data.mqtt_qos}
           fullWidth
           variant="outlined"
           onChange={handleValueChange('mqtt_qos')}
           margin="normal">
-          <MenuItem value={0}>0</MenuItem>
-          <MenuItem value={1}>1</MenuItem>
-          <MenuItem value={2}>2</MenuItem>
+          <MenuItem value={0}>0 - At most once</MenuItem>
+          <MenuItem value={1}>1 - At least once</MenuItem>
+          <MenuItem value={2}>2 - Exactly once</MenuItem>
         </SelectValidator>
+        <BlockFormControlLabel
+          control={
+            <Checkbox
+              checked={data.clean_session}
+              onChange={handleValueChange('clean_session')}
+              value="clean_session"
+            />
+          }
+          label="Clean Session"
+        />
+        <BlockFormControlLabel
+          control={
+            <Checkbox
+              checked={data.mqtt_retain}
+              onChange={handleValueChange('mqtt_retain')}
+              value="mqtt_retain"
+            />
+          }
+          label="Retain Flag"
+        />
+        <br></br>
+        <Typography variant="h6" color="primary" >
+          Publish Intervals
+        </Typography>
         <TextValidator
           validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
           errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
           name="publish_time_boiler"
-          label="MQTT Boiler Publish Period (seconds, 0=on change)"
+          label="Boiler Publish Interval (seconds, 0=on change)"
           fullWidth
           variant="outlined"
           value={data.publish_time_boiler}
@@ -165,7 +168,7 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
           errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
           name="publish_time_thermostat"
-          label="MQTT Thermostat Publish Period (seconds, 0=on change)"
+          label="Thermostat Publish Interval (seconds, 0=on change)"
           fullWidth
           variant="outlined"
           value={data.publish_time_thermostat}
@@ -177,7 +180,7 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
           errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
           name="publish_time_solar"
-          label="MQTT Solar Publish Period (seconds, 0=on change)"
+          label="Solar Publish Interval (seconds, 0=on change)"
           fullWidth
           variant="outlined"
           value={data.publish_time_solar}
@@ -188,37 +191,37 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
         <TextValidator
           validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
           errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
-          name="publish_time_mixing"
-          label="MQTT Mixer Publish Period (seconds, 0=on change)"
+          name="publish_time_mixer"
+          label="Mixer Publish Interval (seconds, 0=on change)"
           fullWidth
           variant="outlined"
-          value={data.publish_time_mixing}
+          value={data.publish_time_mixer}
           type="number"
-          onChange={handleValueChange('publish_time_mixing')}
-          margin="normal"
-        />
-        <TextValidator
-          validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
-          errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
-          name="publish_time_other"
-          label="MQTT other Modules Publish Period (seconds, 0=on change)"
-          fullWidth
-          variant="outlined"
-          value={data.publish_time_other}
-          type="number"
-          onChange={handleValueChange('publish_time_other')}
+          onChange={handleValueChange('publish_time_mixer')}
           margin="normal"
         />
         <TextValidator
           validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
           errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
           name="publish_time_sensor"
-          label="MQTT Sensors Publish Period (seconds, 0=on change)"
+          label="Sensors Publish Interval (seconds, 0=on change)"
           fullWidth
           variant="outlined"
           value={data.publish_time_sensor}
           type="number"
           onChange={handleValueChange('publish_time_sensor')}
+          margin="normal"
+        />
+        <TextValidator
+          validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
+          errorMessages={['Publish time is required', "Must be a number", "Must be 0 or greater", "Max value is 65535"]}
+          name="publish_time_other"
+          label="All other Modules Publish Interval (seconds, 0=on change)"
+          fullWidth
+          variant="outlined"
+          value={data.publish_time_other}
+          type="number"
+          onChange={handleValueChange('publish_time_other')}
           margin="normal"
         />
         <FormActions>

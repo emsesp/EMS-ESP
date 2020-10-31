@@ -65,6 +65,8 @@ void Shell::start() {
 #endif
 
     line_buffer_.reserve(maximum_command_line_length_);
+    oldline_.reserve(maximum_command_line_length_);
+    oldline_.clear();
     display_banner();
     display_prompt();
     shells_.insert(shared_from_this());
@@ -175,6 +177,9 @@ void Shell::loop_normal() {
     case '\x0A':
         // Line feed (^J)
         if (previous_ != '\x0D') {
+            if (!line_buffer_.empty()) {
+                oldline_ = line_buffer_;
+            }
             process_command();
         }
         break;
@@ -187,6 +192,9 @@ void Shell::loop_normal() {
         break;
 
     case '\x0D':
+        if (!line_buffer_.empty()) {
+            oldline_ = line_buffer_;
+        }
         // Carriage return (^M)
         process_command();
         break;
@@ -210,6 +218,40 @@ void Shell::loop_normal() {
             if (line_buffer_.length() < maximum_command_line_length_) {
                 line_buffer_.push_back(c);
                 write((uint8_t)c);
+            }
+            // cursor up, get last command
+            if ((c == 'A') && (previous_ == '[')) {
+                erase_current_line();
+                prompt_displayed_ = false;
+                line_buffer_ = oldline_;
+                display_prompt();
+            }
+            // cursor back, delete cursor chars
+            if ((c == 'D') && (previous_ == '[')) {
+                line_buffer_.pop_back();
+                line_buffer_.pop_back();
+                // alternative work as backspace
+                // if (line_buffer_.length() > 0) {
+                //     line_buffer_.pop_back();
+                // }
+                erase_current_line();
+                prompt_displayed_ = false;
+                display_prompt();
+            }
+            // cursor forward, only delete cursor chars
+            if ((c == 'C') && (previous_ == '[')) {
+                line_buffer_.pop_back();
+                line_buffer_.pop_back();
+                erase_current_line();
+                prompt_displayed_ = false;
+                display_prompt();
+            }
+            // cursor down(B): Delete line
+            if ((c == 'B') && (previous_ == '[')) {
+                erase_current_line();
+                prompt_displayed_ = false;
+                line_buffer_.clear();
+                display_prompt();
             }
         }
         break;

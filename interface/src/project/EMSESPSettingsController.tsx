@@ -1,4 +1,4 @@
-import React, { Component, Fragment } from 'react';
+import React, { Component } from 'react';
 import { ValidatorForm, TextValidator, SelectValidator } from 'react-material-ui-form-validator';
 
 import { Checkbox, Typography, Box, Link } from '@material-ui/core';
@@ -48,18 +48,18 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
         <ValidatorForm onSubmit={saveData}>
             <Box bgcolor="info.main" p={2} mt={2} mb={2}>
                 <Typography variant="body1">
-                    Customize EMS-ESP by modifying the default settings here.
+                    Change the default settings on this page. For help click <Link target="_blank" href="https://emsesp.github.io/docs/#/Configure-firmware?id=settings" color="primary">{'here'}</Link>.
                 </Typography>
             </Box>
             <br></br>
             <Typography variant="h6" color="primary" >
-                EMS Bus Settings
+                EMS Bus
             </Typography>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:255']}
                 errorMessages={['TX mode is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
                 name="tx_mode"
-                label="Tx Mode (0=off, 1=EMS1.0, 2=EMS+, 3=HT3)"
+                label="Tx Mode (0=off)"
                 fullWidth
                 variant="outlined"
                 value={data.tx_mode}
@@ -106,7 +106,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             />
             <br></br>
             <Typography variant="h6" color="primary" >
-                Dallas Sensor Settings
+                Dallas Sensor
             </Typography>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
@@ -132,7 +132,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             />
             <br></br>
             <Typography variant="h6" color="primary" >
-                LED Settings
+                LED
             </Typography>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
@@ -158,7 +158,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             />
             <br></br>
             <Typography variant="h6" color="primary" >
-                Shower Settings
+                Shower
             </Typography>
             <BlockFormControlLabel
                 control={
@@ -182,13 +182,38 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             />
             <br></br>
             <Typography variant="h6" color="primary" >
-                Syslog Settings
+                API
+            </Typography>
+            <BlockFormControlLabel
+                control={
+                    <Checkbox
+                        checked={data.api_enabled}
+                        onChange={handleValueChange('api_enabled')}
+                        value="api_enabled"
+                    />
+                }
+                label="Enable WEB API (for write commands)"
+            />
+            <SelectValidator name="bool_format"
+                label="Boolean Format"
+                value={data.bool_format}
+                fullWidth
+                variant="outlined"
+                onChange={handleValueChange('bool_format')}
+                margin="normal">
+                <MenuItem value={1}>on/off</MenuItem>
+                <MenuItem value={2}>true/false</MenuItem>
+                <MenuItem value={3}>1/0</MenuItem>
+            </SelectValidator>
+            <br></br>
+            <Typography variant="h6" color="primary" >
+                Syslog
             </Typography>
             <TextValidator
                 validators={['isIPOrHostname']}
                 errorMessages={["Not a valid IP address or hostname"]}
                 name="syslog_host"
-                label="Syslog IP/Host"
+                label="Syslog IP/Host (optional)"
                 fullWidth
                 variant="outlined"
                 value={data.syslog_host}
@@ -219,6 +244,21 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 onChange={handleValueChange('syslog_mark_interval')}
                 margin="normal"
             />
+            <br></br>
+            <Typography variant="h6" color="primary" >
+                Analog Input
+            </Typography>
+            <BlockFormControlLabel
+                control={
+                    <Checkbox
+                        checked={data.analog_enabled}
+                        onChange={handleValueChange('analog_enabled')}
+                        value="analog_enabled"
+                    />
+                }
+                label="Enable ADC"
+            />
+            <br></br>
             <FormActions>
                 <FormButton startIcon={<SaveIcon />} variant="contained" color="primary" type="submit">
                     Save

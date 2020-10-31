@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,9 +28,6 @@ Gateway::Gateway(uint8_t device_type, uint8_t device_id, uint8_t product_id, con
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
 }
 
-void Gateway::add_context_menu() {
-}
-
 void Gateway::device_info_web(JsonArray & root) {
 }
 
@@ -40,16 +37,17 @@ void Gateway::show_values(uuid::console::Shell & shell) {
 }
 
 // publish values via MQTT
-void Gateway::publish_values() {
+void Gateway::publish_values(JsonObject & json, bool force) {
+}
+
+// export values to JSON
+bool Gateway::export_values(JsonObject & json) {
+    return true;
 }
 
 // check to see if values have been updated
 bool Gateway::updated_values() {
     return false;
-}
-
-// add console commands
-void Gateway::console_commands() {
 }
 
 } // namespace emsesp

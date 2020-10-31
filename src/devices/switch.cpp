@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,12 @@ namespace emsesp {
 
 REGISTER_FACTORY(Switch, EMSdevice::DeviceType::SWITCH);
 
-uuid::log::Logger Switch::logger_{F_(switch), uuid::log::Facility::CONSOLE};
+uuid::log::Logger Switch::logger_ {
+    F_(switch), uuid::log::Facility::CONSOLE
+};
 
 Switch::Switch(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand)
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
-}
-
-void Switch::add_context_menu() {
 }
 
 void Switch::device_info_web(JsonArray & root) {
@@ -40,16 +39,17 @@ void Switch::show_values(uuid::console::Shell & shell) {
 }
 
 // publish values via MQTT
-void Switch::publish_values() {
+void Switch::publish_values(JsonObject & json, bool force) {
+}
+
+// export values to JSON
+bool Switch::export_values(JsonObject & json) {
+    return true;
 }
 
 // check to see if values have been updated
 bool Switch::updated_values() {
     return false;
-}
-
-// add console commands
-void Switch::console_commands() {
 }
 
 } // namespace emsesp

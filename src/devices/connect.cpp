@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,25 +31,23 @@ Connect::Connect(uint8_t device_type, uint8_t device_id, uint8_t product_id, con
 void Connect::device_info_web(JsonArray & root) {
 }
 
-void Connect::add_context_menu() {
-}
-
 // display all values into the shell console
 void Connect::show_values(uuid::console::Shell & shell) {
     // EMSdevice::show_values(shell); // always call this to show header
 }
 
 // publish values via MQTT
-void Connect::publish_values() {
+void Connect::publish_values(JsonObject & json, bool force) {
+}
+
+// export values to JSON
+bool Connect::export_values(JsonObject & json) {
+    return true;
 }
 
 // check to see if values have been updated
 bool Connect::updated_values() {
     return false;
-}
-
-// add console commands
-void Connect::console_commands() {
 }
 
 } // namespace emsesp

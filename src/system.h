@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,18 +48,29 @@ class System {
 
     static void console_commands(Shell & shell, unsigned int context);
 
-    static void mqtt_command_pin(const char * value, const int8_t id);
-    static void mqtt_command_send(const char * value, const int8_t id);
+    static bool command_pin(const char * value, const int8_t id);
+    static bool command_send(const char * value, const int8_t id);
+    static bool command_info(const char * value, const int8_t id, JsonObject & json);
+    static bool command_report(const char * value, const int8_t id, JsonObject & json);
 
     static uint8_t free_mem();
     static void    upload_status(bool in_progress);
     static bool    upload_status();
-    void           syslog_init();
-    void           set_heartbeat(bool system_heartbeat);
-    void           send_heartbeat();
     static void    show_mem(const char * note);
     static void    set_led();
-    bool           check_upgrade();
+    static void    init();
+
+    bool check_upgrade();
+    void syslog_init();
+    void send_heartbeat();
+
+    static std::string hostname() {
+        return hostname_;
+    }
+
+    static void hostname(std::string hostname) {
+        hostname_ = hostname;
+    }
 
   private:
     static uuid::log::Logger logger_;
@@ -72,7 +83,7 @@ class System {
     static constexpr uint32_t LED_WARNING_BLINK              = 1000;  // pulse to show no connection, 1 sec
     static constexpr uint32_t LED_WARNING_BLINK_FAST         = 100;   // flash quickly for boot up sequence
     static constexpr uint32_t SYSTEM_HEARTBEAT_INTERVAL      = 60000; // in milliseconds, how often the MQTT heartbeat is sent (1 min)
-    static constexpr uint32_t SYSTEM_MEASURE_ANALOG_INTERVAL = 1100;
+    static constexpr uint32_t SYSTEM_MEASURE_ANALOG_INTERVAL = 500;
 
     // internal LED
     static constexpr uint8_t LED_ON = LOW;
@@ -87,21 +98,22 @@ class System {
     static void   wifi_reconnect();
     static int8_t wifi_quality();
 
-    bool            system_healthy_  = false;
-    uint32_t        led_flash_speed_ = LED_WARNING_BLINK_FAST; // default boot flashes quickly
-    static uint32_t heap_start_;
-    static int      reset_counter_;
-    uint32_t        last_heartbeat_ = 0;
-    static bool     upload_status_; // true if we're in the middle of a OTA firmware upload
-    static uint16_t analog_;
+    bool               system_healthy_  = false;
+    uint32_t           led_flash_speed_ = LED_WARNING_BLINK_FAST; // default boot flashes quickly
+    static uint32_t    heap_start_;
+    static int         reset_counter_;
+    uint32_t           last_heartbeat_ = 0;
+    static bool        upload_status_; // true if we're in the middle of a OTA firmware upload
+    static uint16_t    analog_;
+    static std::string hostname_;
 
     // settings
-    bool           system_heartbeat_;
     static bool    hide_led_;
     uint8_t        syslog_level_;
     uint32_t       syslog_mark_interval_;
     String         syslog_host_;
     static uint8_t led_gpio_;
+    static bool    analog_enabled_;
 };
 
 } // namespace emsesp

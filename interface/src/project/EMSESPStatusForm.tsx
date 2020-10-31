@@ -1,14 +1,11 @@
 import React, { Component, Fragment } from "react";
 
-import { WithTheme, withTheme, withStyles, Theme, createStyles } from "@material-ui/core/styles";
+import { WithTheme, withTheme } from "@material-ui/core/styles";
 import {
   TableContainer,
   Table,
-  Box,
-  Typography,
   TableBody,
   TableCell,
-  TableHead,
   TableRow,
   List,
   ListItem,
@@ -16,7 +13,7 @@ import {
   ListItemText,
   withWidth,
   WithWidthProps,
-  isWidthDown
+  isWidthDown,
 } from "@material-ui/core";
 
 import RefreshIcon from "@material-ui/icons/Refresh";
@@ -32,34 +29,18 @@ import {
 import {
   busStatus,
   busStatusHighlight,
-  isConnected
+  isConnected,
 } from "./EMSESPStatus";
 
 import { EMSESPStatus } from "./EMSESPtypes";
 
 function formatNumber(num: number) {
-   return new Intl.NumberFormat().format(num);
+  return new Intl.NumberFormat().format(num);
 }
 
 type EMSESPStatusFormProps = RestFormProps<EMSESPStatus> & WithTheme & WithWidthProps;
 
-const StyledTableCell = withStyles((theme: Theme) =>
-  createStyles({
-    head: {
-      backgroundColor: theme.palette.common.black,
-      color: theme.palette.common.white,
-    },
-    body: {
-      fontSize: 14,
-    },
-  }),
-)(TableCell);
-
 class EMSESPStatusForm extends Component<EMSESPStatusFormProps> {
-
-  rxErrors = () => {
-    return this.props.data.crc_errors !== 0;
-  }
 
   createListItems() {
     const { data, theme, width } = this.props;
@@ -71,53 +52,42 @@ class EMSESPStatusForm extends Component<EMSESPStatusFormProps> {
               <DeviceHubIcon />
             </HighlightAvatar>
           </ListItemAvatar>
-          <ListItemText primary="EMS Connection Status" secondary={busStatus(data)} />
+          <ListItemText primary="Connection Status" secondary={busStatus(data)} />
         </ListItem>
         {isConnected(data) && (
           <TableContainer>
             <Table size="small" padding={isWidthDown('xs', width!) ? "none" : "default"}>
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell>Statistic</StyledTableCell>
-                  <StyledTableCell align="right"># Telegrams</StyledTableCell>
-                </TableRow>
-              </TableHead>
               <TableBody>
                 <TableRow>
                   <TableCell>
-                    (Rx) Received telegrams
+                    Received telegrams
                   </TableCell>
-                  <TableCell align="right">{formatNumber(data.rx_received)}</TableCell>
+                  <TableCell align="right">{formatNumber(data.rx_received)}
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell >
-                    (Rx) Incomplete telegrams
+                    Rx line quality
                   </TableCell>
-                  <TableCell align="right">{formatNumber(data.crc_errors)}</TableCell>
+                  <TableCell align="right">{data.rx_quality}&nbsp;%
+                  </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell >
-                    (Tx) Successfully sent telegrams
+                    Sent telegrams
+                  </TableCell >
+                  <TableCell align="right">{formatNumber(data.tx_sent)}
                   </TableCell>
-                  <TableCell align="right">{formatNumber(data.tx_sent)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell >
-                    (Tx) Send Errors
+                    Tx line quality
                   </TableCell>
-                  <TableCell align="right">{formatNumber(data.tx_errors)}</TableCell>
+                  <TableCell align="right">{data.tx_quality}&nbsp;%
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
-            <Fragment>
-              {this.rxErrors() && (
-                <Box bgcolor="warning.main" p={1} mt={0} mb={0}>
-                  <Typography variant="caption" color="textPrimary">
-                    <i>Note: Having a small number of incomplete Rx telegrams is normal and often caused by noise on the EMS line.</i>
-                  </Typography>
-                </Box>
-              )}
-            </Fragment>
           </TableContainer>
         )}
       </Fragment>

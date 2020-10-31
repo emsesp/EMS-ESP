@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,13 +34,18 @@ Solar::Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
     }
 
     if (flags == EMSdevice::EMS_DEVICE_FLAG_SM100) {
-        register_telegram_type(0x0362, F("SM100Monitor"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Monitor(t); });
-        register_telegram_type(0x0363, F("SM100Monitor2"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Monitor2(t); });
-        register_telegram_type(0x0366, F("SM100Config"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Config(t); });
-
-        register_telegram_type(0x0364, F("SM100Status"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100Status(t); });
-        register_telegram_type(0x036A, F("SM100Status2"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100Status2(t); });
-        register_telegram_type(0x038E, F("SM100Energy"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Energy(t); });
+        if (device_id == 0x2A) {
+            register_telegram_type(0x07D6, F("SM100wwTemperature"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100wwTemperature(t); });
+            register_telegram_type(0x07AA, F("SM100wwStatus"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100wwStatus(t); });
+            register_telegram_type(0x07AB, F("SM100wwCommand"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100wwCommand(t); });
+        } else {
+            register_telegram_type(0x0362, F("SM100Monitor"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Monitor(t); });
+            register_telegram_type(0x0363, F("SM100Monitor2"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Monitor2(t); });
+            register_telegram_type(0x0366, F("SM100Config"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Config(t); });
+            register_telegram_type(0x0364, F("SM100Status"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100Status(t); });
+            register_telegram_type(0x036A, F("SM100Status2"), false, [&](std::shared_ptr<const Telegram> t) { process_SM100Status2(t); });
+            register_telegram_type(0x038E, F("SM100Energy"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Energy(t); });
+        }
     }
 
     if (flags == EMSdevice::EMS_DEVICE_FLAG_ISM) {
@@ -49,129 +54,200 @@ Solar::Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
     }
 }
 
-// context submenu
-void Solar::add_context_menu() {
-}
-
 // print to web
 void Solar::device_info_web(JsonArray & root) {
-    render_value_json(root, "", F("Collector temperature (TS1)"), collectorTemp_, F_(degrees), 10);
-    render_value_json(root, "", F("Tank bottom temperature (TS2)"), tankBottomTemp_, F_(degrees), 10);
-    render_value_json(root, "", F("Tank bottom temperature (TS5)"), tankBottomTemp2_, F_(degrees), 10);
-    render_value_json(root, "", F("Heat exchanger temperature (TS6)"), heatExchangerTemp_, F_(degrees), 10);
-    render_value_json(root, "", F("Solar pump modulation (PS1)"), solarPumpModulation_, F_(percent));
-    render_value_json(root, "", F("Cylinder pump modulation (PS5)"), cylinderPumpModulation_, F_(percent));
-    render_value_json(root, "", F("Valve (VS2) status"), valveStatus_, nullptr, EMS_VALUE_BOOL);
-    render_value_json(root, "", F("Solar Pump (PS1) active"), solarPump_, nullptr, EMS_VALUE_BOOL);
-
-    if (Helpers::hasValue(pumpWorkMin_)) {
-        JsonObject dataElement;
-        dataElement         = root.createNestedObject();
-        dataElement["name"] = F("Pump working time");
-        std::string time_str(60, '\0');
-        snprintf_P(&time_str[0], time_str.capacity() + 1, PSTR("%d days %d hours %d minutes"), pumpWorkMin_ / 1440, (pumpWorkMin_ % 1440) / 60, pumpWorkMin_ % 60);
-        dataElement["value"] = time_str;
+    // fetch the values into a JSON document
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+    JsonObject                                      json = doc.to<JsonObject>();
+    if (!export_values(json)) {
+        return; // empty
     }
 
-    render_value_json(root, "", F("Tank Heated"), tankHeated_, nullptr, EMS_VALUE_BOOL);
-    render_value_json(root, "", F("Collector shutdown"), collectorShutdown_, nullptr, EMS_VALUE_BOOL);
+    print_value_json(root, F("collectorTemp"), nullptr, F_(collectorTemp), F_(degrees), json);
+    print_value_json(root, F("tankBottomTemp"), nullptr, F_(tankBottomTemp), F_(degrees), json);
+    print_value_json(root, F("tankBottomTemp2"), nullptr, F_(tankBottomTemp2), F_(degrees), json);
+    print_value_json(root, F("heatExchangerTemp"), nullptr, F_(heatExchangerTemp), F_(degrees), json);
+    print_value_json(root, F("solarPumpModulation"), nullptr, F_(solarPumpModulation), F_(percent), json);
+    print_value_json(root, F("cylinderPumpModulation"), nullptr, F_(cylinderPumpModulation), F_(percent), json);
+    print_value_json(root, F("valveStatus"), nullptr, F_(valveStatus), nullptr, json);
+    print_value_json(root, F("solarPump"), nullptr, F_(solarPump), nullptr, json);
+    print_value_json(root, F("tankHeated"), nullptr, F_(tankHeated), nullptr, json);
+    print_value_json(root, F("collectorShutdown"), nullptr, F_(collectorShutdown), nullptr, json);
+    print_value_json(root, F("energyLastHour"), nullptr, F_(energyLastHour), F_(wh), json);
+    print_value_json(root, F("energyToday"), nullptr, F_(energyToday), F_(wh), json);
+    print_value_json(root, F("energyTotal"), nullptr, F_(energyTotal), F_(kwh), json);
 
-    render_value_json(root, "", F("Energy last hour"), energyLastHour_, F_(wh), 10);
-    render_value_json(root, "", F("Energy today"), energyToday_, F_(wh));
-    render_value_json(root, "", F("Energy total"), energyTotal_, F_(kwh), 10);
+    if (Helpers::hasValue(pumpWorkMin_)) {
+        JsonObject dataElement = root.createNestedObject();
+        dataElement["n"]       = F_(pumpWorkMin);
+        char time_str[60];
+        snprintf_P(time_str, sizeof(time_str), PSTR("%d days %d hours %d minutes"), pumpWorkMin_ / 1440, (pumpWorkMin_ % 1440) / 60, pumpWorkMin_ % 60);
+        dataElement["v"] = time_str;
+    }
 }
 
 // display all values into the shell console
 void Solar::show_values(uuid::console::Shell & shell) {
     EMSdevice::show_values(shell); // always call this to show header
 
-    print_value(shell, 2, F("Collector temperature (TS1)"), collectorTemp_, F_(degrees), 10);
-    print_value(shell, 2, F("Bottom temperature (TS2)"), tankBottomTemp_, F_(degrees), 10);
-    print_value(shell, 2, F("Bottom temperature (TS5)"), tankBottomTemp2_, F_(degrees), 10);
-    print_value(shell, 2, F("Heat exchanger temperature (TS6)"), heatExchangerTemp_, F_(degrees), 10);
-    print_value(shell, 2, F("Solar pump modulation (PS1)"), solarPumpModulation_, F_(percent));
-    print_value(shell, 2, F("Cylinder pump modulation (PS5)"), cylinderPumpModulation_, F_(percent));
-    print_value(shell, 2, F("Valve (VS2) status"), valveStatus_, nullptr, EMS_VALUE_BOOL);
-    print_value(shell, 2, F("Solar Pump (PS1) active"), solarPump_, nullptr, EMS_VALUE_BOOL);
-
-    if (Helpers::hasValue(pumpWorkMin_)) {
-        shell.printfln(F("  Pump working time: %d days %d hours %d minutes"), pumpWorkMin_ / 1440, (pumpWorkMin_ % 1440) / 60, pumpWorkMin_ % 60);
+    // fetch the values into a JSON document
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+    JsonObject                                      json = doc.to<JsonObject>();
+    if (!export_values(json)) {
+        return; // empty
     }
 
-    print_value(shell, 2, F("Tank Heated"), tankHeated_, nullptr, EMS_VALUE_BOOL);
-    print_value(shell, 2, F("Collector shutdown"), collectorShutdown_, nullptr, EMS_VALUE_BOOL);
+    print_value_json(shell, F("collectorTemp"), nullptr, F_(collectorTemp), F_(degrees), json);
+    print_value_json(shell, F("tankBottomTemp"), nullptr, F_(tankBottomTemp), F_(degrees), json);
+    print_value_json(shell, F("tankBottomTemp2"), nullptr, F_(tankBottomTemp2), F_(degrees), json);
+    print_value_json(shell, F("heatExchangerTemp"), nullptr, F_(heatExchangerTemp), F_(degrees), json);
+    print_value_json(shell, F("solarPumpModulation"), nullptr, F_(solarPumpModulation), F_(percent), json);
+    print_value_json(shell, F("cylinderPumpModulation"), nullptr, F_(cylinderPumpModulation), F_(percent), json);
+    print_value_json(shell, F("valveStatus"), nullptr, F_(valveStatus), nullptr, json);
+    print_value_json(shell, F("solarPump"), nullptr, F_(solarPump), nullptr, json);
+    print_value_json(shell, F("tankHeated"), nullptr, F_(tankHeated), nullptr, json);
+    print_value_json(shell, F("collectorShutdown"), nullptr, F_(collectorShutdown), nullptr, json);
+    print_value_json(shell, F("energyLastHour"), nullptr, F_(energyLastHour), F_(wh), json);
+    print_value_json(shell, F("energyToday"), nullptr, F_(energyToday), F_(wh), json);
+    print_value_json(shell, F("energyTotal"), nullptr, F_(energyTotal), F_(kwh), json);
 
-    print_value(shell, 2, F("Energy last hour"), energyLastHour_, F_(wh), 10);
-    print_value(shell, 2, F("Energy today"), energyToday_, F_(wh));
-    print_value(shell, 2, F("Energy total"), energyTotal_, F_(kwh), 10);
+    if (Helpers::hasValue(pumpWorkMin_)) {
+        shell.printfln(F("  %s: %d days %d hours %d minutes"),
+                       uuid::read_flash_string(F_(pumpWorkMin)).c_str(),
+                       pumpWorkMin_ / 1440,
+                       (pumpWorkMin_ % 1440) / 60,
+                       pumpWorkMin_ % 60);
+    }
 }
 
 // publish values via MQTT
-void Solar::publish_values() {
-    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+void Solar::publish_values(JsonObject & json, bool force) {
+    // handle HA first
+    if (Mqtt::mqtt_format() == Mqtt::Format::HA) {
+        register_mqtt_ha_config(force);
+    }
 
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+    JsonObject                                      json_payload = doc.to<JsonObject>();
+    if (export_values(json_payload)) {
+        if (device_id() == 0x2A) {
+            Mqtt::publish(F("ww_data"), doc.as<JsonObject>());
+        } else {
+            Mqtt::publish(F("solar_data"), doc.as<JsonObject>());
+        }
+    }
+}
+
+// publish config topic for HA MQTT Discovery
+void Solar::register_mqtt_ha_config(bool force) {
+    if ((mqtt_ha_config_ && !force)) {
+        return;
+    }
+
+    if (!Mqtt::connected()) {
+        return;
+    }
+
+    // Create the Master device
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
+    doc["name"]    = F_(EMSESP);
+    doc["uniq_id"] = F_(solar);
+    doc["ic"]      = F_(iconthermostat);
+
+    char stat_t[50];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/solar_data"), System::hostname().c_str());
+    doc["stat_t"] = stat_t;
+
+    doc["val_tpl"] = F("{{value_json.solarPump}}");
+    JsonObject dev = doc.createNestedObject("dev");
+    dev["name"]    = F("EMS-ESP Solar");
+    dev["sw"]      = EMSESP_APP_VERSION;
+    dev["mf"]      = this->brand_to_string();
+    dev["mdl"]     = this->name();
+    JsonArray ids  = dev.createNestedArray("ids");
+    ids.add("ems-esp-solar");
+    Mqtt::publish_retain(F("homeassistant/sensor/ems-esp/solar/config"), doc.as<JsonObject>(), true); // publish the config payload with retain flag
+
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorTemp), this->device_type(), "collectorTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankBottomTemp), this->device_type(), "tankBottomTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankBottomTemp2), this->device_type(), "tankBottomTemp2", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatExchangerTemp), this->device_type(), "heatExchangerTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPumpModulation), this->device_type(), "solarPumpModulation", F_(percent), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(cylinderPumpModulation), this->device_type(), "cylinderPumpModulation", F_(percent), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(pumpWorkMin), this->device_type(), "pumpWorkMin", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyLastHour), this->device_type(), "energyLastHour", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyToday), this->device_type(), "energyToday", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyTotal), this->device_type(), "energyTotal", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPump), this->device_type(), "solarPump", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(valveStatus), this->device_type(), "valveStatus", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankHeated), this->device_type(), "tankHeated", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorShutdown), this->device_type(), "collectorShutdown", nullptr, nullptr);
+
+    mqtt_ha_config_ = true; // done
+}
+
+// creates JSON doc from values
+// returns false if empty
+bool Solar::export_values(JsonObject & json) {
     char s[10]; // for formatting strings
 
     if (Helpers::hasValue(collectorTemp_)) {
-        doc["collectorTemp"] = (float)collectorTemp_ / 10;
+        json["collectorTemp"] = (float)collectorTemp_ / 10;
     }
 
     if (Helpers::hasValue(tankBottomTemp_)) {
-        doc["tankBottomTemp"] = (float)tankBottomTemp_ / 10;
+        json["tankBottomTemp"] = (float)tankBottomTemp_ / 10;
     }
 
     if (Helpers::hasValue(tankBottomTemp2_)) {
-        doc["tankBottomTemp2"] = (float)tankBottomTemp2_ / 10;
+        json["tankBottomTemp2"] = (float)tankBottomTemp2_ / 10;
     }
 
     if (Helpers::hasValue(heatExchangerTemp_)) {
-        doc["heatExchangerTemp"] = (float)heatExchangerTemp_ / 10;
+        json["heatExchangerTemp"] = (float)heatExchangerTemp_ / 10;
     }
 
     if (Helpers::hasValue(solarPumpModulation_)) {
-        doc["solarPumpModulation"] = solarPumpModulation_;
+        json["solarPumpModulation"] = solarPumpModulation_;
     }
 
     if (Helpers::hasValue(cylinderPumpModulation_)) {
-        doc["cylinderPumpModulation"] = cylinderPumpModulation_;
+        json["cylinderPumpModulation"] = cylinderPumpModulation_;
     }
 
     if (Helpers::hasValue(solarPump_, EMS_VALUE_BOOL)) {
-        doc["solarPump"] = Helpers::render_value(s, solarPump_, EMS_VALUE_BOOL);
+        json["solarPump"] = Helpers::render_value(s, solarPump_, EMS_VALUE_BOOL);
     }
 
     if (Helpers::hasValue(valveStatus_, EMS_VALUE_BOOL)) {
-        doc["valveStatus"] = Helpers::render_value(s, valveStatus_, EMS_VALUE_BOOL);
+        json["valveStatus"] = Helpers::render_value(s, valveStatus_, EMS_VALUE_BOOL);
     }
 
     if (Helpers::hasValue(pumpWorkMin_)) {
-        doc["pumpWorkMin"] = pumpWorkMin_;
+        json["pumpWorkMin"] = pumpWorkMin_;
     }
 
     if (Helpers::hasValue(tankHeated_, EMS_VALUE_BOOL)) {
-        doc["tankHeated"] = Helpers::render_value(s, tankHeated_, EMS_VALUE_BOOL);
+        json["tankHeated"] = Helpers::render_value(s, tankHeated_, EMS_VALUE_BOOL);
     }
 
     if (Helpers::hasValue(collectorShutdown_, EMS_VALUE_BOOL)) {
-        doc["collectorShutdown"] = Helpers::render_value(s, collectorShutdown_, EMS_VALUE_BOOL);
+        json["collectorShutdown"] = Helpers::render_value(s, collectorShutdown_, EMS_VALUE_BOOL);
     }
 
     if (Helpers::hasValue(energyLastHour_)) {
-        doc["energyLastHour"] = (float)energyLastHour_ / 10;
+        json["energyLastHour"] = (float)energyLastHour_ / 10;
     }
 
     if (Helpers::hasValue(energyToday_)) {
-        doc["energyToday"] = energyToday_;
+        json["energyToday"] = energyToday_;
     }
 
     if (Helpers::hasValue(energyTotal_)) {
-        doc["energyTotal"] = (float)energyTotal_ / 10;
+        json["energyTotal"] = (float)energyTotal_ / 10;
     }
 
-    // if we have data, publish it
-    if (!doc.isNull()) {
-        Mqtt::publish(F("sm_data"), doc);
-    }
+    return json.size();
 }
 
 // check to see if values have been updated
@@ -183,17 +259,13 @@ bool Solar::updated_values() {
     return false;
 }
 
-// add console commands
-void Solar::console_commands() {
-}
-
 // SM10Monitor - type 0x97
 void Solar::process_SM10Monitor(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(collectorTemp_, 2);       // collector temp from SM10, is *10
     changed_ |= telegram->read_value(tankBottomTemp_, 5);      // bottom temp from SM10, is *10
     changed_ |= telegram->read_value(solarPumpModulation_, 4); // modulation solar pump
     changed_ |= telegram->read_bitvalue(solarPump_, 7, 1);
-    changed_ |= telegram->read_value(pumpWorkMin_, 8);
+    changed_ |= telegram->read_value(pumpWorkMin_, 8, 3);
 }
 
 /*
@@ -222,6 +294,27 @@ void Solar::process_SM100Monitor(std::shared_ptr<const Telegram> telegram) {
 void Solar::process_SM100Monitor2(std::shared_ptr<const Telegram> telegram) {
     // not implemented yet
 }
+
+// SM100wwTemperatur - 0x07D6
+// Solar Module(0x2A) -> (0x00), (0x7D6), data: 01 C1 00 00 02 5B 01 AF 01 AD 80 00 01 90
+void Solar::process_SM100wwTemperature(std::shared_ptr<const Telegram> telegram) {
+    // changed_ |= telegram->read_value(wwTemp_1_, 0);
+    // changed_ |= telegram->read_value(wwTemp_3_, 4);
+    // changed_ |= telegram->read_value(wwTemp_4_, 6);
+    // changed_ |= telegram->read_value(wwTemp_5_, 8);
+    // changed_ |= telegram->read_value(wwTemp_7_, 12);
+}
+// SM100wwStatus - 0x07AA
+// Solar Module(0x2A) -> (0x00), (0x7AA), data: 64 00 04 00 03 00 28 01 0F
+void Solar::process_SM100wwStatus(std::shared_ptr<const Telegram> telegram) {
+    // changed_ |= telegram->read_value(wwPump_, 0);
+}
+// SM100wwCommand - 0x07AB
+// Thermostat(0x10) -> Solar Module(0x2A), (0x7AB), data: 01 00 01
+void Solar::process_SM100wwCommand(std::shared_ptr<const Telegram> telegram) {
+    // not implemented yet
+}
+
 
 #pragma GCC diagnostic pop
 

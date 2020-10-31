@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,12 +47,13 @@ class EMSdevice {
 
     virtual ~EMSdevice() = default; // destructor of base class must always be virtual because it's a polymorphic class
 
-    inline uint8_t get_device_id() const {
+    inline uint8_t device_id() const {
         return device_id_;
     }
 
     std::string        device_type_name() const;
-    static std::string device_type_topic_name(const uint8_t device_type);
+    static std::string device_type_2_device_name(const uint8_t device_type);
+    static uint8_t     device_name_2_device_type(const char * topic);
 
     inline uint8_t product_id() const {
         return product_id_;
@@ -66,12 +67,17 @@ class EMSdevice {
         return ((device_id & 0x7F) == (device_id_ & 0x7F));
     }
 
+    inline void add_flags(uint8_t flags) {
+        flags_ |= flags;
+    }
+    inline bool has_flags(uint8_t flags) const {
+        return (flags_ & flags) == flags;
+    }
+    inline void remove_flags(uint8_t flags) {
+        flags_ &= ~flags;
+    }
     inline uint8_t flags() const {
         return flags_;
-    }
-
-    inline void flags(uint8_t flags) {
-        flags_ = flags;
     }
 
     // see enum DeviceType below
@@ -117,8 +123,9 @@ class EMSdevice {
     std::string to_string() const;
     std::string to_string_short() const;
 
-    void show_telegram_handlers(uuid::console::Shell & shell);
-    void show_mqtt_handlers(uuid::console::Shell & shell);
+    void   show_telegram_handlers(uuid::console::Shell & shell);
+    char * show_telegram_handlers(char * result);
+    void   show_mqtt_handlers(uuid::console::Shell & shell);
 
     using process_function_p = std::function<void(std::shared_ptr<const Telegram>)>;
     void register_telegram_type(const uint16_t telegram_type_id, const __FlashStringHelper * telegram_type_name, bool fetch, process_function_p cb);
@@ -127,37 +134,50 @@ class EMSdevice {
     void write_command(const uint16_t type_id, const uint8_t offset, uint8_t * message_data, const uint8_t message_length, const uint16_t validate_typeid);
     void write_command(const uint16_t type_id, const uint8_t offset, const uint8_t value, const uint16_t validate_typeid);
     void write_command(const uint16_t type_id, const uint8_t offset, const uint8_t value);
-
     void read_command(const uint16_t type_id);
 
-    void add_context_commands(unsigned int context);
-
     void register_mqtt_topic(const std::string & topic, mqtt_subfunction_p f);
-    void register_mqtt_cmd(const __FlashStringHelper * cmd, mqtt_cmdfunction_p f);
+    void register_mqtt_cmd(const __FlashStringHelper * cmd, cmdfunction_p f);
 
     // virtual functions overrules by derived classes
-    virtual void show_values(uuid::console::Shell & shell) = 0;
-    virtual void publish_values()                          = 0;
-    virtual bool updated_values()                          = 0;
-    virtual void add_context_menu()                        = 0;
-    virtual void device_info_web(JsonArray & root)             = 0;
+    virtual void show_values(uuid::console::Shell & shell)             = 0;
+    virtual void publish_values(JsonObject & json, bool force = false) = 0;
+    virtual bool export_values(JsonObject & json)                      = 0;
+    virtual bool updated_values()                                      = 0;
+    virtual void device_info_web(JsonArray & root)                     = 0;
 
     std::string telegram_type_name(std::shared_ptr<const Telegram> telegram);
 
     void fetch_values();
     void toggle_fetch(uint16_t telegram_id, bool toggle);
+    bool get_toggle_fetch(uint16_t telegram_id);
 
     void reserve_mem(size_t n) {
         telegram_functions_.reserve(n);
     }
 
-    // prints a ems device value to the console, handling the correct rendering of the type
+    static void print_value_json(uuid::console::Shell &      shell,
+                                 const __FlashStringHelper * key,
+                                 const __FlashStringHelper * prefix,
+                                 const __FlashStringHelper * name,
+                                 const __FlashStringHelper * suffix,
+                                 JsonObject &                json);
+
+    static void print_value_json(JsonArray &                 root,
+                                 const __FlashStringHelper * key,
+                                 const __FlashStringHelper * prefix,
+                                 const __FlashStringHelper * name,
+                                 const __FlashStringHelper * suffix,
+                                 JsonObject &                json);
+
+    // prints an EMS device value to the console, handling the correct rendering of the type
     // padding is # white space
     // name is the name of the parameter
     // suffix is any string to be appended after the value
     // format:
     //  for ints its  0=no division, 255=handle as boolean, other divide by the value given and render with a decimal point
     //  for floats its the precision in number of decimal places from 0 to 8
+    //  for bools its EMS_VALUE_BOOL (0xFF)
     template <typename Value>
     static void print_value(uuid::console::Shell &      shell,
                             uint8_t                     padding,
@@ -172,74 +192,46 @@ class EMSdevice {
 
         uint8_t i = padding;
         while (i-- > 0) {
-            shell.print(F(" "));
+            shell.print(F_(1space));
         }
 
         shell.printf(PSTR("%s: %s"), uuid::read_flash_string(name).c_str(), buffer);
 
         if (suffix != nullptr) {
+            shell.print(F_(1space));
             shell.println(uuid::read_flash_string(suffix).c_str());
         } else {
             shell.println();
         }
     }
 
-    // takes a value from an ems device and creates a nested json (name, value)
-    // which can be passed to the web UI
-    template <typename Value>
-    static void render_value_json(JsonArray &                 json,
-                                  const std::string &         prefix,
-                                  const __FlashStringHelper * name,
-                                  Value &                     value,
-                                  const __FlashStringHelper * suffix,
-                                  const uint8_t               format = 0) {
-        char buffer[15];
-        if (Helpers::render_value(buffer, value, format) == nullptr) {
-            return;
-        }
-
-        JsonObject dataElement = json.createNestedObject();
-
-        // copy flash into std::strings to ensure arduinojson can reference them without a copy
-
-        if (suffix != nullptr) {
-            std::string text(20, '\0');
-            snprintf_P(&text[0], text.capacity() + 1, PSTR("%s%s"), buffer, uuid::read_flash_string(suffix).c_str());
-            dataElement["value"] = text;
-        } else {
-            dataElement["value"] = buffer;
-        }
-
-        std::string text2(100, '\0');
-        snprintf_P(&text2[0], text2.capacity() + 1, PSTR("%s%s"), prefix.c_str(), uuid::read_flash_string(name).c_str());
-        dataElement["name"] = text2;
-    }
-
     static void print_value(uuid::console::Shell & shell, uint8_t padding, const __FlashStringHelper * name, const __FlashStringHelper * value);
     static void print_value(uuid::console::Shell & shell, uint8_t padding, const __FlashStringHelper * name, const char * value);
 
     enum Brand : uint8_t {
-        NO_BRAND, // 0
-        BOSCH,    // 1
-        JUNKERS,  // 2
-        BUDERUS,  // 3
-        NEFIT,    // 4
-        SIEGER,   // 5
-        WORCESTER // 11
+        NO_BRAND = 0, // 0
+        BOSCH,        // 1
+        JUNKERS,      // 2
+        BUDERUS,      // 3
+        NEFIT,        // 4
+        SIEGER,       // 5
+        WORCESTER     // 11
     };
 
     enum DeviceType : uint8_t {
-        SERVICEKEY = 0, // this is us
+        SYSTEM = 0,   // this is us (EMS-ESP)
+        DALLASSENSOR, // for internal dallas sensors
         BOILER,
         THERMOSTAT,
-        MIXING,
+        MIXER,
         SOLAR,
         HEATPUMP,
         GATEWAY,
         SWITCH,
         CONTROLLER,
-        CONNECT
-
+        CONNECT,
+        GENERIC,
+        UNKNOWN
     };
 
     // device IDs
@@ -258,7 +250,7 @@ class EMSdevice {
     static constexpr uint8_t EMS_DEVICE_FLAG_SM100 = 2;
     static constexpr uint8_t EMS_DEVICE_FLAG_ISM   = 3;
 
-    // Mixing Module
+    // Mixer Module
     static constexpr uint8_t EMS_DEVICE_FLAG_MMPLUS = 1;
     static constexpr uint8_t EMS_DEVICE_FLAG_MM10   = 2;
     static constexpr uint8_t EMS_DEVICE_FLAG_IPM    = 3;
@@ -275,19 +267,17 @@ class EMSdevice {
     static constexpr uint8_t EMS_DEVICE_FLAG_RC300     = 8;
     static constexpr uint8_t EMS_DEVICE_FLAG_RC100     = 9;
     static constexpr uint8_t EMS_DEVICE_FLAG_JUNKERS   = 10;
-    static constexpr uint8_t EMS_DEVICE_FLAG_JUNKERS_2 = (1 << 6); // 6th bit set if older models
+    static constexpr uint8_t EMS_DEVICE_FLAG_JUNKERS_2 = (1 << 6); // 6th bit set if older models, like FR120, FR100
 
   private:
     uint8_t     unique_id_;
-    uint8_t     device_type_ = DeviceType::SERVICEKEY;
+    uint8_t     device_type_ = DeviceType::SYSTEM;
     uint8_t     device_id_   = 0;
     uint8_t     product_id_  = 0;
     std::string version_;
     std::string name_; // the long name for the EMS model
     uint8_t     flags_ = 0;
     uint8_t     brand_ = Brand::NO_BRAND;
-
-    static uuid::log::Logger logger_;
 
     struct TelegramFunction {
         uint16_t                    telegram_type_id_;   // it's type_id

@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,12 @@ namespace emsesp {
 uuid::log::Logger Shower::logger_{F_(shower), uuid::log::Facility::CONSOLE};
 
 void Shower::start() {
-    EMSESP::emsespSettingsService.read([&](EMSESPSettings & settings) {
+    EMSESP::webSettingsService.read([&](WebSettings & settings) {
         shower_timer_ = settings.shower_timer;
         shower_alert_ = settings.shower_alert;
     });
+
+    send_mqtt_stat(false); // send first MQTT publish
 }
 
 void Shower::loop() {
@@ -53,7 +55,7 @@ void Shower::loop() {
                 // first check to see if hot water has been on long enough to be recognized as a Shower/Bath
                 if (!shower_on_ && (time_now - timer_start_) > SHOWER_MIN_DURATION) {
                     shower_on_ = true;
-                    Mqtt::publish(F("shower_active"), (bool)true);
+                    send_mqtt_stat(true);
                     LOG_DEBUG(F("[Shower] hot water still running, starting shower timer"));
                 }
                 // check if the shower has been on too long
@@ -74,7 +76,7 @@ void Shower::loop() {
                 if ((timer_pause_ - timer_start_) > SHOWER_OFFSET_TIME) {
                     duration_ = (timer_pause_ - timer_start_ - SHOWER_OFFSET_TIME);
                     if (duration_ > SHOWER_MIN_DURATION) {
-                        Mqtt::publish(F("shower_active"), (bool)false);
+                        send_mqtt_stat(false);
                         LOG_DEBUG(F("[Shower] finished with duration %d"), duration_);
                         publish_values();
                     }
@@ -88,6 +90,22 @@ void Shower::loop() {
             }
         }
     }
+}
+
+// send status of shower to MQTT
+void Shower::send_mqtt_stat(bool state) {
+    if (!shower_timer_ && !shower_alert_) {
+        return;
+    }
+
+    // if we're in HA mode make sure we've first sent out the HA MQTT Discovery config topic
+    if ((Mqtt::mqtt_format() == Mqtt::Format::HA) && (!ha_config_)) {
+        Mqtt::register_mqtt_ha_binary_sensor(F("Shower Active"), EMSdevice::DeviceType::BOILER, "shower_active");
+        ha_config_ = true;
+    }
+
+    char s[7];
+    Mqtt::publish(F("shower_active"), Helpers::render_boolean(s, state));
 }
 
 // turn back on the hot water for the shower
@@ -114,12 +132,13 @@ void Shower::shower_alert_start() {
 // Publish shower data
 // returns true if added to MQTT queue went ok
 void Shower::publish_values() {
-    StaticJsonDocument<90> doc;
-    doc["shower_timer"] = shower_timer_ ? "1" : "0";
-    doc["shower_alert"] = shower_alert_ ? "1" : "0";
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
+
+    char s[50];
+    doc["shower_timer"] = Helpers::render_boolean(s, shower_timer_);
+    doc["shower_alert"] = Helpers::render_boolean(s, shower_alert_);
 
     // only publish shower duration if there is a value
-    char s[50];
     if (duration_ > SHOWER_MIN_DURATION) {
         char buffer[16] = {0};
         strlcpy(s, Helpers::itoa(buffer, (uint8_t)((duration_ / (1000 * 60)) % 60), 10), 50);
@@ -129,7 +148,7 @@ void Shower::publish_values() {
         doc["duration"] = s;
     }
 
-    Mqtt::publish(F("shower_data"), doc);
+    Mqtt::publish(F("shower_data"), doc.as<JsonObject>());
 }
 
 } // namespace emsesp

@@ -10,7 +10,7 @@ assignees: ''
 *Before creating a new issue please check that you have:*
 
 * *searched the existing [issues](https://github.com/proddy/EMS-ESP/issues) (both open and closed)*
-* *searched the [wiki help pages](https://bbqkees-electronics.nl/wiki/gateway/troubleshooting.html)*
+* *searched the [documentation help section](https://emsesp.github.io/docs)*
 
 *Completing this template will help developers and contributors help you. Try to be as specific and extensive as possible. If the information provided is not enough the issue will likely be closed.*
 
@@ -23,7 +23,7 @@ assignees: ''
 *If applicable, add screenshots to help explain your problem.*
 
 **Device information**
-*Copy-paste here the information as it is outputted by the device. You can get this information by from the telnet session with the logging set to Verbose mode.*
+*Copy-paste here the information as it is outputted by the device. You can get this information from http://ems-esp.local/api?device=system&cmd=report.*
 
 **Additional context**
 *Add any other context about the problem here.*

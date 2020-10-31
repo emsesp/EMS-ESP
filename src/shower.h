@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,15 +62,14 @@ class Shower {
     static constexpr uint32_t SHOWER_COLDSHOT_DURATION = 10;     // in seconds. 10 seconds for cold water before turning back hot water
     static constexpr uint32_t SHOWER_MAX_DURATION      = 420000; // in ms. 7 minutes, before trigger a shot of cold water
 
-    void console_commands();
-
     void publish_values();
     void shower_alert_start();
     void shower_alert_stop();
+    void send_mqtt_stat(bool state);
 
-    bool shower_timer_; // true if we want to report back on shower times
-    bool shower_alert_; // true if we want the alert of cold water
-
+    bool     shower_timer_;      // true if we want to report back on shower times
+    bool     shower_alert_;      // true if we want the alert of cold water
+    bool     ha_config_ = false; // for HA MQTT Discovery
     bool     shower_on_;
     uint32_t timer_start_;     // ms
     uint32_t timer_pause_;     // ms

@@ -1,11 +1,11 @@
-# EMS-ESP Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.1] 
+## [2.0.1] September 13 2020
 
 ### Added
 - Able to set individual MQTT publish intervals per device
@@ -47,7 +47,7 @@ First version of v2 with
 - Support for Home Assistant MQTT Discovery (https://www.home-assistant.io/docs/mqtt/discovery/)
 - Can be run standalone as an independent Access Point or join an existing WiFi network
 - Easier first-time configuration via a web Captive Portal
-- Supporting over 70 EMS devices (boilers, thermostats, solar modules, mixing modules, heat pumps, gateways)
+- Supporting over 70 EMS devices (boilers, thermostats, solar modules, mixer modules, heat pumps, gateways)
 
 See README.me for more details.
 
@@ -105,7 +105,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 - Added `kick` command to reset core services like NTP, Web, Web Sockets
 - Added WiFi static IP (setting done in WebUI only)
 - `log w <type_id>` for watching a specific telegram type ID
-- initial support for EMS+ GB125s and MC110's (https://github.com/proddy/EMS-ESP/wiki/MC110-controller)
+- initial support for EMS+ GB125s and MC110's
 - Buderus RFM200 receiver
 
 ### Fixed
@@ -149,7 +149,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 ## [1.9.2] 2019-10-19
 
 #### Important! This build has breaking changes:
- - MQTT topics have changed. Use the `mqttlog` command to see the names of the subscriptions and the format of the payload data. Also reference the [Wiki page](https://github.com/proddy/EMS-ESP/wiki/MQTT).
+ - MQTT topics have changed. Use the `mqttlog` command to see the names of the subscriptions and the format of the payload data.
  - Home Assistant `.yaml` files need updating to reflect the recent MQTT changes
  - The web builder has been upgraded to use Gulp 4. Remove `tools/webfilesbuilder/node_modules` and re-install the libraries using `npm ci` from within the `tools/webfilesbuilder` folder
 
@@ -199,7 +199,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 - Web login password is now mandatory
 - Faster detection of EMS devices on bus by using the 0x07 telegram instead of the brute-force scan
 - Fixes to the default HA climate component .yaml file to support latest Home Assistance ('heat' added)
-- Update documentation in Wiki on MQTT and troubleshooting
+- Update documentation on MQTT and troubleshooting
 - Slowed down firmware upload via the Web to prevent users rebooting too early
 - Change way WiFi is initialized to prevent dual AP and Client
   
@@ -212,7 +212,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Changed
 
-- New web interface with more features showing Boiler, Thermostat, Solar Module and Heat Pump. See https://github.com/proddy/EMS-ESP/wiki/Running-and-Monitoring
+- New web interface with more features showing Boiler, Thermostat, Solar Module and Heat Pump.
 - Merged with @susisstrolch's TxMode2 branch for improved support for sending EMS packages. This is the default tx mode.
 - Upgraded MyESP library optimizations for WiFi, AP and error handling
 - `reboot` command renamed to `restart` to keep consistent with web interface
@@ -228,12 +228,12 @@ There are breaking changes in this release. See `publish_time` below and make su
 ### Added
 
 - Added back -DCRASH in Debug build target for capturing any ESP8266 stack dumps during crashes
-- Web Interface, for checking stats and setting wifi credentials. See wiki for more details.
+- Web Interface, for checking stats and setting wifi credentials. See documentation for more details.
 - reset firmware option. If the reset button on the ESP is pressed during boot up sequence (the LED is flashing very fast) all settings are erased and goes into AP mode.
 - Added tx_mode back with options 0,1 and 2 until we've fixed option 2 that works for everyone and doesn't reset ESP
 - More solar module data captured, thanks to @Vuego123
 - Detect thermostat mode for EMS+ RC300/Moduline 3000
-- MQTT message to set boiler flowtemp (`boiler_cmd_flowtemp`). See [wiki](https://github.com/proddy/EMS-ESP/wiki/MQTT).
+- MQTT message to set boiler flowtemp (`boiler_cmd_flowtemp`).
 
 ### Fixed
 

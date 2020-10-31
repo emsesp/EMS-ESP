@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,19 +34,21 @@
 #endif
 
 #include <ESP8266React.h>
-#include "EMSESPStatusService.h"
-#include "EMSESPDevicesService.h"
-#include "EMSESPSettingsService.h"
+#include "WebStatusService.h"
+#include "WebDevicesService.h"
+#include "WebSettingsService.h"
+#include "WebAPIService.h"
 
 #include "emsdevice.h"
 #include "emsfactory.h"
 #include "telegram.h"
 #include "mqtt.h"
 #include "system.h"
-#include "sensors.h"
+#include "dallassensor.h"
 #include "console.h"
 #include "shower.h"
 #include "roomcontrol.h"
+#include "command.h"
 
 #define WATCH_ID_NONE 0 // no watch id set
 
@@ -59,9 +61,10 @@ class EMSESP {
     static void start();
     static void loop();
 
-    static void publish_device_values(uint8_t device_type);
+    static void publish_device_values(uint8_t device_type, bool force = false);
     static void publish_other_values();
     static void publish_sensor_values(const bool force = false);
+    static void publish_all(bool force = false);
 
 #ifdef EMSESP_STANDALONE
     static void run_test(uuid::console::Shell & shell, const std::string & command); // only for testing
@@ -74,6 +77,7 @@ class EMSESP {
     static std::string pretty_telegram(std::shared_ptr<const Telegram> telegram);
 
     static void send_read_request(const uint16_t type_id, const uint8_t dest);
+    static void send_read_request(const uint16_t type_id, const uint8_t dest, const uint8_t offset);
     static void send_write_request(const uint16_t type_id,
                                    const uint8_t  dest,
                                    const uint8_t  offset,
@@ -100,14 +104,16 @@ class EMSESP {
     static void show_devices(uuid::console::Shell & shell);
     static void show_ems(uuid::console::Shell & shell);
 
-    static void add_context_menus();
-
     static void init_tx();
 
     static void incoming_telegram(uint8_t * data, const uint8_t length);
 
-    static const std::vector<Sensors::Device> sensor_devices() {
-        return sensors_.devices();
+    static const std::vector<DallasSensor::Sensor> sensor_devices() {
+        return dallassensor_.sensors();
+    }
+
+    static bool have_sensors() {
+        return (!(dallassensor_.sensors().empty()));
     }
 
     enum Watch : uint8_t { WATCH_OFF, WATCH_ON, WATCH_RAW };
@@ -149,19 +155,20 @@ class EMSESP {
     static std::vector<std::unique_ptr<EMSdevice>> emsdevices;
 
     // services
-    static Mqtt      mqtt_;
-    static System    system_;
-    static Sensors   sensors_;
-    static Console   console_;
-    static Shower    shower_;
-    static RxService rxservice_;
-    static TxService txservice_;
+    static Mqtt         mqtt_;
+    static System       system_;
+    static DallasSensor dallassensor_;
+    static Console      console_;
+    static Shower       shower_;
+    static RxService    rxservice_;
+    static TxService    txservice_;
 
     // web controllers
-    static ESP8266React          esp8266React;
-    static EMSESPSettingsService emsespSettingsService;
-    static EMSESPStatusService   emsespStatusService;
-    static EMSESPDevicesService  emsespDevicesService;
+    static ESP8266React       esp8266React;
+    static WebSettingsService webSettingsService;
+    static WebStatusService   webStatusService;
+    static WebDevicesService  webDevicesService;
+    static WebAPIService      webAPIService;
 
     static uuid::log::Logger logger() {
         return logger_;
@@ -177,6 +184,8 @@ class EMSESP {
     static void process_UBADevices(std::shared_ptr<const Telegram> telegram);
     static void process_version(std::shared_ptr<const Telegram> telegram);
     static void publish_response(std::shared_ptr<const Telegram> telegram);
+
+    static bool command_info(uint8_t device_type, JsonObject & json);
 
     static constexpr uint32_t EMS_FETCH_FREQUENCY = 60000; // check every minute
     static uint32_t           last_fetch_;
@@ -194,10 +203,10 @@ class EMSESP {
     static uint16_t watch_id_;
     static uint8_t  watch_;
     static uint16_t read_id_;
+    static bool     read_next_;
     static uint16_t publish_id_;
     static bool     tap_water_active_;
-
-    static uint8_t unique_id_count_;
+    static uint8_t  unique_id_count_;
 };
 
 } // namespace emsesp

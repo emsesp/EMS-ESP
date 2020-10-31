@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,10 @@
 
 namespace emsesp {
 
+uint8_t Helpers::bool_format_ = BOOL_FORMAT_ONOFF; // on/off
+
 // like itoa but for hex, and quicker
+// note: only for single byte hex values
 char * Helpers::hextoa(char * result, const uint8_t value) {
     char *  p    = result;
     uint8_t nib1 = (value >> 4) & 0x0F;
@@ -72,7 +75,7 @@ char * Helpers::ultostr(char * ptr, uint32_t value, const uint8_t base) {
  * itoa for 2 byte signed (short) integers
  * written by Lukás Chmela, Released under GPLv3. http://www.strudel.org.uk/itoa/ version 0.4
  */
-char * Helpers::itoa(char * result, int16_t value, const uint8_t base) {
+char * Helpers::itoa(char * result, int32_t value, const uint8_t base) {
     // check that the base if valid
     if (base < 2 || base > 36) {
         *result = '\0';
@@ -120,17 +123,56 @@ char * Helpers::smallitoa(char * result, const uint16_t value) {
     return result;
 }
 
+// work out how to display booleans
+char * Helpers::render_boolean(char * result, bool value) {
+    if (bool_format() == BOOL_FORMAT_ONOFF) {
+        strlcpy(result, value ? "on" : "off", 5);
+    } else if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
+        strlcpy(result, value ? "true" : "false", 7);
+    } else {
+        strlcpy(result, value ? "1" : "0", 2);
+    }
+    return result;
+}
+
+// depending on format render a number or a string
+char * Helpers::render_enum(char * result, const std::vector<std::string> & value, const uint8_t no) {
+    if (no >= value.size()) {
+        return nullptr; // out of bounds
+    }
+    if (bool_format() == BOOL_FORMAT_ONOFF) {
+        strcpy(result, value[no].c_str());
+    } else if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
+        if (no == 0 && value[0] == "off") {
+            strlcpy(result, "false", 7);
+        } else if (no == 1 && value[1] == "on") {
+            strlcpy(result, "true", 6);
+        } else {
+            strcpy(result, value[no].c_str());
+        }
+    } else {
+        itoa(result, no);
+    }
+    return result;
+}
+
+// render for native char strings
+char * Helpers::render_value(char * result, const char * value, uint8_t format) {
+    strcpy(result, value);
+    return result;
+}
+
 // convert unsigned int (single byte) to text value and returns it
-// format: 255=boolean, 0=no formatting, otherwise divide by format
+// format: 255(0xFF)=boolean, 0=no formatting, otherwise divide by format
 char * Helpers::render_value(char * result, uint8_t value, uint8_t format) {
     // special check if its a boolean
     if (format == EMS_VALUE_BOOL) {
         if (value == EMS_VALUE_BOOL_OFF) {
-            strlcpy(result, "off", 5);
+            render_boolean(result, false);
         } else if (value == EMS_VALUE_BOOL_NOTSET) {
             return nullptr;
         } else {
-            strlcpy(result, "on", 5); // assume on. could have value 0x01 or 0xFF
+            render_boolean(result, true); // assume on. could have value 0x01 or 0xFF
         }
         return result;
     }
@@ -144,7 +186,7 @@ char * Helpers::render_value(char * result, uint8_t value, uint8_t format) {
         return result;
     }
 
-    char s2[5];
+    char s2[10];
 
     // special case for / 2
     if (format == 2) {
@@ -164,16 +206,23 @@ char * Helpers::render_value(char * result, uint8_t value, uint8_t format) {
 // float: convert float to char
 // format is the precision, 0 to 8
 char * Helpers::render_value(char * result, const float value, const uint8_t format) {
-    long p[] = {0, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};
+    if (format > 8) {
+        return nullptr;
+    }
 
-    char * ret   = result;
-    long   whole = (long)value;
-    Helpers::itoa(result, whole, 10);
+    uint32_t p[] = {0, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};
+
+    char *  ret   = result;
+    int32_t whole = (int32_t)value;
+
+    itoa(result, whole, 10);
+
     while (*result != '\0') {
         result++;
     }
-    *result++    = '.';
-    long decimal = abs((long)((value - whole) * p[format]));
+
+    *result++       = '.';
+    int32_t decimal = abs((int32_t)((value - whole) * p[format]));
     itoa(result, decimal, 10);
 
     return ret;
@@ -329,27 +378,27 @@ bool Helpers::check_abs(const int32_t i) {
 }
 
 // for booleans, use isBool true (EMS_VALUE_BOOL)
-bool Helpers::hasValue(const uint8_t &v, const uint8_t isBool) {
+bool Helpers::hasValue(const uint8_t & v, const uint8_t isBool) {
     if (isBool == EMS_VALUE_BOOL) {
         return (v != EMS_VALUE_BOOL_NOTSET);
     }
     return (v != EMS_VALUE_UINT_NOTSET);
 }
 
-bool Helpers::hasValue(const int8_t &v) {
+bool Helpers::hasValue(const int8_t & v) {
     return (v != EMS_VALUE_INT_NOTSET);
 }
 
 // for short these are typically 0x8300, 0x7D00 and sometimes 0x8000
-bool Helpers::hasValue(const int16_t &v) {
+bool Helpers::hasValue(const int16_t & v) {
     return (abs(v) < EMS_VALUE_USHORT_NOTSET);
 }
 
-bool Helpers::hasValue(const uint16_t &v) {
+bool Helpers::hasValue(const uint16_t & v) {
     return (v < EMS_VALUE_USHORT_NOTSET);
 }
 
-bool Helpers::hasValue(const uint32_t &v) {
+bool Helpers::hasValue(const uint32_t & v) {
     return (v != EMS_VALUE_ULONG_NOTSET);
 }
 
@@ -380,7 +429,7 @@ std::string Helpers::toLower(std::string const & s) {
     return lc;
 }
 
-// checks if we can convert a chat string to an int value
+// checks if we can convert a char string to a lowercase string
 bool Helpers::value2string(const char * v, std::string & value) {
     if ((v == nullptr) || (strlen(v) == 0)) {
         value = {};
@@ -410,6 +459,20 @@ bool Helpers::value2bool(const char * v, bool & value) {
     }
 
     return false; // not a bool
+}
+
+// checks to see if a string is member of a vector and return the index, also allow true/false for on/off
+bool Helpers::value2enum(const char * v, uint8_t & value, const std::vector<std::string> & strs) {
+    if ((v == nullptr) || (strlen(v) == 0)) {
+        return false;
+    }
+    std::string str = toLower(v);
+    for (value = 0; value < strs.size(); value++) {
+        if ((strs[value] == "off" && str == "false") || (strs[value] == "on" && str == "true") || (str == strs[value]) || (v[0] == '0' + value)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace emsesp

@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <uuid/log.h>
 
 #include "emsdevice.h"
+#include "emsesp.h"
 #include "telegram.h"
 #include "helpers.h"
 #include "mqtt.h"
@@ -36,15 +37,14 @@ class Solar : public EMSdevice {
     Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
     virtual void show_values(uuid::console::Shell & shell);
-    virtual void publish_values();
+    virtual void publish_values(JsonObject & json, bool force);
+    virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
     virtual bool updated_values();
-    virtual void add_context_menu();
 
   private:
     static uuid::log::Logger logger_;
-
-    void console_commands();
+    void                     register_mqtt_ha_config(bool force);
 
     int16_t  collectorTemp_          = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
     int16_t  tankBottomTemp_         = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1 cylinder, bottom (solar thermal system)
@@ -65,7 +65,9 @@ class Solar : public EMSdevice {
     uint8_t availabilityFlag_ = EMS_VALUE_BOOL_NOTSET;
     uint8_t configFlag_       = EMS_VALUE_BOOL_NOTSET;
     uint8_t userFlag_         = EMS_VALUE_BOOL_NOTSET;
-    bool    changed_          = false;
+
+    bool changed_        = false;
+    bool mqtt_ha_config_ = false; // for HA MQTT Discovery
 
     void process_SM10Monitor(std::shared_ptr<const Telegram> telegram);
     void process_SM100Monitor(std::shared_ptr<const Telegram> telegram);
@@ -76,6 +78,10 @@ class Solar : public EMSdevice {
     void process_SM100Status(std::shared_ptr<const Telegram> telegram);
     void process_SM100Status2(std::shared_ptr<const Telegram> telegram);
     void process_SM100Energy(std::shared_ptr<const Telegram> telegram);
+
+    void process_SM100wwTemperature(std::shared_ptr<const Telegram> telegram);
+    void process_SM100wwStatus(std::shared_ptr<const Telegram> telegram);
+    void process_SM100wwCommand(std::shared_ptr<const Telegram> telegram);
 
     void process_ISM1StatusMessage(std::shared_ptr<const Telegram> telegram);
     void process_ISM1Set(std::shared_ptr<const Telegram> telegram);

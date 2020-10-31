@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,11 +34,12 @@
 {131, DeviceType::BOILER, F("GB212"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {133, DeviceType::BOILER, F("GB125/Logamatic MC110"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {170, DeviceType::BOILER, F("Logano GB212"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
-{172, DeviceType::BOILER, F("Enviline/Compress 6000AW"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
+{172, DeviceType::BOILER, F("Enviline/Compress 6000AW/Hybrid 7000iAW"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {195, DeviceType::BOILER, F("Condens 5000i"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {203, DeviceType::BOILER, F("Logamax U122/Cerapur"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {208, DeviceType::BOILER, F("Logamax Plus/GB192/Condens GC9000"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 {234, DeviceType::BOILER, F("Logamax Plus GB122"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
+{206, DeviceType::BOILER, F("Ecomline Excellent"), DeviceFlags::EMS_DEVICE_FLAG_NONE},
 
 // Controllers - 0x09 / 0x10 / 0x50
 { 68, DeviceType::CONTROLLER, F("BC10/RFM20"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x09
@@ -56,6 +57,7 @@
 {224, DeviceType::CONTROLLER, F("9000i"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x09
 {230, DeviceType::CONTROLLER, F("BC Base"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x09
 {241, DeviceType::CONTROLLER, F("Condens 5000i"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x09
+{206, DeviceType::CONTROLLER, F("Ecomline"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x09
 
 // Thermostat - not currently supporting write operations, like the Easy/100 types - 0x18
 {202, DeviceType::THERMOSTAT, F("Logamatic TC100/Moduline Easy"), DeviceFlags::EMS_DEVICE_FLAG_EASY | DeviceFlags::EMS_DEVICE_FLAG_NO_WRITE}, // 0x18, cannot write
@@ -68,10 +70,11 @@
 { 79, DeviceType::THERMOSTAT, F("RC10/Moduline 100"), DeviceFlags::EMS_DEVICE_FLAG_RC10},// 0x17
 { 80, DeviceType::THERMOSTAT, F("Moduline 200"), DeviceFlags::EMS_DEVICE_FLAG_RC10}, // 0x17
 { 86, DeviceType::THERMOSTAT, F("RC35"), DeviceFlags::EMS_DEVICE_FLAG_RC35}, // 0x10
+{ 90, DeviceType::THERMOSTAT, F("RC10/Moduline 100"), DeviceFlags::EMS_DEVICE_FLAG_RC20_2}, // 0x17
 { 93, DeviceType::THERMOSTAT, F("RC20RF"), DeviceFlags::EMS_DEVICE_FLAG_RC20}, // 0x19
 { 94, DeviceType::THERMOSTAT, F("RFM20 Remote"), DeviceFlags::EMS_DEVICE_FLAG_NONE}, // 0x18
 {157, DeviceType::THERMOSTAT, F("RC200/CW100"), DeviceFlags::EMS_DEVICE_FLAG_RC100}, // 0x18
-{158, DeviceType::THERMOSTAT, F("RC300/RC310/Moduline 3000/CW400/Sense II"), DeviceFlags::EMS_DEVICE_FLAG_RC300}, // 0x10
+{158, DeviceType::THERMOSTAT, F("RC300/RC310/Moduline 3000/1010H/CW400/Sense II"), DeviceFlags::EMS_DEVICE_FLAG_RC300}, // 0x10
 {165, DeviceType::THERMOSTAT, F("RC100/Moduline 1000/1010"), DeviceFlags::EMS_DEVICE_FLAG_RC100}, // 0x18, 0x38
 
 // Thermostat - Sieger - 0x10 / 0x17
@@ -85,7 +88,7 @@
 {108, DeviceType::THERMOSTAT, F("FR110"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS | DeviceFlags::EMS_DEVICE_FLAG_JUNKERS_2}, // older model
 {111, DeviceType::THERMOSTAT, F("FR10"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS},  
 {147, DeviceType::THERMOSTAT, F("FR50"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS},
-{191, DeviceType::THERMOSTAT, F("FR120"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS}, 
+{191, DeviceType::THERMOSTAT, F("FR120"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS | DeviceFlags::EMS_DEVICE_FLAG_JUNKERS_2}, // older model
 {192, DeviceType::THERMOSTAT, F("FW120"), DeviceFlags::EMS_DEVICE_FLAG_JUNKERS},
 
 // Solar Modules - 0x30
@@ -95,12 +98,12 @@
 {163, DeviceType::SOLAR, F("SM100/MS100"), DeviceFlags::EMS_DEVICE_FLAG_SM100},
 {164, DeviceType::SOLAR, F("SM200/MS200"), DeviceFlags::EMS_DEVICE_FLAG_SM100},
 
-// Mixing Modules - 0x20-0x27 for HC, 0x28-0x29 for WWC
-{ 69, DeviceType::MIXING, F("MM10"), DeviceFlags::EMS_DEVICE_FLAG_MM10},
-{102, DeviceType::MIXING, F("IPM"), DeviceFlags::EMS_DEVICE_FLAG_IPM},
-{159, DeviceType::MIXING, F("MM50"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
-{160, DeviceType::MIXING, F("MM100"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
-{161, DeviceType::MIXING, F("MM200"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
+// Mixer Modules - 0x20-0x27 for HC, 0x28-0x29 for WWC
+{ 69, DeviceType::MIXER, F("MM10"), DeviceFlags::EMS_DEVICE_FLAG_MM10},
+{102, DeviceType::MIXER, F("IPM"), DeviceFlags::EMS_DEVICE_FLAG_IPM},
+{159, DeviceType::MIXER, F("MM50"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
+{160, DeviceType::MIXER, F("MM100"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
+{161, DeviceType::MIXER, F("MM200"), DeviceFlags::EMS_DEVICE_FLAG_MMPLUS},
 
 // Heat Pumps - 0x38
 {200, DeviceType::HEATPUMP, F("HP Module"), DeviceFlags::EMS_DEVICE_FLAG_NONE},

@@ -1,6 +1,6 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
- * Copyright 2019  Paul Derbyshire
+ * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ static constexpr uint8_t  EMS_VALUE_UINT_NOTSET   = 0xFF;       // for 8-bit uns
 static constexpr int8_t   EMS_VALUE_INT_NOTSET    = 0x7F;       // for signed 8-bit ints/bytes
 static constexpr uint16_t EMS_VALUE_USHORT_NOTSET = 0x7D00;     //  32000: for 2-byte unsigned shorts
 static constexpr int16_t  EMS_VALUE_SHORT_NOTSET  = 0x7D00;     //  32000: for 2-byte signed shorts
-static constexpr uint32_t EMS_VALUE_ULONG_NOTSET  = 0xFFFFFFFF; // for 3-byte and 4-byte longs
+static constexpr uint32_t EMS_VALUE_ULONG_NOTSET  = 0x00FFFFFF; // for 3-byte and 4-byte longs
 
 static constexpr uint8_t EMS_MAX_TELEGRAM_LENGTH         = 32; // max length of a complete EMS telegram
 static constexpr uint8_t EMS_MAX_TELEGRAM_MESSAGE_LENGTH = 27; // max length of message block, assuming EMS1.0
@@ -189,12 +189,13 @@ class EMSbus {
 
   private:
     static constexpr uint32_t EMS_BUS_TIMEOUT = 30000; // timeout in ms before recognizing the ems bus is offline (30 seconds)
-    static uint32_t           last_bus_activity_;      // timestamp of last time a valid Rx came in
-    static bool               bus_connected_;          // start assuming the bus hasn't been connected
-    static uint8_t            ems_mask_;               // unset=0xFF, buderus=0x00, junkers/ht3=0x80
-    static uint8_t            ems_bus_id_;             // the bus id, which configurable and stored in settings
-    static uint8_t            tx_mode_;                // local copy of the tx mode
-    static uint8_t            tx_state_;               // state of the Tx line (NONE or waiting on a TX_READ or TX_WRITE)
+
+    static uint32_t last_bus_activity_; // timestamp of last time a valid Rx came in
+    static bool     bus_connected_;     // start assuming the bus hasn't been connected
+    static uint8_t  ems_mask_;          // unset=0xFF, buderus=0x00, junkers/ht3=0x80
+    static uint8_t  ems_bus_id_;        // the bus id, which configurable and stored in settings
+    static uint8_t  tx_mode_;           // local copy of the tx mode
+    static uint8_t  tx_state_;          // state of the Tx line (NONE or waiting on a TX_READ or TX_WRITE)
 };
 
 class RxService : public EMSbus {
@@ -223,6 +224,14 @@ class RxService : public EMSbus {
         telegram_error_count_++;
     }
 
+    uint8_t quality() const {
+        if (telegram_error_count_ == 0) {
+            return 100; // all good, 100%
+        }
+        uint8_t q = ((float)telegram_error_count_ / telegram_count_ * 100);
+        return (q <= EMS_BUS_QUALITY_RX_THRESHOLD ? 100 : 100 - q);
+    }
+
     class QueuedRxTelegram {
       public:
         const uint16_t                        id_;
@@ -240,6 +249,8 @@ class RxService : public EMSbus {
     }
 
   private:
+    static constexpr uint8_t EMS_BUS_QUALITY_RX_THRESHOLD = 5; // % threshold before reporting quality issues
+
     uint8_t                         rx_telegram_id_       = 0; // queue counter
     uint32_t                        telegram_count_       = 0; // # Rx received
     uint32_t                        telegram_error_count_ = 0; // # Rx CRC errors
@@ -273,6 +284,7 @@ class TxService : public EMSbus {
     void     retry_tx(const uint8_t operation, const uint8_t * data, const uint8_t length);
     bool     is_last_tx(const uint8_t src, const uint8_t dest) const;
     uint16_t post_send_query();
+    void     read_next_tx();
 
     uint8_t retry_count() const {
         return retry_count_;
@@ -308,6 +320,13 @@ class TxService : public EMSbus {
 
     void telegram_fail_count(uint8_t telegram_fail_count) {
         telegram_fail_count_ = telegram_fail_count;
+    }
+
+    uint8_t quality() const {
+        if (telegram_fail_count_ == 0) {
+            return 100; // all good, 100%
+        }
+        return (100 - (((float)telegram_fail_count_ / telegram_read_count_ * 100)));
     }
 
     void increment_telegram_fail_count() {
@@ -365,7 +384,7 @@ class TxService : public EMSbus {
 
     void send_telegram(const QueuedTxTelegram & tx_telegram);
     void send_telegram(const uint8_t * data, const uint8_t length);
-};
+}; // namespace emsesp
 
 } // namespace emsesp
 
