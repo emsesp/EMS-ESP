@@ -201,7 +201,7 @@ void Mixer::register_mqtt_ha_config(bool force) {
         Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(flowTemp), this->device_type(), "flowTemp", F_(degrees), F_(icontemperature));
         Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(flowSetTemp), this->device_type(), "flowSetTemp", F_(degrees), F_(icontemperature));
         Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(pumpStatus), this->device_type(), "pumpStatus", nullptr, nullptr);
-        Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(valveStatus), this->device_type(), "valveStatus", nullptr, nullptr);
+        Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(valveStatus), this->device_type(), "valveStatus", F_(percent), F_(iconpercent));
     } else {
         // WWC
         snprintf_P(&topic[0], topic.capacity() + 1, PSTR("homeassistant/climate/ems-esp/mixer_wwc%d/config"), hc_);
