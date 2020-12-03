@@ -67,6 +67,10 @@ class Thermostat : public EMSdevice {
         uint8_t flowtempoffset    = EMS_VALUE_UINT_NOTSET;
         uint8_t minflowtemp       = EMS_VALUE_UINT_NOTSET;
         uint8_t maxflowtemp       = EMS_VALUE_UINT_NOTSET;
+        uint8_t reducemode        = EMS_VALUE_UINT_NOTSET;
+        int16_t ha_temp           = EMS_VALUE_SHORT_NOTSET;
+        uint8_t program           = EMS_VALUE_UINT_NOTSET;
+        uint8_t controlmode       = EMS_VALUE_UINT_NOTSET;
 
         uint8_t hc_num() const {
             return hc_num_;
@@ -279,6 +283,7 @@ class Thermostat : public EMSdevice {
     void process_RC35wwSettings(std::shared_ptr<const Telegram> telegram);
     void process_RC35Monitor(std::shared_ptr<const Telegram> telegram);
     void process_RC35Set(std::shared_ptr<const Telegram> telegram);
+    void process_RC35Timer(std::shared_ptr<const Telegram> telegram);
     void process_RC30Monitor(std::shared_ptr<const Telegram> telegram);
     void process_RC30Set(std::shared_ptr<const Telegram> telegram);
     void process_RC20Monitor(std::shared_ptr<const Telegram> telegram);
@@ -335,6 +340,10 @@ class Thermostat : public EMSdevice {
     bool set_flowtempoffset(const char * value, const int8_t id);
     bool set_minflowtemp(const char * value, const int8_t id);
     bool set_maxflowtemp(const char * value, const int8_t id);
+    bool set_roomtemp(const char * value, const int8_t id);
+    bool set_reducemode(const char * value, const int8_t id);
+    bool set_program(const char * value, const int8_t id);
+    bool set_controlmode(const char * value, const int8_t id);
 
     // set functions - these don't use the id/hc, the parameters are ignored
     bool set_wwmode(const char * value, const int8_t id);
