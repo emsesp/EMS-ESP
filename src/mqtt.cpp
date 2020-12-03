@@ -512,7 +512,7 @@ void Mqtt::ha_status() {
     doc["name"]        = FJSON("EMS-ESP status");
     doc["uniq_id"]     = FJSON("status");
     doc["~"]           = System::hostname(); // ems-esp
-    doc["avty_t"]      = FJSON("~/status");
+    // doc["avty_t"]      = FJSON("~/status");
     doc["json_attr_t"] = FJSON("~/heartbeat");
     doc["stat_t"]      = FJSON("~/heartbeat");
     doc["val_tpl"]     = FJSON("{{value_json['status']}}");
