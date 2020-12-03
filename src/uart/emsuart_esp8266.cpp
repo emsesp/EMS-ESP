@@ -233,6 +233,9 @@ uint16_t ICACHE_FLASH_ATTR EMSuart::transmit(uint8_t * buf, uint8_t len) {
     if (len == 0 || len >= EMS_MAXBUFFERSIZE) {
         return EMS_TX_STATUS_ERR; // nothing or to much to send
     }
+    if (tx_mode_ == 0) {
+        return EMS_TX_STATUS_OK;
+    }
 
     // timer controlled modes with extra delay
     if (tx_mode_ >= 5) {
