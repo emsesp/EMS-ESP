@@ -71,7 +71,7 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
         id = "-1";
     }
 
-    DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_MEDIUM_DYN);
+    DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_LARGE_DYN);
     JsonObject          json = doc.to<JsonObject>();
     bool                ok   = false;
 
