@@ -182,7 +182,6 @@ class Boiler : public EMSdevice {
     uint8_t maintenanceTime_     = EMS_VALUE_UINT_NOTSET;
     char    maintenanceDate_[12] = {'\0'};
 
-
     void process_UBAParameterWW(std::shared_ptr<const Telegram> telegram);
     void process_UBAMonitorFast(std::shared_ptr<const Telegram> telegram);
     void process_UBATotalUptime(std::shared_ptr<const Telegram> telegram);
@@ -223,7 +222,7 @@ class Boiler : public EMSdevice {
     bool set_hyst_off(const char * value, const int8_t id);
     bool set_burn_period(const char * value, const int8_t id);
     bool set_pump_delay(const char * value, const int8_t id);
-    bool set_reset(const char * value, const int8_t id);
+    // bool set_reset(const char * value, const int8_t id);
     bool set_maintenance(const char * value, const int8_t id);
 };
 
