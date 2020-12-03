@@ -512,7 +512,7 @@ void Mqtt::ha_status() {
     doc["name"]        = FJSON("EMS-ESP status");
     doc["uniq_id"]     = FJSON("status");
     doc["~"]           = System::hostname(); // ems-esp
-    doc["avty_t"]      = FJSON("~/status");
+    // doc["avty_t"]      = FJSON("~/status");
     doc["json_attr_t"] = FJSON("~/heartbeat");
     doc["stat_t"]      = FJSON("~/heartbeat");
     doc["val_tpl"]     = FJSON("{{value_json['status']}}");
@@ -560,7 +560,7 @@ std::shared_ptr<const MqttMessage> Mqtt::queue_message(const uint8_t operation, 
 
 // add MQTT message to queue, payload is a string
 std::shared_ptr<const MqttMessage> Mqtt::queue_publish_message(const std::string & topic, const std::string & payload, bool retain) {
-    if (!enabled() || !connected()) {
+    if (!enabled() || !connecting_) {
         return nullptr;
     };
     return queue_message(Operation::PUBLISH, topic, payload, retain);
