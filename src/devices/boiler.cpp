@@ -826,8 +826,8 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
             char s[5];
             snprintf_P(s, sizeof(s), PSTR("H%02d"), maintenanceMessage_);
             json["maintenanceMessage"] = s;
-        // } else {
-        //     json["maintenanceMessage"] = "";
+        } else {
+            json["maintenanceMessage"] = " ";
         }
     }
 
