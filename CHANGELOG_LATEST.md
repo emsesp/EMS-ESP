@@ -8,11 +8,12 @@
 - expose test framework via api (#611)
 - SysLog has enable/disable flag in WebUI
 - Add solar configuration telegrams (#616) [thanks @hpanther]
-- `log trace` shows decoded telegrams, `watch unknown` for only unknown telegrams
+- `log trace` shows decoded or optional raw telegrams, `watch unknown` for only unknown telegrams
 - WM10 switch telegrams
 - boiler information (#633)
 - maintenance message and command
 - thermostat program, reducemode, controlmode
+- optional delayed start for sending tx-telegrams to prevent conflicts with KM200
 
 ### Fixed
 - mixer IPM pumpstatus

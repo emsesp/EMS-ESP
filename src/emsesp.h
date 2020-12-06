@@ -150,6 +150,14 @@ class EMSESP {
         return tap_water_active_;
     }
 
+    static bool trace_raw() {
+        return trace_raw_;
+    }
+
+    static void trace_raw(bool set) {
+        trace_raw_ = set;
+    }
+
     static void tap_water_active(const bool tap_water_active) {
         tap_water_active_ = tap_water_active;
     }
@@ -217,6 +225,8 @@ class EMSESP {
     static bool     tap_water_active_;
     static uint8_t  publish_all_idx_;
     static uint8_t  unique_id_count_;
+    static bool     trace_raw_;
+    static uint64_t tx_delay_;
 };
 
 } // namespace emsesp
