@@ -46,6 +46,7 @@ class Switch : public EMSdevice {
 
     void process_WM10SetMessage(std::shared_ptr<const Telegram> telegram);
     void process_WM10MonitorMessage(std::shared_ptr<const Telegram> telegram);
+    void process_WM10TempMessage(std::shared_ptr<const Telegram> telegram);
     void register_mqtt_ha_config();
 
     uint16_t flowTemp_       = EMS_VALUE_USHORT_NOTSET;

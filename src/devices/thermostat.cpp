@@ -565,7 +565,8 @@ bool Thermostat::export_values_hc(uint8_t mqtt_format, JsonObject & rootThermost
 
             // Heating Type
             if (Helpers::hasValue(hc->heatingtype)) {
-                dataThermostat["heatingtype"] = hc->heatingtype;
+                char s[10];
+                dataThermostat["heatingtype"] = Helpers::render_enum(s, {F("off"), F("radiator"), F("convector"), F("floor")}, hc->heatingtype);
             }
 
             // Target flow temperature
@@ -1657,6 +1658,7 @@ bool Thermostat::set_display(const char * value, const int8_t id) {
     return true;
 }
 
+// set roomtemp for HA-thermostat
 bool Thermostat::set_roomtemp(const char * value, const int8_t id) {
     float f = 0;
     if (!Helpers::value2float(value, f)) {
@@ -1679,6 +1681,7 @@ bool Thermostat::set_roomtemp(const char * value, const int8_t id) {
     return true;
 }
 
+// set remotetemp for RC20 remote simulation on RC35 master
 bool Thermostat::set_remotetemp(const char * value, const int8_t id) {
     float f = 0;
     if (!Helpers::value2float(value, f)) {
@@ -2171,7 +2174,7 @@ bool Thermostat::set_program(const char * value, const int8_t id) {
         return false;
     }
 
-   if (model() == EMS_DEVICE_FLAG_RC20_2 && set > 0 && set < 10) {
+    if (model() == EMS_DEVICE_FLAG_RC20_2 && set > 0 && set < 10) {
         write_command(set_typeids[hc->hc_num() - 1], 11, set, set_typeids[hc->hc_num() - 1]);
     } else if ((model() == EMS_DEVICE_FLAG_RC35 || model() == EMS_DEVICE_FLAG_RC30_1) && set < 11) {
         write_command(timer_typeids[hc->hc_num() - 1], 84, set, timer_typeids[hc->hc_num() - 1]);
