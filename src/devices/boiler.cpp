@@ -1238,6 +1238,9 @@ void Boiler::process_UBAFlags(std::shared_ptr<const Telegram> telegram) {
 
 // 0x10, 0x11
 void Boiler::process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram) {
+    if (telegram->offset > 0 || telegram->message_length < 9) {
+        return;
+    }
     // data: displaycode(2), errornumber(2), year, month, hour, day, minute, duration(2), src-addr
     if (telegram->message_data[4] & 0x80) { // valid date
         char     code[3];
@@ -1262,6 +1265,9 @@ void Boiler::process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram) {
 
 // 0x15
 void Boiler::process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram) {
+    if (telegram->offset > 0 || telegram->message_length < 5) {
+        return;
+    }
     // first byte: Maintenance messages (0 = none, 1 = by operating hours, 2 = by date)
     telegram->read_value(maintenanceType_, 0);
     telegram->read_value(maintenanceTime_, 1);

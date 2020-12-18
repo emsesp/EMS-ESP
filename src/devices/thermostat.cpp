@@ -1461,6 +1461,9 @@ void Thermostat::process_RC35Monitor(std::shared_ptr<const Telegram> telegram) {
     // exit if the 15th byte (second from last) is 0x00, which I think is calculated flow setpoint temperature
     // with weather controlled RC35s this value is >=5, otherwise can be zero and our setpoint temps will be incorrect
     // see https://github.com/proddy/EMS-ESP/issues/373#issuecomment-627907301
+    if (telegram->offset > 0 || telegram->message_length < 15) {
+        return;
+    }
     if (telegram->message_data[14] == 0x00) {
         return;
     }
@@ -1482,7 +1485,7 @@ void Thermostat::process_RC35Monitor(std::shared_ptr<const Telegram> telegram) {
 // type 0x3D (HC1), 0x47 (HC2), 0x51 (HC3), 0x5B (HC4) - Working Mode Heating - for reading the mode from the RC35 thermostat (0x10)
 void Thermostat::process_RC35Set(std::shared_ptr<const Telegram> telegram) {
     // check to see we have a valid type. heating: 1 radiator, 2 convectors, 3 floors, 4 room supply
-    if (telegram->message_data[0] == 0x00) {
+    if (telegram->offset == 0 && telegram->message_data[0] == 0x00) {
         return;
     }
 
@@ -1528,7 +1531,7 @@ void Thermostat::process_RCTime(std::shared_ptr<const Telegram> telegram) {
     if (flags() == EMS_DEVICE_FLAG_EASY) {
         return; // not supported
     }
-    if (telegram->message_length < 7) {
+    if (telegram->offset > 0 || telegram->message_length < 8) {
         return;
     }
     if (telegram->message_data[7] & 0x0C) { // date and time not valid
@@ -1566,6 +1569,9 @@ void Thermostat::process_RCTime(std::shared_ptr<const Telegram> telegram) {
 // 10 00 A2 00 41 32 32 03 30 00 02 00 00 00 00 00 00 02 CRC
 //              A  2  2  816
 void Thermostat::process_RCError(std::shared_ptr<const Telegram> telegram) {
+    if (telegram->offset > 0 || telegram->message_length < 5) {
+        return;
+    }
     if (errorCode_.empty()) {
         errorCode_.resize(10, '\0');
     }
@@ -1581,6 +1587,9 @@ void Thermostat::process_RCError(std::shared_ptr<const Telegram> telegram) {
 
 // 0x12 error log
 void Thermostat::process_RCErrorMessage(std::shared_ptr<const Telegram> telegram) {
+    if (telegram->offset > 0 || telegram->message_length < 12) {
+        return;
+    }
     // data: displaycode(2), errornumber(2), year, month, hour, day, minute, duration(2), src-addr
     if (telegram->message_data[4] & 0x80) { // valid date
         char     code[3];
@@ -1606,7 +1615,7 @@ bool Thermostat::set_minexttemp(const char * value, const int8_t id) {
         return false;
     }
 
-    LOG_INFO(F("Setting min external temperature to %d"), mt);
+    LOG_INFO(F("Setting min external temperature to %d C"), mt);
     if ((model() == EMS_DEVICE_FLAG_RC300) || (model() == EMS_DEVICE_FLAG_RC100)) {
         write_command(0x240, 10, mt, 0x240);
     } else {
@@ -1747,7 +1756,7 @@ bool Thermostat::set_control(const char * value, const int8_t id) {
 
     uint8_t                                     hc_num = (id == -1) ? AUTO_HEATING_CIRCUIT : id;
     std::shared_ptr<Thermostat::HeatingCircuit> hc     = heating_circuit(hc_num);
-    if (hc == nullptr || ctrl > 2) {
+    if (hc == nullptr) {
         return false;
     }
 
