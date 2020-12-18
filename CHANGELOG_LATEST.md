@@ -22,6 +22,7 @@
 - serviceCodeNumber, 3-char serviceCode, exhausttemp and heating_active for newer ems+ boilers
 - prevent MQTT publish messages from sending twice
 - repeated output on read commands
+- heating_active for ems+
 
 ### Changed
 - optimized MQTT for HA to reduce heap fragmentation issues

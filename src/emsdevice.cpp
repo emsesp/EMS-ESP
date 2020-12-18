@@ -326,8 +326,9 @@ bool EMSdevice::handle_telegram(std::shared_ptr<const Telegram> telegram) {
                 toggle_fetch(tf.telegram_type_id_, false);
                 return false;
             }
-
-            tf.process_function_(telegram);
+            if (telegram->message_length > 0) {
+                tf.process_function_(telegram);
+            }
             return true;
         }
     }
