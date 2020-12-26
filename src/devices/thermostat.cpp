@@ -1865,12 +1865,20 @@ bool Thermostat::set_holiday(const char * value, const int8_t id) {
     data[0] = (hd[0] - '0') * 10 + (hd[1] - '0');
     data[1] = (hd[3] - '0') * 10 + (hd[4] - '0');
     data[2] = (hd[7] - '0') * 100 + (hd[8] - '0') * 10 + (hd[9] - '0');
-    data[3] = (hd[11] - '0') * 10 + (hd[11] - '0');
+    data[3] = (hd[11] - '0') * 10 + (hd[12] - '0');
     data[4] = (hd[14] - '0') * 10 + (hd[15] - '0');
     data[5] = (hd[18] - '0') * 100 + (hd[19] - '0') * 10 + (hd[20] - '0');
 
-    LOG_INFO(F("Setting holiday for hc %d"), hc->hc_num());
-    write_command(timer_typeids[hc->hc_num() - 1], 87, data, 6, 0);
+    if (hd[10] == '-') {
+        LOG_INFO(F("Setting holiday away from home for hc %d"), hc->hc_num());
+        write_command(timer_typeids[hc->hc_num() - 1], 87, data, 6, 0);
+    } else if (hd[10] == '+') {
+        LOG_INFO(F("Setting holiday at home for hc %d"), hc->hc_num());
+        write_command(timer_typeids[hc->hc_num() - 1], 93, data, 6, 0);
+    } else {
+        LOG_WARNING(F("Set holiday: Invalid"));
+        return false;
+    }
 
     return true;
 }

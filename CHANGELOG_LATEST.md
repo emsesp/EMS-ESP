@@ -14,6 +14,7 @@
 - maintenance message and command
 - thermostat program, reducemode, controlmode
 - optional delayed start for sending tx-telegrams to prevent conflicts with KM200
+- RC35 holiday setting with `+` for 'at home'
 
 ### Fixed
 - mixer IPM pumpstatus
