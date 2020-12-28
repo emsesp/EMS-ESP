@@ -327,7 +327,7 @@ void Solar::process_SM100Monitor2(std::shared_ptr<const Telegram> telegram) {
     // not implemented yet
 }
 
-// SM100wwTemperatur - 0x07D6
+// SM100wwTemperature - 0x07D6
 // Solar Module(0x2A) -> (0x00), (0x7D6), data: 01 C1 00 00 02 5B 01 AF 01 AD 80 00 01 90
 void Solar::process_SM100wwTemperature(std::shared_ptr<const Telegram> telegram) {
     // changed_ |= telegram->read_value(wwTemp_1_, 0);

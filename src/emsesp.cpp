@@ -635,7 +635,7 @@ bool EMSESP::process_telegram(std::shared_ptr<const Telegram> telegram) {
         } else if (!trace_raw_) {
             LOG_TRACE(pretty_telegram(telegram).c_str());
         }
-    } else if (!trace_raw_){
+    } else if (!trace_raw_) {
         LOG_TRACE(pretty_telegram(telegram).c_str());
     }
 

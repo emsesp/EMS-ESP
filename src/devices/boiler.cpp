@@ -1037,8 +1037,8 @@ void Boiler::process_UBAMonitorFastPlus(std::shared_ptr<const Telegram> telegram
     changed_ |= telegram->read_value(retTemp_, 17); // can be 0 if no sensor, handled in export_values
     changed_ |= telegram->read_value(sysPress_, 21);
 
-    //changed_ |= telegram->read_value(temperatur_, 13); // unknown temperature
-    //changed_ |= telegram->read_value(temperatur_, 27); // unknown temperature
+    //changed_ |= telegram->read_value(temperature_, 13); // unknown temperature
+    //changed_ |= telegram->read_value(temperature_, 27); // unknown temperature
 
     // read 3 char service code / installation status as appears on the display
     if ((telegram->message_length > 3) && (telegram->offset == 0)) {
@@ -1231,9 +1231,9 @@ void Boiler::process_UBAFlags(std::shared_ptr<const Telegram> telegram) {
 // 0x1C
 // 08 00 1C 94 0B 0A 1D 31 08 00 80 00 00 00 -> message for 29.11.2020
 // 08 00 1C 94 0B 0A 1D 31 00 00 00 00 00 00 -> message reset
- void Boiler::process_UBAMaintenanceStatus(std::shared_ptr<const Telegram> telegram) {
+void Boiler::process_UBAMaintenanceStatus(std::shared_ptr<const Telegram> telegram) {
     // 5. byte: Maintenance due (0 = no, 3 = yes, due to operating hours, 8 = yes, due to date)
-    changed_ |= telegram->read_value(maintenanceMessage_,5);
+    changed_ |= telegram->read_value(maintenanceMessage_, 5);
 }
 
 // 0x10, 0x11
@@ -1271,11 +1271,11 @@ void Boiler::process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram
     // first byte: Maintenance messages (0 = none, 1 = by operating hours, 2 = by date)
     telegram->read_value(maintenanceType_, 0);
     telegram->read_value(maintenanceTime_, 1);
-    uint8_t  day   = telegram->message_data[2];
-    uint8_t  month = telegram->message_data[3];
-    uint8_t  year  = telegram->message_data[4];
+    uint8_t day   = telegram->message_data[2];
+    uint8_t month = telegram->message_data[3];
+    uint8_t year  = telegram->message_data[4];
     if (day > 0 && month > 0 && year > 0) {
-        snprintf_P(maintenanceDate_,sizeof(maintenanceDate_),PSTR("%02d.%02d.%04d"),day,month,year + 2000);
+        snprintf_P(maintenanceDate_, sizeof(maintenanceDate_), PSTR("%02d.%02d.%04d"), day, month, year + 2000);
     }
 }
 
@@ -1715,15 +1715,15 @@ bool Boiler::set_maintenance(const char * value, const int8_t id) {
         return true;
     }
 
-   int hrs;
-   if (!Helpers::value2number(value, hrs)) {
-       LOG_WARNING(F("Setting maintenance: wrong format"));
-       return false;
+    int hrs;
+    if (!Helpers::value2number(value, hrs)) {
+        LOG_WARNING(F("Setting maintenance: wrong format"));
+        return false;
     }
 
     if (hrs == 0) {
         LOG_INFO(F("Setting maintenance off"));
-        write_command(0x15, 0, 0, 0x15);    // off
+        write_command(0x15, 0, 0, 0x15); // off
     } else {
         LOG_INFO(F("Setting maintenance in %d hours"), hrs);
         write_command(0x15, 1, (uint8_t)(hrs / 100));

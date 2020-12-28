@@ -631,7 +631,8 @@ bool Thermostat::export_values_hc(uint8_t mqtt_format, JsonObject & rootThermost
                 if (model == EMS_DEVICE_FLAG_RC35 || model == EMS_DEVICE_FLAG_RC30_1) {
                     dataThermostat["controlmode"] = Helpers::render_enum(s, {F("outdoor"), F("room")}, hc->controlmode);
                 } else if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
-                    dataThermostat["controlmode"] = Helpers::render_enum(s, {F("off"), F("outdoor"), F("simple"), F("MPC"), F("room"), F("power"), F("const.")}, hc->controlmode);
+                    dataThermostat["controlmode"] =
+                        Helpers::render_enum(s, {F("off"), F("outdoor"), F("simple"), F("MPC"), F("room"), F("power"), F("const.")}, hc->controlmode);
                 }
             }
 
@@ -1565,7 +1566,7 @@ void Thermostat::process_RCTime(std::shared_ptr<const Telegram> telegram) {
     }
 }
 
-// process_RCError - type 0xA2 - error maeesage - 14 bytes long
+// process_RCError - type 0xA2 - error message - 14 bytes long
 // 10 00 A2 00 41 32 32 03 30 00 02 00 00 00 00 00 00 02 CRC
 //              A  2  2  816
 void Thermostat::process_RCError(std::shared_ptr<const Telegram> telegram) {

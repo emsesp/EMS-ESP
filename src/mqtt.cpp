@@ -508,9 +508,9 @@ void Mqtt::on_connect() {
 void Mqtt::ha_status() {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
 
-    doc["name"]        = FJSON("EMS-ESP status");
-    doc["uniq_id"]     = FJSON("status");
-    doc["~"]           = System::hostname(); // ems-esp
+    doc["name"]    = FJSON("EMS-ESP status");
+    doc["uniq_id"] = FJSON("status");
+    doc["~"]       = System::hostname(); // ems-esp
     // doc["avty_t"]      = FJSON("~/status");
     doc["json_attr_t"] = FJSON("~/heartbeat");
     doc["stat_t"]      = FJSON("~/heartbeat");
