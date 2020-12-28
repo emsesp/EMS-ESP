@@ -1,6 +1,8 @@
 export interface EMSESPSettings {
   tx_mode: number;
+  tx_delay: number;
   ems_bus_id: number;
+  syslog_enabled: boolean;
   syslog_level: number;
   syslog_mark_interval: number;
   syslog_host: string;
@@ -16,6 +18,7 @@ export interface EMSESPSettings {
   api_enabled: boolean;
   bool_format: number;
   analog_enabled: boolean;
+  trace_raw: boolean;
 }
 
 export enum busConnectionStatus {
@@ -53,13 +56,7 @@ export interface EMSESPDevices {
   sensors: Sensor[];
 }
 
-export interface DeviceData {
-  n: string;
-  v: string;
-}
-
 export interface EMSESPDeviceData {
-  deviceName: string;
-  deviceData: DeviceData[];
+  name: string;
+  data: string[];
 }
-

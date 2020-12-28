@@ -17,7 +17,7 @@ assignees: ''
 *You can now remove this line and the above ones. Text in italic is meant to be replaced by your own words. If any of the sections below are not relevant to the issue (for instance, the screenshots) then you can delete them.*
 
 **Bug description**
-*A clear and concise description of what the bug is.*
+*A clear and concise description of what the bug is. Mention which EMS-ESP version you're using.*
 
 **Steps to reproduce**
 *Steps to reproduce the behavior.*
@@ -29,7 +29,7 @@ assignees: ''
 *If applicable, add screenshots to help explain your problem.*
 
 **Device information**
-*Copy-paste here the information as it is outputted by the device. You can get this information by from http://ems-esp.local/api?device=system&cmd=report.*
+*Copy-paste here the information as it is outputted by the device. You can get this information by from http://ems-esp.local/api?device=system&cmd=info*
 
 **Additional context**
 *Add any other context about the problem here.*

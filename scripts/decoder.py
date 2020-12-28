@@ -54,6 +54,7 @@ PLATFORMS = {
     "ESP32": "esp32"
 }
 
+BACKTRACE_REGEX = re.compile(r"(?:\s+(0x40[0-2](?:\d|[a-f]|[A-F]){5}):0x(?:\d|[a-f]|[A-F]){8})\b")
 EXCEPTION_REGEX = re.compile("^Exception \\((?P<exc>[0-9]*)\\):$")
 COUNTER_REGEX = re.compile('^epc1=(?P<epc1>0x[0-9a-f]+) epc2=(?P<epc2>0x[0-9a-f]+) epc3=(?P<epc3>0x[0-9a-f]+) '
                            'excvaddr=(?P<excvaddr>0x[0-9a-f]+) depc=(?P<depc>0x[0-9a-f]+)$')
@@ -84,6 +85,12 @@ class ExceptionDataParser(object):
         self.offset = None
 
         self.stack = []
+
+    def _parse_backtrace(self, line):
+        if line.startswith('Backtrace:'):
+            self.stack = [StackLine(offset=0, content=(addr,)) for addr in BACKTRACE_REGEX.findall(line)]
+            return None
+        return self._parse_backtrace
 
     def _parse_exception(self, line):
         match = EXCEPTION_REGEX.match(line)
@@ -134,10 +141,13 @@ class ExceptionDataParser(object):
             return self._parse_stack_line
         return None
 
-    def parse_file(self, file, stack_only=False):
-        func = self._parse_exception
-        if stack_only:
-            func = self._parse_stack_begin
+    def parse_file(self, file, platform, stack_only=False):
+        if platform == 'ESP32':
+            func = self._parse_backtrace
+        else:
+            func = self._parse_exception
+            if stack_only:
+                func = self._parse_stack_begin
 
         for line in file:
             func = func(line.strip())
@@ -237,8 +247,8 @@ def print_stack(lines, resolver):
             print(out)
 
 
-def print_result(parser, resolver, full=True, stack_only=False):
-    if not stack_only:
+def print_result(parser, resolver, platform, full=True, stack_only=False):
+    if platform == 'ESP8266' and not stack_only:
         print('Exception: {} ({})'.format(parser.exception, EXCEPTIONS[parser.exception]))
 
         print("")
@@ -290,7 +300,9 @@ if __name__ == "__main__":
         file = open(args.file, "r")
 
     addr2line = os.path.join(os.path.abspath(os.path.expanduser(args.tool)),
-                             "bin/xtensa-" + PLATFORMS[args.platform] + "-elf-addr2line.exe")
+                             "bin/xtensa-" + PLATFORMS[args.platform] + "-elf-addr2line")
+    if os.name == 'nt':
+        addr2line += '.exe'
     if not os.path.exists(addr2line):
         print("ERROR: addr2line not found (" + addr2line + ")")
 
@@ -301,7 +313,7 @@ if __name__ == "__main__":
     parser = ExceptionDataParser()
     resolver = AddressResolver(addr2line, elf_file)
 
-    parser.parse_file(file, args.stack_only)
+    parser.parse_file(file, args.platform, args.stack_only)
     resolver.fill(parser)
 
-    print_result(parser, resolver, args.full, args.stack_only)
+    print_result(parser, resolver, args.platform, args.full, args.stack_only)

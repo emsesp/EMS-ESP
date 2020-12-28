@@ -25,6 +25,7 @@
 #include <uuid/log.h>
 
 #include "emsdevice.h"
+#include "emsesp.h"
 #include "telegram.h"
 #include "helpers.h"
 #include "mqtt.h"
@@ -35,7 +36,6 @@ class Switch : public EMSdevice {
   public:
     Switch(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
-    virtual void show_values(uuid::console::Shell & shell);
     virtual void publish_values(JsonObject & json, bool force);
     virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
@@ -43,6 +43,17 @@ class Switch : public EMSdevice {
 
   private:
     static uuid::log::Logger logger_;
+
+    void process_WM10SetMessage(std::shared_ptr<const Telegram> telegram);
+    void process_WM10MonitorMessage(std::shared_ptr<const Telegram> telegram);
+    void process_WM10TempMessage(std::shared_ptr<const Telegram> telegram);
+    void register_mqtt_ha_config();
+
+    uint16_t flowTemp_       = EMS_VALUE_USHORT_NOTSET;
+    uint8_t  status_         = EMS_VALUE_UINT_NOTSET;
+    uint8_t  activated_      = EMS_VALUE_BOOL_NOTSET;
+    bool     changed_        = false;
+    bool     mqtt_ha_config_ = false; // for HA MQTT Discovery
 };
 
 } // namespace emsesp

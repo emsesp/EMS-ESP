@@ -36,7 +36,6 @@ class Heatpump : public EMSdevice {
   public:
     Heatpump(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
-    virtual void show_values(uuid::console::Shell & shell);
     virtual void publish_values(JsonObject & json, bool force);
     virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
@@ -45,7 +44,7 @@ class Heatpump : public EMSdevice {
   private:
     static uuid::log::Logger logger_;
 
-    void register_mqtt_ha_config(bool force);
+    void register_mqtt_ha_config();
 
     uint8_t airHumidity_    = EMS_VALUE_UINT_NOTSET;
     uint8_t dewTemperature_ = EMS_VALUE_UINT_NOTSET;

@@ -38,7 +38,6 @@ class Boiler : public EMSdevice {
   public:
     Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
-    virtual void show_values(uuid::console::Shell & shell);
     virtual void publish_values(JsonObject & json, bool force);
     virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
@@ -47,21 +46,25 @@ class Boiler : public EMSdevice {
   private:
     static uuid::log::Logger logger_;
 
-    void register_mqtt_ha_config(bool force);
-    void check_active();
-    bool export_values_main(JsonObject & doc);
-    bool export_values_ww(JsonObject & doc);
+    void register_mqtt_ha_config();
+    void register_mqtt_ha_config_ww();
+    void check_active(const bool force = false);
+    bool export_values_main(JsonObject & doc, const bool textformat = false);
+    bool export_values_ww(JsonObject & doc, const bool textformat = false);
 
-    bool changed_        = false;
-    bool mqtt_ha_config_ = false; // HA MQTT Discovery
+    bool changed_           = false;
+    bool mqtt_ha_config_    = false; // HA MQTT Discovery
+    bool mqtt_ha_config_ww_ = false; // HA MQTT Discovery
 
-    static constexpr uint8_t EMS_TYPE_UBAParameterWW     = 0x33;
-    static constexpr uint8_t EMS_TYPE_UBAFunctionTest    = 0x1D;
-    static constexpr uint8_t EMS_TYPE_UBAFlags           = 0x35;
-    static constexpr uint8_t EMS_TYPE_UBASetPoints       = 0x1A;
-    static constexpr uint8_t EMS_TYPE_UBAParameters      = 0x16;
-    static constexpr uint8_t EMS_TYPE_UBAParametersPlus  = 0xE6;
-    static constexpr uint8_t EMS_TYPE_UBAParameterWWPlus = 0xEA;
+    static constexpr uint8_t  EMS_TYPE_UBAParameterWW     = 0x33;
+    static constexpr uint8_t  EMS_TYPE_UBAFunctionTest    = 0x1D;
+    static constexpr uint8_t  EMS_TYPE_UBAFlags           = 0x35;
+    static constexpr uint8_t  EMS_TYPE_UBASetPoints       = 0x1A;
+    static constexpr uint8_t  EMS_TYPE_UBAParameters      = 0x16;
+    static constexpr uint8_t  EMS_TYPE_UBAParametersPlus  = 0xE6;
+    static constexpr uint8_t  EMS_TYPE_UBAParameterWWPlus = 0xEA;
+    static constexpr uint16_t EMS_TYPE_UBAInfomration     = 0x495;
+    static constexpr uint16_t EMS_TYPE_UBAEnergySupplied  = 0x494;
 
     static constexpr uint8_t EMS_BOILER_SELFLOWTEMP_HEATING = 20; // was originally 70, changed to 30 for issue #193, then to 20 with issue #344
 
@@ -94,9 +97,11 @@ class Boiler : public EMSdevice {
     uint8_t  curBurnPow_        = EMS_VALUE_UINT_NOTSET;   // Burner current power %
     uint16_t flameCurr_         = EMS_VALUE_USHORT_NOTSET; // Flame current in micro amps
     uint8_t  sysPress_          = EMS_VALUE_UINT_NOTSET;   // System pressure
-    char     serviceCode_[3]    = {'\0'};                  // 2 character status/service code
+    char     serviceCode_[4]    = {'\0'};                  // 3 character status/service code
     uint16_t serviceCodeNumber_ = EMS_VALUE_USHORT_NOTSET; // error/service code
     uint8_t  boilerState_       = EMS_VALUE_UINT_NOTSET;   // Boiler state flag
+    char     lastCode_[30]      = {'\0'};
+    uint32_t lastCodeDate_      = 0;
 
     // UBAMonitorSlow - 0x19 on EMS1
     int16_t  outdoorTemp_ = EMS_VALUE_SHORT_NOTSET;  // Outside temperature
@@ -148,6 +153,35 @@ class Boiler : public EMSdevice {
     uint8_t heatingActive_  = EMS_VALUE_BOOL_NOTSET; // Central heating is on/off
     uint8_t pumpMod2_       = EMS_VALUE_UINT_NOTSET; // heatpump modulation from 0xE3 (heatpumps)
 
+    // UBAInformation
+    uint32_t upTimeControl_             = EMS_VALUE_ULONG_NOTSET; // Operating time control
+    uint32_t upTimeCompHeating_         = EMS_VALUE_ULONG_NOTSET; // Operating time compressor heating
+    uint32_t upTimeCompCooling_         = EMS_VALUE_ULONG_NOTSET; // Operating time compressor cooling
+    uint32_t upTimeCompWw_              = EMS_VALUE_ULONG_NOTSET; // Operating time compressor warm water
+    uint32_t heatingStarts_             = EMS_VALUE_ULONG_NOTSET; // Heating starts (control)
+    uint32_t coolingStarts_             = EMS_VALUE_ULONG_NOTSET; // Cooling  starts (control)
+    uint32_t wWStarts2_                 = EMS_VALUE_ULONG_NOTSET; // Warm water starts (control)
+    uint32_t nrgConsTotal_              = EMS_VALUE_ULONG_NOTSET; // Energy consumption total
+    uint32_t auxElecHeatNrgConsTotal_   = EMS_VALUE_ULONG_NOTSET; // Auxiliary electrical heater energy consumption total
+    uint32_t auxElecHeatNrgConsHeating_ = EMS_VALUE_ULONG_NOTSET; // Auxiliary electrical heater energy consumption heating
+    uint32_t auxElecHeatNrgConsDHW_     = EMS_VALUE_ULONG_NOTSET; // Auxiliary electrical heater energ consumption DHW
+    uint32_t nrgConsCompTotal_          = EMS_VALUE_ULONG_NOTSET; // Energy consumption compressor total
+    uint32_t nrgConsCompHeating_        = EMS_VALUE_ULONG_NOTSET; // Energy consumption compressor heating
+    uint32_t nrgConsCompWw_             = EMS_VALUE_ULONG_NOTSET; // Energy consumption compressor warm water
+    uint32_t nrgConsCompCooling_        = EMS_VALUE_ULONG_NOTSET; // Energy consumption compressor cooling
+
+    // UBAEnergySupplied
+    uint32_t nrgSuppTotal_   = EMS_VALUE_ULONG_NOTSET; // Energy supplied total
+    uint32_t nrgSuppHeating_ = EMS_VALUE_ULONG_NOTSET; // Energy supplied heating
+    uint32_t nrgSuppWw_      = EMS_VALUE_ULONG_NOTSET; // Energy supplied warm water
+    uint32_t nrgSuppCooling_ = EMS_VALUE_ULONG_NOTSET; // Energy supplied cooling
+
+    // _UBAMaintenanceData
+    uint8_t maintenanceMessage_  = EMS_VALUE_UINT_NOTSET;
+    uint8_t maintenanceType_     = EMS_VALUE_UINT_NOTSET;
+    uint8_t maintenanceTime_     = EMS_VALUE_UINT_NOTSET;
+    char    maintenanceDate_[12] = {'\0'};
+
     void process_UBAParameterWW(std::shared_ptr<const Telegram> telegram);
     void process_UBAMonitorFast(std::shared_ptr<const Telegram> telegram);
     void process_UBATotalUptime(std::shared_ptr<const Telegram> telegram);
@@ -167,6 +201,8 @@ class Boiler : public EMSdevice {
     void process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram);
     void process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram);
     void process_UBADHWStatus(std::shared_ptr<const Telegram> telegram);
+    void process_UBAInformation(std::shared_ptr<const Telegram> telegram);
+    void process_UBAEnergySupplied(std::shared_ptr<const Telegram> telegram);
 
     // commands - none of these use the additional id parameter
     bool set_warmwater_mode(const char * value, const int8_t id);
@@ -182,10 +218,14 @@ class Boiler : public EMSdevice {
     bool set_heating_temp(const char * value, const int8_t id);
     bool set_min_power(const char * value, const int8_t id);
     bool set_max_power(const char * value, const int8_t id);
+    bool set_min_pump(const char * value, const int8_t id);
+    bool set_max_pump(const char * value, const int8_t id);
     bool set_hyst_on(const char * value, const int8_t id);
     bool set_hyst_off(const char * value, const int8_t id);
     bool set_burn_period(const char * value, const int8_t id);
     bool set_pump_delay(const char * value, const int8_t id);
+    // bool set_reset(const char * value, const int8_t id);
+    bool set_maintenance(const char * value, const int8_t id);
 };
 
 } // namespace emsesp

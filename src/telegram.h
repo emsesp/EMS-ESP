@@ -40,6 +40,8 @@ static constexpr uint8_t EMS_VALUE_BOOL     = 0xFF; // used to mark that somethi
 static constexpr uint8_t EMS_VALUE_BOOL_OFF = 0x00; // boolean false
 static constexpr uint8_t EMS_VALUE_BOOL_ON  = 0x01; // boolean true. True can be 0x01 or 0xFF sometimes
 
+static constexpr uint8_t EMS_VALUE_TIME = 0xFD; // for converting uint32 to time strings
+
 static constexpr uint8_t  EMS_VALUE_BOOL_NOTSET   = 0xFE;       // random number for booleans, that's not 0, 1 or FF
 static constexpr uint8_t  EMS_VALUE_UINT_NOTSET   = 0xFF;       // for 8-bit unsigned ints/bytes
 static constexpr int8_t   EMS_VALUE_INT_NOTSET    = 0x7F;       // for signed 8-bit ints/bytes
@@ -74,6 +76,7 @@ class Telegram {
     enum Operation : uint8_t {
         NONE = 0,
         RX,
+        RX_READ,
         TX_RAW,
         TX_READ,
         TX_WRITE,
@@ -220,10 +223,6 @@ class RxService : public EMSbus {
         return telegram_error_count_;
     }
 
-    void increment_telegram_error_count() {
-        telegram_error_count_++;
-    }
-
     uint8_t quality() const {
         if (telegram_error_count_ == 0) {
             return 100; // all good, 100%
@@ -260,7 +259,7 @@ class RxService : public EMSbus {
 
 class TxService : public EMSbus {
   public:
-    static constexpr size_t  MAX_TX_TELEGRAMS = 20; // size of Tx queue
+    static constexpr size_t  MAX_TX_TELEGRAMS = 30; // size of Tx queue
     static constexpr uint8_t TX_WRITE_FAIL    = 4;  // EMS return code for fail
     static constexpr uint8_t TX_WRITE_SUCCESS = 1;  // EMS return code for success
 
@@ -284,7 +283,7 @@ class TxService : public EMSbus {
     void     retry_tx(const uint8_t operation, const uint8_t * data, const uint8_t length);
     bool     is_last_tx(const uint8_t src, const uint8_t dest) const;
     uint16_t post_send_query();
-    void     read_next_tx();
+    uint16_t read_next_tx();
 
     uint8_t retry_count() const {
         return retry_count_;
@@ -384,7 +383,7 @@ class TxService : public EMSbus {
 
     void send_telegram(const QueuedTxTelegram & tx_telegram);
     void send_telegram(const uint8_t * data, const uint8_t length);
-}; // namespace emsesp
+};
 
 } // namespace emsesp
 

@@ -50,18 +50,26 @@ class System {
 
     static bool command_pin(const char * value, const int8_t id);
     static bool command_send(const char * value, const int8_t id);
+    static bool command_publish(const char * value, const int8_t id);
+    static bool command_fetch(const char * value, const int8_t id);
     static bool command_info(const char * value, const int8_t id, JsonObject & json);
-    static bool command_report(const char * value, const int8_t id, JsonObject & json);
+    static bool command_settings(const char * value, const int8_t id, JsonObject & json);
+
+#if defined(EMSESP_TEST)
+    static bool command_test(const char * value, const int8_t id);
+#endif
 
     static uint8_t free_mem();
     static void    upload_status(bool in_progress);
     static bool    upload_status();
     static void    show_mem(const char * note);
-    static void    set_led();
-    static void    init();
+
+    static void init();
+    static void led_init();
+    static void syslog_init();
+    static void other_init();
 
     bool check_upgrade();
-    void syslog_init();
     void send_heartbeat();
 
     static std::string hostname() {
@@ -98,22 +106,20 @@ class System {
     static void   wifi_reconnect();
     static int8_t wifi_quality();
 
-    bool               system_healthy_  = false;
-    uint32_t           led_flash_speed_ = LED_WARNING_BLINK_FAST; // default boot flashes quickly
-    static uint32_t    heap_start_;
-    static int         reset_counter_;
-    uint32_t           last_heartbeat_ = 0;
-    static bool        upload_status_; // true if we're in the middle of a OTA firmware upload
-    static uint16_t    analog_;
-    static std::string hostname_;
+    bool     system_healthy_  = false;
+    uint32_t led_flash_speed_ = LED_WARNING_BLINK_FAST; // default boot flashes quickly
+    uint32_t last_heartbeat_  = 0;
+
+    static bool     upload_status_; // true if we're in the middle of a OTA firmware upload
+    static uint32_t heap_start_;
+    static uint16_t analog_;
 
     // settings
-    static bool    hide_led_;
-    uint8_t        syslog_level_;
-    uint32_t       syslog_mark_interval_;
-    String         syslog_host_;
-    static uint8_t led_gpio_;
-    static bool    analog_enabled_;
+    static std::string hostname_;
+    static bool        hide_led_;
+    static uint8_t     led_gpio_;
+    static bool        syslog_enabled_;
+    static bool        analog_enabled_;
 };
 
 } // namespace emsesp

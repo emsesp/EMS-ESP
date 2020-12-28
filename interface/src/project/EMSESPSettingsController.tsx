@@ -82,7 +82,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             </SelectValidator>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
-                errorMessages={['Rx GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
+                errorMessages={['Rx GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 40"]}
                 name="rx_gpio"
                 label="Rx GPIO pin"
                 fullWidth
@@ -94,7 +94,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             />
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
-                errorMessages={['Tx GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
+                errorMessages={['Tx GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 40"]}
                 name="tx_gpio"
                 label="Tx GPIO pin"
                 fullWidth
@@ -104,13 +104,25 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 onChange={handleValueChange('tx_gpio')}
                 margin="normal"
             />
+            <TextValidator
+                validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:120']}
+                errorMessages={['Tx delay is required', "Must be a number", "Must be 0 or higher", "Max value is 120"]}
+                name="tx_delay"
+                label="Tx delayed start (seconds)"
+                fullWidth
+                variant="outlined"
+                value={data.tx_delay}
+                type="number"
+                onChange={handleValueChange('tx_delay')}
+                margin="normal"
+            />
             <br></br>
             <Typography variant="h6" color="primary" >
                 Dallas Sensor
             </Typography>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
-                errorMessages={['Dallas GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
+                errorMessages={['Dallas GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 40"]}
                 name="dallas_gpio"
                 label="Dallas GPIO pin (0=none)"
                 fullWidth
@@ -136,7 +148,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             </Typography>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
-                errorMessages={['LED GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
+                errorMessages={['LED GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 40"]}
                 name="led_gpio"
                 label="LED GPIO pin (0=none)"
                 fullWidth
@@ -192,28 +204,27 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                         value="api_enabled"
                     />
                 }
-                label="Enable WEB API (for write commands)"
+                label="Allow WEB API to write commands"
             />
-            <SelectValidator name="bool_format"
-                label="Boolean Format"
-                value={data.bool_format}
-                fullWidth
-                variant="outlined"
-                onChange={handleValueChange('bool_format')}
-                margin="normal">
-                <MenuItem value={1}>on/off</MenuItem>
-                <MenuItem value={2}>true/false</MenuItem>
-                <MenuItem value={3}>1/0</MenuItem>
-            </SelectValidator>
             <br></br>
             <Typography variant="h6" color="primary" >
                 Syslog
             </Typography>
+            <BlockFormControlLabel
+                control={
+                    <Checkbox
+                        checked={data.syslog_enabled}
+                        onChange={handleValueChange('syslog_enabled')}
+                        value="syslog_enabled"
+                    />
+                }
+                label="Enable Syslog"
+            />
             <TextValidator
                 validators={['isIPOrHostname']}
                 errorMessages={["Not a valid IP address or hostname"]}
                 name="syslog_host"
-                label="Syslog IP/Host (optional)"
+                label="Syslog IP/Host"
                 fullWidth
                 variant="outlined"
                 value={data.syslog_host}
@@ -229,12 +240,14 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 margin="normal">
                 <MenuItem value={-1}>OFF</MenuItem>
                 <MenuItem value={3}>ERR</MenuItem>
+                <MenuItem value={5}>NOTICE</MenuItem>
                 <MenuItem value={6}>INFO</MenuItem>
                 <MenuItem value={7}>DEBUG</MenuItem>
+                <MenuItem value={8}>ALL</MenuItem>
             </SelectValidator>
             <TextValidator
                 validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:65535']}
-                errorMessages={['Syslog Mark is required', "Must be a number", "Must be 0 or higher (0=off)", "Max value is 65535"]}
+                errorMessages={['Syslog Mark is required', "Must be a number", "Must be 0 or higher", "Max value is 10"]}
                 name="syslog_mark_interval"
                 label="Syslog Mark Interval (seconds, 0=off)"
                 fullWidth
@@ -244,6 +257,17 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 onChange={handleValueChange('syslog_mark_interval')}
                 margin="normal"
             />
+            <BlockFormControlLabel
+                control={
+                    <Checkbox
+                        checked={data.trace_raw}
+                        onChange={handleValueChange('trace_raw')}
+                        value="trace_raw"
+                    />
+                }
+                label="Trace ems-telegrams in raw format"
+            />
+
             <br></br>
             <Typography variant="h6" color="primary" >
                 Analog Input
@@ -258,6 +282,21 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 }
                 label="Enable ADC"
             />
+            <br></br>
+            <Typography variant="h6" color="primary" >
+                Other
+            </Typography>
+            <SelectValidator name="bool_format"
+                label="Boolean Format"
+                value={data.bool_format}
+                fullWidth
+                variant="outlined"
+                onChange={handleValueChange('bool_format')}
+                margin="normal">
+                <MenuItem value={1}>on/off</MenuItem>
+                <MenuItem value={2}>true/false</MenuItem>
+                <MenuItem value={3}>1/0</MenuItem>
+            </SelectValidator>
             <br></br>
             <FormActions>
                 <FormButton startIcon={<SaveIcon />} variant="contained" color="primary" type="submit">

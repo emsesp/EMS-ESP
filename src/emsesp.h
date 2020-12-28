@@ -52,6 +52,14 @@
 
 #define WATCH_ID_NONE 0 // no watch id set
 
+#define EMSESP_MAX_JSON_SIZE_HA_CONFIG 384   // for small HA config payloads, using StaticJsonDocument
+#define EMSESP_MAX_JSON_SIZE_SMALL 256       // for smaller json docs, using StaticJsonDocument
+#define EMSESP_MAX_JSON_SIZE_MEDIUM 768      // for medium json docs from ems devices, using StaticJsonDocument
+#define EMSESP_MAX_JSON_SIZE_LARGE 1024      // for large json docs from ems devices, like boiler or thermostat data, using StaticJsonDocument
+#define EMSESP_MAX_JSON_SIZE_MEDIUM_DYN 1024 // for large json docs, using DynamicJsonDocument
+#define EMSESP_MAX_JSON_SIZE_LARGE_DYN 2048  // for very large json docs, using DynamicJsonDocument
+#define EMSESP_MAX_JSON_SIZE_MAX_DYN 4096    // for very very large json docs, using DynamicJsonDocument
+
 namespace emsesp {
 
 class Shower; // forward declaration for compiler
@@ -63,7 +71,7 @@ class EMSESP {
 
     static void publish_device_values(uint8_t device_type, bool force = false);
     static void publish_other_values();
-    static void publish_sensor_values(const bool force = false);
+    static void publish_sensor_values(const bool time, const bool force = false);
     static void publish_all(bool force = false);
 
 #ifdef EMSESP_STANDALONE
@@ -116,7 +124,7 @@ class EMSESP {
         return (!(dallassensor_.sensors().empty()));
     }
 
-    enum Watch : uint8_t { WATCH_OFF, WATCH_ON, WATCH_RAW };
+    enum Watch : uint8_t { WATCH_OFF, WATCH_ON, WATCH_RAW, WATCH_UNKNOWN };
     static void     watch_id(uint16_t id);
     static uint16_t watch_id() {
         return watch_id_;
@@ -140,6 +148,14 @@ class EMSESP {
 
     static bool tap_water_active() {
         return tap_water_active_;
+    }
+
+    static bool trace_raw() {
+        return trace_raw_;
+    }
+
+    static void trace_raw(bool set) {
+        trace_raw_ = set;
     }
 
     static void tap_water_active(const bool tap_water_active) {
@@ -184,6 +200,7 @@ class EMSESP {
     static void process_UBADevices(std::shared_ptr<const Telegram> telegram);
     static void process_version(std::shared_ptr<const Telegram> telegram);
     static void publish_response(std::shared_ptr<const Telegram> telegram);
+    static void publish_all_loop();
 
     static bool command_info(uint8_t device_type, JsonObject & json);
 
@@ -206,7 +223,10 @@ class EMSESP {
     static bool     read_next_;
     static uint16_t publish_id_;
     static bool     tap_water_active_;
+    static uint8_t  publish_all_idx_;
     static uint8_t  unique_id_count_;
+    static bool     trace_raw_;
+    static uint64_t tx_delay_;
 };
 
 } // namespace emsesp

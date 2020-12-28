@@ -58,13 +58,19 @@ class Thermostat : public EMSdevice {
         uint8_t heatingtype       = EMS_VALUE_UINT_NOTSET; // type of heating: 1 radiator, 2 convectors, 3 floors, 4 room supply
         uint8_t targetflowtemp    = EMS_VALUE_UINT_NOTSET;
         uint8_t summertemp        = EMS_VALUE_UINT_NOTSET;
-        uint8_t nofrosttemp       = EMS_VALUE_UINT_NOTSET;
+        int8_t  nofrosttemp       = EMS_VALUE_INT_NOTSET;  // signed -20°C to +10°C
         uint8_t designtemp        = EMS_VALUE_UINT_NOTSET; // heating curve design temp at MinExtTemp
         int8_t  offsettemp        = EMS_VALUE_INT_NOTSET;  // heating curve offest temp at roomtemp signed!
         uint8_t manualtemp        = EMS_VALUE_UINT_NOTSET;
         uint8_t summer_setmode    = EMS_VALUE_UINT_NOTSET;
         uint8_t roominfluence     = EMS_VALUE_UINT_NOTSET;
         uint8_t flowtempoffset    = EMS_VALUE_UINT_NOTSET;
+        uint8_t minflowtemp       = EMS_VALUE_UINT_NOTSET;
+        uint8_t maxflowtemp       = EMS_VALUE_UINT_NOTSET;
+        uint8_t reducemode        = EMS_VALUE_UINT_NOTSET;
+        int16_t ha_temp           = EMS_VALUE_SHORT_NOTSET;
+        uint8_t program           = EMS_VALUE_UINT_NOTSET;
+        uint8_t controlmode       = EMS_VALUE_UINT_NOTSET;
 
         uint8_t hc_num() const {
             return hc_num_;
@@ -83,10 +89,29 @@ class Thermostat : public EMSdevice {
             return Helpers::hasValue(setpoint_roomTemp);
         }
 
-        uint8_t get_mode(uint8_t flags) const;
-        uint8_t get_mode_type(uint8_t flags) const;
+        uint8_t get_mode(uint8_t model) const;
+        uint8_t get_mode_type(uint8_t model) const;
 
-        enum Mode : uint8_t { UNKNOWN, OFF, MANUAL, AUTO, DAY, NIGHT, HEAT, NOFROST, ECO, HOLIDAY, COMFORT, OFFSET, DESIGN, SUMMER, FLOWOFFSET };
+        enum Mode : uint8_t {
+            UNKNOWN,
+            OFF,
+            MANUAL,
+            AUTO,
+            DAY,
+            NIGHT,
+            HEAT,
+            NOFROST,
+            ECO,
+            HOLIDAY,
+            COMFORT,
+            OFFSET,
+            DESIGN,
+            SUMMER,
+            FLOWOFFSET,
+            MINFLOW,
+            MAXFLOW,
+            ROOMINFLUENCE
+        };
 
         // for sorting based on hc number
         friend inline bool operator<(const std::shared_ptr<HeatingCircuit> & lhs, const std::shared_ptr<HeatingCircuit> & rhs) {
@@ -100,7 +125,6 @@ class Thermostat : public EMSdevice {
 
     static std::string mode_tostring(uint8_t mode);
 
-    virtual void show_values(uuid::console::Shell & shell);
     virtual void publish_values(JsonObject & json, bool force);
     virtual bool export_values(JsonObject & json);
     virtual void device_info_web(JsonArray & root);
@@ -121,9 +145,9 @@ class Thermostat : public EMSdevice {
         ha_registered_ = b;
     }
 
-    // specific thermostat characteristics, stripping the last 4 bits
+    // specific thermostat characteristics, stripping the top 4 bits
     inline uint8_t model() const {
-        return (this->flags() & 0x0F);
+        return (flags() & 0x0F);
     }
 
     // each thermostat has a list of heating controller type IDs for reading and writing
@@ -131,9 +155,10 @@ class Thermostat : public EMSdevice {
     std::vector<uint16_t> set_typeids;
     std::vector<uint16_t> timer_typeids;
     std::vector<uint16_t> summer_typeids;
+    std::vector<uint16_t> curve_typeids;
 
     std::string datetime_;  // date and time stamp
-    std::string errorCode_; // code as string i.e. "A22(816)"
+    std::string errorCode_; // code from 0xA2 as string i.e. "A22(816)"
 
     bool changed_       = false;
     bool ha_registered_ = false;
@@ -148,6 +173,7 @@ class Thermostat : public EMSdevice {
     uint8_t ibaClockOffset_       = EMS_VALUE_UINT_NOTSET; // offset (in sec) to clock, 0xff = -1 s, 0x02 = 2 s
 
     uint16_t errorNumber_        = EMS_VALUE_USHORT_NOTSET;
+    char     lastCode_[30]       = {'\0'};
     int8_t   dampedoutdoortemp_  = EMS_VALUE_INT_NOTSET;
     uint16_t tempsensor1_        = EMS_VALUE_USHORT_NOTSET;
     uint16_t tempsensor2_        = EMS_VALUE_USHORT_NOTSET;
@@ -158,6 +184,7 @@ class Thermostat : public EMSdevice {
     uint8_t wwExtra1_   = EMS_VALUE_UINT_NOTSET; // wwExtra active for wwSystem 1
     uint8_t wwExtra2_   = EMS_VALUE_UINT_NOTSET;
     uint8_t wwMode_     = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwCircPump_ = EMS_VALUE_UINT_NOTSET;
     uint8_t wwCircMode_ = EMS_VALUE_UINT_NOTSET;
     uint8_t wwTemp_     = EMS_VALUE_UINT_NOTSET;
     uint8_t wwTempLow_  = EMS_VALUE_UINT_NOTSET;
@@ -245,16 +272,18 @@ class Thermostat : public EMSdevice {
 
     void register_mqtt_ha_config();
     void register_mqtt_ha_config(uint8_t hc_num);
-    void ha_config(bool force = false);
+    bool ha_config(bool force = false);
     bool thermostat_ha_cmd(const char * message, uint8_t hc_num);
 
     void process_RCOutdoorTemp(std::shared_ptr<const Telegram> telegram);
     void process_IBASettings(std::shared_ptr<const Telegram> telegram);
     void process_RCTime(std::shared_ptr<const Telegram> telegram);
     void process_RCError(std::shared_ptr<const Telegram> telegram);
+    void process_RCErrorMessage(std::shared_ptr<const Telegram> telegram);
     void process_RC35wwSettings(std::shared_ptr<const Telegram> telegram);
     void process_RC35Monitor(std::shared_ptr<const Telegram> telegram);
     void process_RC35Set(std::shared_ptr<const Telegram> telegram);
+    void process_RC35Timer(std::shared_ptr<const Telegram> telegram);
     void process_RC30Monitor(std::shared_ptr<const Telegram> telegram);
     void process_RC30Set(std::shared_ptr<const Telegram> telegram);
     void process_RC20Monitor(std::shared_ptr<const Telegram> telegram);
@@ -273,6 +302,7 @@ class Thermostat : public EMSdevice {
     void process_RC300OutdoorTemp(std::shared_ptr<const Telegram> telegram);
     void process_RC300Settings(std::shared_ptr<const Telegram> telegram);
     void process_RC300Floordry(std::shared_ptr<const Telegram> telegram);
+    void process_RC300Curve(std::shared_ptr<const Telegram> telegram);
     void process_JunkersMonitor(std::shared_ptr<const Telegram> telegram);
     void process_JunkersSet(std::shared_ptr<const Telegram> telegram);
     void process_JunkersSet2(std::shared_ptr<const Telegram> telegram);
@@ -308,11 +338,18 @@ class Thermostat : public EMSdevice {
     bool set_remotetemp(const char * value, const int8_t id);
     bool set_roominfluence(const char * value, const int8_t id);
     bool set_flowtempoffset(const char * value, const int8_t id);
+    bool set_minflowtemp(const char * value, const int8_t id);
+    bool set_maxflowtemp(const char * value, const int8_t id);
+    bool set_roomtemp(const char * value, const int8_t id);
+    bool set_reducemode(const char * value, const int8_t id);
+    bool set_program(const char * value, const int8_t id);
+    bool set_controlmode(const char * value, const int8_t id);
 
     // set functions - these don't use the id/hc, the parameters are ignored
     bool set_wwmode(const char * value, const int8_t id);
     bool set_wwtemp(const char * value, const int8_t id);
     bool set_wwtemplow(const char * value, const int8_t id);
+    bool set_wwonetime(const char * value, const int8_t id);
     bool set_wwcircmode(const char * value, const int8_t id);
     bool set_datetime(const char * value, const int8_t id);
     bool set_minexttemp(const char * value, const int8_t id);

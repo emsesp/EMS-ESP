@@ -38,9 +38,7 @@
 
 using uuid::console::Shell;
 
-#define EMSESP_MAX_JSON_SIZE_SMALL 256  // for smaller json docs when using StaticJsonDocument
-#define EMSESP_MAX_JSON_SIZE_MEDIUM 768 // for smaller json docs from ems devices, when using StaticJsonDocument
-#define EMSESP_MAX_JSON_SIZE_LARGE 2048 // for large json docs from ems devices, like boiler or thermostat data. Using DynamicJsonDocument
+#define MQTT_HA_PUBLISH_DELAY 50
 
 namespace emsesp {
 
@@ -84,6 +82,8 @@ class Mqtt {
 
     static constexpr uint8_t MQTT_TOPIC_MAX_SIZE = 128; // note this should really match the user setting in mqttSettings.maxTopicLength
 
+    static void on_connect();
+
     static void subscribe(const uint8_t device_type, const std::string & topic, mqtt_subfunction_p cb);
     static void subscribe(const std::string & topic, mqtt_subfunction_p cb);
     static void resubscribe();
@@ -97,6 +97,8 @@ class Mqtt {
     static void publish_retain(const std::string & topic, const JsonObject & payload, bool retain);
     static void publish_retain(const __FlashStringHelper * topic, const std::string & payload, bool retain);
     static void publish_retain(const __FlashStringHelper * topic, const JsonObject & payload, bool retain);
+    static void publish_ha(const std::string & topic, const JsonObject & payload);
+    static void publish_ha(const __FlashStringHelper * topic, const JsonObject & payload);
 
     static void register_mqtt_ha_binary_sensor(const __FlashStringHelper * name, const uint8_t device_type, const char * entity);
     static void register_mqtt_ha_sensor(const char *                prefix,
@@ -111,16 +113,13 @@ class Mqtt {
     static void show_topic_handlers(uuid::console::Shell & shell, const uint8_t device_type);
     static void show_mqtt(uuid::console::Shell & shell);
 
-    static void on_connect();
     static void ha_status();
 
     void disconnect() {
         mqttClient_->disconnect();
     }
 
-#if defined(EMSESP_DEBUG)
     void incoming(const char * topic, const char * payload); // for testing only
-#endif
 
     static bool connected() {
 #if defined(EMSESP_STANDALONE)
@@ -171,11 +170,16 @@ class Mqtt {
     static std::list<QueuedMqttMessage> mqtt_messages_;
 
     static AsyncMqttClient * mqttClient_;
+    static uint16_t          mqtt_message_id_;
 
-    static size_t   maximum_mqtt_messages_;
-    static uint16_t mqtt_message_id_;
+#if defined(EMSESP_STANDALONE)
+    static constexpr size_t MAX_MQTT_MESSAGES = 70; // size of queue
+#elif defined(ESP32)
+    static constexpr size_t MAX_MQTT_MESSAGES = 100; // size of queue
+#else
+    static constexpr size_t MAX_MQTT_MESSAGES = 20; // size of queue
+#endif
 
-    static constexpr size_t   MAX_MQTT_MESSAGES      = 70;  // size of queue
     static constexpr uint32_t MQTT_PUBLISH_WAIT      = 200; // delay between sending publishes, to account for large payloads
     static constexpr uint8_t  MQTT_PUBLISH_MAX_RETRY = 3;   // max retries for giving up on publishing
 
@@ -186,8 +190,6 @@ class Mqtt {
     void on_publish(uint16_t packetId);
     void on_message(const char * topic, const char * payload, size_t len);
     void process_queue();
-
-    static uint16_t mqtt_publish_fails_;
 
     // function handlers for MQTT subscriptions
     struct MQTTSubFunction {
@@ -213,6 +215,11 @@ class Mqtt {
     uint32_t last_publish_mixer_      = 0;
     uint32_t last_publish_other_      = 0;
     uint32_t last_publish_sensor_     = 0;
+
+    static bool     connecting_;
+    static bool     initialized_;
+    static uint16_t mqtt_publish_fails_;
+    static uint8_t  connectcount_;
 
     // settings, copied over
     static std::string hostname_;

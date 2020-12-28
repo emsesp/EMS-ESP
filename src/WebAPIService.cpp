@@ -52,7 +52,7 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
     String cmd = request->getParam(F_(cmd))->value();
 
     // look up command in our list
-    if (!Command::find_command(device_type, cmd.c_str())) {
+    if (Command::find_command(device_type, cmd.c_str()) == nullptr) {
         request->send(400, "text/plain", F("Invalid cmd"));
         return;
     }
@@ -71,7 +71,7 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
         id = "-1";
     }
 
-    DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_LARGE);
+    DynamicJsonDocument doc(EMSESP_MAX_JSON_SIZE_LARGE_DYN);
     JsonObject          json = doc.to<JsonObject>();
     bool                ok   = false;
 
@@ -93,26 +93,25 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
     std::string debug(200, '\0');
     snprintf_P(&debug[0],
                debug.capacity() + 1,
-               PSTR("API: device=%s cmd=%s data=%s id=%s [%s]"),
+               PSTR("[DEBUG] API: device=%s cmd=%s data=%s id=%s [%s]"),
                device.c_str(),
                cmd.c_str(),
                data.c_str(),
                id.c_str(),
-               ok ? F("OK") : F("Invalid"));
-    EMSESP::logger().info(debug.c_str());
+               ok ? PSTR("OK") : PSTR("Invalid"));
+    EMSESP::logger().debug(debug.c_str());
     if (json.size()) {
-        char buffer2[EMSESP_MAX_JSON_SIZE_LARGE];
+        std::string buffer2;
         serializeJson(doc, buffer2);
-        EMSESP::logger().info("json (max 255 chars): %s", buffer2);
+        EMSESP::logger().debug("json (max 255 chars): %s", buffer2.c_str());
     }
 #endif
 
     // if we have returned data in JSON format, send this to the WEB
     if (json.size()) {
-        doc.shrinkToFit();
-        char buffer[EMSESP_MAX_JSON_SIZE_LARGE];
+        std::string buffer;
         serializeJsonPretty(doc, buffer);
-        request->send(200, "text/plain", buffer);
+        request->send(200, "text/plain", buffer.c_str());
     } else {
         request->send(200, "text/plain", ok ? F("OK") : F("Invalid"));
     }

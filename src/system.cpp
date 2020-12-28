@@ -21,6 +21,10 @@
 
 #include "version.h" // firmware version of EMS-ESP
 
+#if defined(EMSESP_TEST)
+#include "test/test.h"
+#endif
+
 namespace emsesp {
 
 uuid::log::Logger System::logger_{F_(system), uuid::log::Facility::KERN};
@@ -31,17 +35,22 @@ uuid::syslog::SyslogService System::syslog_;
 
 // init statics
 uint32_t    System::heap_start_     = 0;
-int         System::reset_counter_  = 0;
 bool        System::upload_status_  = false;
 bool        System::hide_led_       = false;
 uint8_t     System::led_gpio_       = 0;
 uint16_t    System::analog_         = 0;
 bool        System::analog_enabled_ = false;
+bool        System::syslog_enabled_ = false;
 std::string System::hostname_;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
+// http://ems-esp/api?device=system&cmd=pin&data=1&id=2
 bool System::command_pin(const char * value, const int8_t id) {
+    if (id < 0) {
+        return false;
+    }
+
     bool v = false;
     if (Helpers::value2bool(value, v)) {
         pinMode(id, OUTPUT);
@@ -53,15 +62,38 @@ bool System::command_pin(const char * value, const int8_t id) {
     return false;
 }
 
-// send raw
+// send raw to ems
 bool System::command_send(const char * value, const int8_t id) {
     EMSESP::send_raw_telegram(value); // ignore id
     return true;
 }
 
+// fetch device values
+bool System::command_fetch(const char * value, const int8_t id) {
+    LOG_INFO(F("Requesting data from EMS devices"));
+    EMSESP::fetch_device_values();
+    return true;
+}
+
+// mqtt publish
+bool System::command_publish(const char * value, const int8_t id) {
+    std::string ha(10, '\0');
+    if (Helpers::value2string(value, ha)) {
+        if (ha == "ha") {
+            EMSESP::publish_all(true); // includes HA
+            LOG_INFO(F("Publishing all data to MQTT, including HA configs"));
+            return true;
+        }
+    }
+
+    EMSESP::publish_all(); // ignore value and id
+    LOG_INFO(F("Publishing all data to MQTT"));
+    return true;
+}
+
 // restart EMS-ESP
 void System::restart() {
-    LOG_NOTICE("Restarting system...");
+    LOG_INFO(F("Restarting system..."));
     Shell::loop_all();
     delay(1000); // wait a second
 #if defined(ESP8266)
@@ -73,7 +105,7 @@ void System::restart() {
 
 // saves all settings
 void System::wifi_reconnect() {
-    LOG_NOTICE("The wifi will reconnect...");
+    LOG_INFO(F("The wifi will reconnect..."));
     Shell::loop_all();
     delay(1000);                                                                // wait a second
     EMSESP::webSettingsService.save();                                          // local settings
@@ -110,25 +142,42 @@ uint8_t System::free_mem() {
 }
 
 void System::syslog_init() {
+    int8_t   syslog_level_;
+    uint32_t syslog_mark_interval_;
+    String   syslog_host_;
+
     // fetch settings
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
+        syslog_enabled_       = settings.syslog_enabled;
         syslog_level_         = settings.syslog_level;
         syslog_mark_interval_ = settings.syslog_mark_interval;
         syslog_host_          = settings.syslog_host;
     });
 
 #ifndef EMSESP_STANDALONE
-    syslog_.start(); // syslog service re-start
 
-    // configure syslog
+    // check for empty hostname
     IPAddress addr;
     if (!addr.fromString(syslog_host_.c_str())) {
-        addr = (uint32_t)0;
+        syslog_enabled_ = false;
     }
+
+    // in case service is still running, this flushes the queue - https://github.com/proddy/EMS-ESP/issues/496
+    if (!syslog_enabled_) {
+        syslog_.log_level((uuid::log::Level)-1);
+        syslog_.mark_interval(0);
+        syslog_.destination((IPAddress)((uint32_t)0));
+        return;
+    }
+
+    // start & configure syslog
+    syslog_.start();
     syslog_.log_level((uuid::log::Level)syslog_level_);
     syslog_.mark_interval(syslog_mark_interval_);
     syslog_.destination(addr);
     EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & wifiSettings) { syslog_.hostname(wifiSettings.hostname.c_str()); });
+
+    EMSESP::logger().info(F("Syslog started"));
 #endif
 }
 
@@ -151,24 +200,34 @@ void System::start() {
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
         Command::add(EMSdevice::DeviceType::SYSTEM, settings.ems_bus_id, F_(pin), System::command_pin);
         Command::add(EMSdevice::DeviceType::SYSTEM, settings.ems_bus_id, F_(send), System::command_send);
+        Command::add(EMSdevice::DeviceType::SYSTEM, settings.ems_bus_id, F_(publish), System::command_publish);
+        Command::add(EMSdevice::DeviceType::SYSTEM, settings.ems_bus_id, F_(fetch), System::command_fetch);
         Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(info), System::command_info);
-        Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(report), System::command_report);
-    });
+        Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(settings), System::command_settings);
 
-    syslog_init(); // init SysLog
+#if defined(EMSESP_TEST)
+        Command::add(EMSdevice::DeviceType::SYSTEM, settings.ems_bus_id, F_(test), System::command_test);
+#endif
+    });
 
     init();
 }
 
-// init stuff. This is called when settings are changed in the web
-void System::init() {
-    set_led(); // init LED
-
+void System::other_init() {
     // set the boolean format used for rendering booleans
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
         Helpers::bool_format(settings.bool_format);
         analog_enabled_ = settings.analog_enabled;
     });
+}
+
+// init stuff. This is called when settings are changed in the web
+void System::init() {
+    led_init(); // init LED
+
+    other_init();
+
+    syslog_init(); // init SysLog
 
     EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & settings) { hostname(settings.hostname.c_str()); });
 
@@ -176,7 +235,7 @@ void System::init() {
 }
 
 // set the LED to on or off when in normal operating mode
-void System::set_led() {
+void System::led_init() {
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
         hide_led_ = settings.hide_led;
         led_gpio_ = settings.led_gpio;
@@ -207,8 +266,11 @@ void System::upload_status(bool in_progress) {
 // checks system health and handles LED flashing wizardry
 void System::loop() {
 #ifndef EMSESP_STANDALONE
-    syslog_.loop();
-#endif
+
+    if (syslog_enabled_) {
+        syslog_.loop();
+    }
+
     led_monitor();  // check status and report back using the LED
     system_check(); // check system health
     if (analog_enabled_) {
@@ -231,6 +293,8 @@ void System::loop() {
     }
 #endif
 #endif
+
+#endif
 }
 
 void System::show_mem(const char * note) {
@@ -244,7 +308,7 @@ void System::show_mem(const char * note) {
 // send periodic MQTT message with system information
 void System::send_heartbeat() {
     // don't send heartbeat if WiFi is not connected
-    int rssi = wifi_quality();
+    int8_t rssi = wifi_quality();
     if (rssi == -1) {
         return;
     }
@@ -259,11 +323,11 @@ void System::send_heartbeat() {
 
     uint8_t ems_status = EMSESP::bus_status();
     if (ems_status == EMSESP::BUS_STATUS_TX_ERRORS) {
-        doc["status"] = "txerror";
+        doc["status"] = FJSON("txerror");
     } else if (ems_status == EMSESP::BUS_STATUS_CONNECTED) {
-        doc["status"] = "connected";
+        doc["status"] = FJSON("connected");
     } else {
-        doc["status"] = "disconnected";
+        doc["status"] = FJSON("disconnected");
     }
 
     doc["rssi"]       = rssi;
@@ -331,9 +395,11 @@ void System::system_check() {
 
         // not healthy if bus not connected
         if (!EMSbus::bus_connected()) {
+            if (system_healthy_) {
+                LOG_ERROR(F("Error: No connection to the EMS bus"));
+            }
             system_healthy_ = false;
             set_led_speed(LED_WARNING_BLINK); // flash every 1/2 second from now on
-            // LOG_ERROR(F("Error: No connection to the EMS bus"));
         } else {
             // if it was unhealthy but now we're better, make sure the LED is solid again cos we've been healed
             if (!system_healthy_) {
@@ -370,21 +436,22 @@ void System::led_monitor() {
 //  Low quality: 30% ~= -85dBm
 //  Unusable quality: 8% ~= -96dBm
 int8_t System::wifi_quality() {
-#ifndef EMSESP_STANDALONE
+#ifdef EMSESP_STANDALONE
+    return 100;
+#else
     if (WiFi.status() != WL_CONNECTED) {
         return -1;
     }
-    int dBm = WiFi.RSSI();
-#else
-    int8_t dBm = -70;
-#endif
+    int32_t dBm = WiFi.RSSI();
     if (dBm <= -100) {
         return 0;
     }
+
     if (dBm >= -50) {
         return 100;
     }
     return 2 * (dBm + 100);
+#endif
 }
 
 // print users to console
@@ -481,13 +548,18 @@ void System::show_system(uuid::console::Shell & shell) {
 
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
         shell.println();
-        shell.printfln(F("Syslog:"));
-        shell.print(F_(1space));
-        shell.printfln(F_(host_fmt), !settings.syslog_host.isEmpty() ? settings.syslog_host.c_str() : uuid::read_flash_string(F_(unset)).c_str());
-        shell.print(F_(1space));
-        shell.printfln(F_(log_level_fmt), uuid::log::format_level_lowercase(static_cast<uuid::log::Level>(settings.syslog_level)));
-        shell.print(F_(1space));
-        shell.printfln(F_(mark_interval_fmt), settings.syslog_mark_interval);
+
+        if (!settings.syslog_enabled) {
+            shell.printfln(F("Syslog: disabled"));
+        } else {
+            shell.printfln(F("Syslog:"));
+            shell.print(F_(1space));
+            shell.printfln(F_(host_fmt), !settings.syslog_host.isEmpty() ? settings.syslog_host.c_str() : uuid::read_flash_string(F_(unset)).c_str());
+            shell.print(F_(1space));
+            shell.printfln(F_(log_level_fmt), uuid::log::format_level_lowercase(static_cast<uuid::log::Level>(settings.syslog_level)));
+            shell.print(F_(1space));
+            shell.printfln(F_(mark_interval_fmt), settings.syslog_mark_interval);
+        }
     });
 
 #endif
@@ -652,7 +724,7 @@ bool System::check_upgrade() {
     l_cfg.setAutoFormat(false);
     LittleFS.setConfig(l_cfg); // do not auto format if it can't find LittleFS
     if (LittleFS.begin()) {
-#if defined(EMSESP_DEBUG)
+#if defined(EMSESP_FORCE_SERIAL)
         Serial.begin(115200);
         Serial.println(F("FS is Littlefs"));
         Serial.end();
@@ -667,7 +739,7 @@ bool System::check_upgrade() {
     cfg.setAutoFormat(false); // prevent formatting when opening SPIFFS filesystem
     SPIFFS.setConfig(cfg);
     if (!SPIFFS.begin()) {
-#if defined(EMSESP_DEBUG)
+#if defined(EMSESP_FORCE_SERIAL)
         Serial.begin(115200);
         Serial.println(F("No old SPIFFS found!"));
         Serial.end();
@@ -680,10 +752,10 @@ bool System::check_upgrade() {
 
     Serial.begin(115200);
 
-    bool                     failed = false;
-    File                     file;
-    JsonObject               network, general, mqtt, custom_settings;
-    StaticJsonDocument<1024> doc;
+    bool                                           failed = false;
+    File                                           file;
+    JsonObject                                     network, general, mqtt, custom_settings;
+    StaticJsonDocument<EMSESP_MAX_JSON_SIZE_LARGE> doc;
 
     // open the system settings:
     // {
@@ -766,9 +838,7 @@ bool System::check_upgrade() {
     file.close();
 
     if (failed) {
-#if defined(EMSESP_DEBUG)
         Serial.println(F("Failed to read system config. Quitting."));
-#endif
         SPIFFS.end();
         Serial.end();
         return false;
@@ -791,10 +861,6 @@ bool System::check_upgrade() {
             Serial.printf(PSTR("Error. Failed to deserialize custom json, error %s\n"), error.c_str());
             failed = true;
         } else {
-#if defined(EMSESP_DEBUG)
-            serializeJson(doc, Serial);
-            Serial.println();
-#endif
             custom_settings = doc["settings"];
             EMSESP::webSettingsService.update(
                 [&](WebSettings & settings) {
@@ -803,6 +869,7 @@ bool System::check_upgrade() {
                     settings.shower_timer         = custom_settings["shower_timer"] | EMSESP_DEFAULT_SHOWER_TIMER;
                     settings.master_thermostat    = custom_settings["master_thermostat"] | EMSESP_DEFAULT_MASTER_THERMOSTAT;
                     settings.ems_bus_id           = custom_settings["bus_id"] | EMSESP_DEFAULT_EMS_BUS_ID;
+                    settings.syslog_enabled       = false;
                     settings.syslog_host          = EMSESP_DEFAULT_SYSLOG_HOST;
                     settings.syslog_level         = EMSESP_DEFAULT_SYSLOG_LEVEL;
                     settings.syslog_mark_interval = EMSESP_DEFAULT_SYSLOG_MARK_INTERVAL;
@@ -821,9 +888,7 @@ bool System::check_upgrade() {
     SPIFFS.end();
 
     if (failed) {
-#if defined(EMSESP_DEBUG)
         Serial.println(F("Failed to read custom config. Quitting."));
-#endif
         Serial.end();
         return false;
     }
@@ -843,9 +908,9 @@ bool System::check_upgrade() {
 }
 
 // export all settings to JSON text
-// http://ems-esp/api?device=system&cmd=info
+// http://ems-esp/api?device=system&cmd=settings
 // value and id are ignored
-bool System::command_info(const char * value, const int8_t id, JsonObject & json) {
+bool System::command_settings(const char * value, const int8_t id, JsonObject & json) {
 #ifdef EMSESP_STANDALONE
     json["test"] = "testing system info command";
 #else
@@ -918,6 +983,7 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
         JsonObject node              = json.createNestedObject("Settings");
         node["tx_mode"]              = settings.tx_mode;
         node["ems_bus_id"]           = settings.ems_bus_id;
+        node["syslog_enabled"]       = Helpers::render_boolean(s, settings.syslog_enabled);
         node["syslog_level"]         = settings.syslog_level;
         node["syslog_mark_interval"] = settings.syslog_mark_interval;
         node["syslog_host"]          = settings.syslog_host;
@@ -939,9 +1005,9 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
     return true;
 }
 
-// export debug information
-// http://ems-esp/api?device=system&cmd=report
-bool System::command_report(const char * value, const int8_t id, JsonObject & json) {
+// export status information including some basic settings
+// http://ems-esp/api?device=system&cmd=info
+bool System::command_info(const char * value, const int8_t id, JsonObject & json) {
     JsonObject node;
 
     node = json.createNestedObject("System");
@@ -1029,5 +1095,13 @@ bool System::command_report(const char * value, const int8_t id, JsonObject & js
 
     return true;
 }
+
+#if defined(EMSESP_TEST)
+// run a test
+// e.g. http://ems-esp/api?device=system&cmd=test&data=boiler
+bool System::command_test(const char * value, const int8_t id) {
+    return (Test::run_test(value, id));
+}
+#endif
 
 } // namespace emsesp

@@ -61,12 +61,12 @@ void Shell::start() {
     uuid::log::Logger::register_handler(this, uuid::log::Level::DEBUG); // added by proddy
     //uuid::log::Logger::register_handler(this, uuid::log::Level::INFO); // added by proddy
 #else
-    uuid::log::Logger::register_handler(this, uuid::log::Level::NOTICE);
+    uuid::log::Logger::register_handler(this, uuid::log::Level::INFO);
 #endif
 
     line_buffer_.reserve(maximum_command_line_length_);
-    oldline_.reserve(maximum_command_line_length_);
-    oldline_.clear();
+    line_old_.reserve(maximum_command_line_length_);
+    line_old_.clear();
     display_banner();
     display_prompt();
     shells_.insert(shared_from_this());
@@ -133,6 +133,14 @@ void Shell::loop_one() {
     }
 }
 
+void Shell::set_command_str(const __FlashStringHelper * str) {
+    line_buffer_ = read_flash_string(str);
+    erase_current_line();
+    prompt_displayed_ = false;
+    display_prompt();
+    process_command();
+}
+
 void Shell::loop_normal() {
     const int input = read_one_char();
 
@@ -148,8 +156,7 @@ void Shell::loop_normal() {
         // Interrupt (^C)
         line_buffer_.clear();
         println();
-        prompt_displayed_ = false;
-        display_prompt();
+        cursor_ = 0;
         break;
 
     case '\x04':
@@ -160,51 +167,38 @@ void Shell::loop_normal() {
         break;
 
     case '\x08':
-    case '\x7F':
         // Backspace (^H)
-        // Delete (^?)
-        if (!line_buffer_.empty()) {
-            erase_characters(1);
-            line_buffer_.pop_back();
+    case '\x7F':
+        // Del/Backspace (^?)
+        if (line_buffer_.length() > cursor_) {
+            line_buffer_.erase(line_buffer_.length() - cursor_ - 1, 1);
         }
         break;
 
     case '\x09':
         // Tab (^I)
         process_completion();
+        cursor_ = 0;
         break;
 
     case '\x0A':
         // Line feed (^J)
         if (previous_ != '\x0D') {
-            if (!line_buffer_.empty()) {
-                oldline_ = line_buffer_;
-            }
             process_command();
         }
         break;
 
-    case '\x0C':
-        // New page (^L)
-        erase_current_line();
-        prompt_displayed_ = false;
-        display_prompt();
-        break;
-
     case '\x0D':
-        if (!line_buffer_.empty()) {
-            oldline_ = line_buffer_;
-        }
         // Carriage return (^M)
         process_command();
         break;
 
+    case '\x0C':
+        // New page (^L)
     case '\x15':
         // Delete line (^U)
-        erase_current_line();
-        prompt_displayed_ = false;
         line_buffer_.clear();
-        display_prompt();
+        cursor_ = 0;
         break;
 
     case '\x17':
@@ -212,49 +206,90 @@ void Shell::loop_normal() {
         delete_buffer_word(true);
         break;
 
+    case '\033':
+        // esc
+        esc_ = 0x80;
+        break;
+
     default:
-        if (c >= '\x20' && c <= '\x7E') {
-            // ASCII text
-            if (line_buffer_.length() < maximum_command_line_length_) {
-                line_buffer_.push_back(c);
-                write((uint8_t)c);
-            }
-            // cursor up, get last command
-            if ((c == 'A') && (previous_ == '[')) {
-                erase_current_line();
-                prompt_displayed_ = false;
-                line_buffer_ = oldline_;
-                display_prompt();
-            }
-            // cursor back, delete cursor chars
-            if ((c == 'D') && (previous_ == '[')) {
-                line_buffer_.pop_back();
-                line_buffer_.pop_back();
-                // alternative work as backspace
-                // if (line_buffer_.length() > 0) {
-                //     line_buffer_.pop_back();
-                // }
-                erase_current_line();
-                prompt_displayed_ = false;
-                display_prompt();
-            }
-            // cursor forward, only delete cursor chars
-            if ((c == 'C') && (previous_ == '[')) {
-                line_buffer_.pop_back();
-                line_buffer_.pop_back();
-                erase_current_line();
-                prompt_displayed_ = false;
-                display_prompt();
-            }
-            // cursor down(B): Delete line
-            if ((c == 'B') && (previous_ == '[')) {
-                erase_current_line();
-                prompt_displayed_ = false;
+        if (esc_) {
+            if (c == 'A') { // cursor up
+                line_buffer_ = line_old_;
+                cursor_      = 0;
+            } else if (c == 'B') { // cursor down
                 line_buffer_.clear();
-                display_prompt();
+                cursor_ = 0;
+            } else if (c == 'C') { // cursor  right
+                if (cursor_) {
+                    cursor_--;
+                }
+            } else if (c == 'D') { // cursor left
+                if (cursor_ < line_buffer_.length()) {
+                    cursor_++;
+                }
+            } else if (c == 'H') { // Home
+                cursor_ = line_buffer_.length();
+            } else if (c == 'F') { // End
+                cursor_ = 0;
+            } else if (c >= 'P' && c <= 'Z') { // F1 - F11, Linux, VT100
+                // set esc-number like ESCn~
+                esc_ = 11 + c - 'P';
+            }
+            if (c == '~' || (c >= 'P' && c <= 'Z')) { // function keys with number ESCn~
+                if ((esc_ == 3) && cursor_) {         // del
+                    cursor_--;
+                    line_buffer_.erase(line_buffer_.length() - cursor_ - 1, 1);
+                } else if (esc_ == 4) { // end
+                    cursor_ = 0;
+                } else if (esc_ == 1) { // pos1
+                    cursor_ = line_buffer_.length();
+                } else if (esc_ == 11) { // F1
+                    set_command_str(F("help"));
+                } else if (esc_ == 12) { // F2
+                    set_command_str(F("show"));
+                } else if (esc_ == 13) { // F3
+                    set_command_str(F("log notice"));
+                } else if (esc_ == 14) { // F4
+                    set_command_str(F("log info"));
+                } else if (esc_ == 15) { // F5
+                    set_command_str(F("log debug"));
+                } else if (esc_ == 17) { // F6
+                    set_command_str(F("watch off"));
+                } else if (esc_ == 18) { // F7
+                    set_command_str(F("watch on"));
+                } else if (esc_ == 19) { // F8
+                    set_command_str(F("watch raw"));
+                } else if (esc_ == 20) { // F9
+                    set_command_str(F("call system info"));
+                } else if (esc_ == 21) { // F10
+                    set_command_str(F("call system settings"));
+                } else if (esc_ == 23) { // F11
+                    line_buffer_ = read_flash_string(F("call send \"0B \""));
+                    cursor_      = 1;
+                } else if (esc_ == 24) { // F12
+                    set_command_str(F("log debug; watch raw"));
+                }
+                esc_ = 0;
+            } else if (c >= '0' && (c <= '9')) { // numbers
+                esc_ = (esc_ & 0x7F) * 10 + c - '0';
+            } else if ((c != '[') && (c != 'O')) { // all other chars except start of sequence
+                esc_ = 0;
+            }
+            // process normal ascii text
+        } else if (c >= '\x20' && c <= '\x7E') {
+            if (line_buffer_.length() < maximum_command_line_length_) {
+                line_buffer_.insert(line_buffer_.length() - cursor_, 1, c);
             }
         }
         break;
+    }
+
+    // common for all, display the complete line
+    erase_current_line();
+    prompt_displayed_ = false;
+    display_prompt();
+    if (cursor_) {
+        printf(F("\033[%dD"), cursor_);
     }
 
     previous_ = c;
@@ -360,9 +395,9 @@ void Shell::loop_delay() {
 
         function_copy(*this);
 
-        if (running()) {
-            display_prompt();
-        }
+        // if (running()) {
+        //     display_prompt();
+        // }
 
         idle_time_ = uuid::get_uptime_ms();
     }
@@ -390,9 +425,9 @@ void Shell::loop_blocking() {
             stop();
         }
 
-        if (running()) {
-            display_prompt();
-        }
+        // if (running()) {
+        //     display_prompt();
+        // }
 
         idle_time_ = uuid::get_uptime_ms();
     }
@@ -428,16 +463,24 @@ void Shell::delete_buffer_word(bool display) {
 
     if (pos == std::string::npos) {
         line_buffer_.clear();
-        if (display) {
-            erase_current_line();
-            prompt_displayed_ = false;
-            display_prompt();
-        }
+        cursor_ = 0;
     } else {
         if (display) {
-            erase_characters(line_buffer_.length() - pos);
+            size_t pos1 = 0;
+            pos         = 0;
+            while (pos1 < line_buffer_.length() - cursor_) {
+                pos  = pos1;
+                pos1 = line_buffer_.find(' ', pos + 1);
+            }
+            line_buffer_.erase(pos, pos1 - pos);
+            if (line_buffer_.find(' ') == 0) {
+                line_buffer_.erase(0, 1);
+            }
+            cursor_ = line_buffer_.length() - pos;
+        } else {
+            line_buffer_.resize(pos);
+            cursor_ = 0;
         }
-        line_buffer_.resize(pos);
     }
 }
 
@@ -451,28 +494,42 @@ void Shell::maximum_command_line_length(size_t length) {
 }
 
 void Shell::process_command() {
-    CommandLine command_line{line_buffer_};
-
-    line_buffer_.clear();
-    println();
-    prompt_displayed_ = false;
-
-    if (!command_line->empty()) {
-        if (commands_) {
-            auto execution = commands_->execute_command(*this, std::move(command_line));
-
-            if (execution.error != nullptr) {
-                println(execution.error);
-            }
+    if (line_buffer_.empty()) {
+        println();
+        return;
+    }
+    line_old_ = line_buffer_;
+    while (!line_buffer_.empty()) {
+        size_t      pos = line_buffer_.find(';');
+        std::string line1;
+        if (pos < line_buffer_.length()) {
+            line1 = line_buffer_.substr(0, pos);
+            line_buffer_.erase(0, pos + 1);
         } else {
-            println(F("No commands configured"));
+            line1 = line_buffer_;
+            line_buffer_.clear();
+            cursor_ = 0;
         }
-    }
+        CommandLine command_line{line1};
 
-    if (running()) {
-        display_prompt();
+        println();
+        prompt_displayed_ = false;
+
+        if (!command_line->empty()) {
+            if (commands_) {
+                auto execution = commands_->execute_command(*this, std::move(command_line));
+                if (execution.error != nullptr) {
+                    println(execution.error);
+                }
+            } else {
+                println(F("No commands configured"));
+            }
+        }
+        ::yield();
     }
-    ::yield();
+    // if (running()) {
+    //     display_prompt();
+    // }
 }
 
 void Shell::process_completion() {
@@ -480,11 +537,9 @@ void Shell::process_completion() {
 
     if (!command_line->empty() && commands_) {
         auto completion = commands_->complete_command(*this, command_line);
-        bool redisplay  = false;
 
         if (!completion.help.empty()) {
             println();
-            redisplay = true;
 
             for (auto & help : completion.help) {
                 std::string help_line = help.to_string(maximum_command_line_length_);
@@ -494,17 +549,7 @@ void Shell::process_completion() {
         }
 
         if (!completion.replacement->empty()) {
-            if (!redisplay) {
-                erase_current_line();
-                prompt_displayed_ = false;
-                redisplay         = true;
-            }
-
             line_buffer_ = completion.replacement.to_string(maximum_command_line_length_);
-        }
-
-        if (redisplay) {
-            display_prompt();
         }
     }
 
@@ -523,21 +568,16 @@ void Shell::process_password(bool completed) {
     function_copy(*this, completed, line_buffer_);
     line_buffer_.clear();
 
-    if (running()) {
-        display_prompt();
-    }
+    // if (running()) {
+    //     display_prompt();
+    // }
 }
 
 void Shell::invoke_command(const std::string & line) {
-    if (!line_buffer_.empty()) {
-        println();
-        prompt_displayed_ = false;
-    }
-    if (!prompt_displayed_) {
-        display_prompt();
-    }
-    line_buffer_ = line;
-    print(line_buffer_);
+    erase_current_line();
+    prompt_displayed_ = false;
+    line_buffer_      = line;
+    display_prompt();
     process_command();
 }
 

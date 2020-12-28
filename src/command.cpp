@@ -29,69 +29,105 @@ std::vector<Command::CmdFunction> Command::cmdfunctions_;
 // calls a command, context is the device_type
 // id may be used to represent a heating circuit for example
 // returns false if error or not found
-bool Command::call(const uint8_t device_type, const char * cmd, const char * value, const int8_t id, JsonObject & json) {
+bool Command::call(const uint8_t device_type, const char * cmd, const char * value, const int8_t id) {
+    auto cf = find_command(device_type, cmd);
+    if ((cf == nullptr) || (cf->cmdfunction_json_)) {
+        LOG_WARNING(F("Command %s not found"), cmd);
+        return false; // command not found, or requires a json
+    }
+
 #ifdef EMSESP_DEBUG
     std::string dname = EMSdevice::device_type_2_device_name(device_type);
     if (value == nullptr) {
-        LOG_DEBUG(F("[DEBUG] Calling command %s in %s"), cmd, dname.c_str());
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s"), dname.c_str(), cmd);
     } else if (id == -1) {
-        LOG_DEBUG(F("[DEBUG] Calling command %s, value %s, id is default in %s"), cmd, value, dname.c_str());
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s, value %s, id is default"), dname.c_str(), cmd, value);
     } else {
-        LOG_DEBUG(F("[DEBUG] Calling command %s, value %s, id is %d in %s"), cmd, value, id, dname.c_str());
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s, value %s, id is %d"), dname.c_str(), cmd, value, id);
     }
 #endif
-    bool ok = false;
-    if (!cmdfunctions_.empty()) {
-        for (const auto & cf : cmdfunctions_) {
-            if (cf.device_type_ == device_type) {
-                // find a matching command and call it
-                if (uuid::read_flash_string(cf.cmd_) == cmd) {
-                    if (cf.cmdfunction_json_) {
-                        // check if json object is empty, if so quit
-                        if (json.isNull()) {
-                            LOG_WARNING(F("Ignore call for command %s in %s because no json"), cmd, EMSdevice::device_type_2_device_name(device_type).c_str());
-                            return false;
-                        }
-                        ok |= ((cf.cmdfunction_json_)(value, id, json));
-                    } else {
-                        ok |= ((cf.cmdfunction_)(value, id));
-                    }
-                }
-            }
-        }
+
+    return ((cf->cmdfunction_)(value, id));
+}
+
+// calls a command, context is the device_type. Takes a json object for output.
+// id may be used to represent a heating circuit for example
+// returns false if error or not found
+bool Command::call(const uint8_t device_type, const char * cmd, const char * value, const int8_t id, JsonObject & json) {
+    auto cf = find_command(device_type, cmd);
+    if (cf == nullptr) {
+        LOG_WARNING(F("Command %s not found"), cmd);
+        return false; // command not found or not json
     }
-    return ok;
+
+#ifdef EMSESP_DEBUG
+    std::string dname = EMSdevice::device_type_2_device_name(device_type);
+    if (value == nullptr) {
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s"), dname.c_str(), cmd);
+    } else if (id == -1) {
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s, value %s, id is default"), dname.c_str(), cmd, value);
+    } else {
+        LOG_DEBUG(F("[DEBUG] Calling %s command %s, value %s, id is %d"), dname.c_str(), cmd, value, id);
+    }
+#endif
+
+    // check if json object is empty, if so quit
+    if (json.isNull()) {
+        LOG_WARNING(F("Ignore call for command %s in %s because no json"), cmd, EMSdevice::device_type_2_device_name(device_type).c_str());
+        return false;
+    }
+
+    if (!cf->cmdfunction_json_) {
+        return ((cf->cmdfunction_)(value, id));
+    } else {
+        return ((cf->cmdfunction_json_)(value, id, json));
+    }
 }
 
 // add a command to the list, which does not return json
 void Command::add(const uint8_t device_type, const uint8_t device_id, const __FlashStringHelper * cmd, cmdfunction_p cb) {
+    // if the command already exists for that device type don't add it
+    if (find_command(device_type, uuid::read_flash_string(cmd).c_str()) != nullptr) {
+        return;
+    }
     cmdfunctions_.emplace_back(device_type, cmd, cb, nullptr);
 
     // see if we need to subscribe
-    Mqtt::register_command(device_type, device_id, cmd, cb);
+    if (Mqtt::enabled()) {
+        Mqtt::register_command(device_type, device_id, cmd, cb);
+    }
 }
 
 // add a command to the list, which does return json object as output
 void Command::add_with_json(const uint8_t device_type, const __FlashStringHelper * cmd, cmdfunction_json_p cb) {
     // if the command already exists for that device type don't add it
-    if (!find_command(device_type, uuid::read_flash_string(cmd).c_str())) {
-        cmdfunctions_.emplace_back(device_type, cmd, nullptr, cb);
+    if (find_command(device_type, uuid::read_flash_string(cmd).c_str()) != nullptr) {
+        return;
     }
+
+    cmdfunctions_.emplace_back(device_type, cmd, nullptr, cb); // add command
 }
 
 // see if a command exists for that device type
-bool Command::find_command(const uint8_t device_type, const char * cmd) {
-    if ((cmd == nullptr) || (strlen(cmd) == 0)) {
-        return false;
+Command::CmdFunction * Command::find_command(const uint8_t device_type, const char * cmd) {
+    if ((cmd == nullptr) || (strlen(cmd) == 0) || (cmdfunctions_.empty())) {
+        return nullptr;
     }
 
-    for (const auto & cf : cmdfunctions_) {
-        if (!strcmp_P(cmd, reinterpret_cast<PGM_P>(cf.cmd_)) && (cf.device_type_ == device_type)) {
-            return true;
+    // convert cmd to lowercase and compare
+    char lowerCmd[20];
+    strlcpy(lowerCmd, cmd, sizeof(lowerCmd));
+    for (char * p = lowerCmd; *p; p++) {
+        *p = tolower(*p);
+    }
+
+    for (auto & cf : cmdfunctions_) {
+        if (!strcmp_P(lowerCmd, reinterpret_cast<PGM_P>(cf.cmd_)) && (cf.device_type_ == device_type)) {
+            return &cf;
         }
     }
 
-    return false; // not found
+    return nullptr; // command not found
 }
 
 // output list of all commands to console for a specific DeviceType

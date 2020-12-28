@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(EMSESP_DEBUG)
+#if defined(EMSESP_TEST)
 
 #ifndef EMSESP_TEST_H
 #define EMSESP_TEST_H
@@ -38,14 +38,18 @@
 
 namespace emsesp {
 
+#define EMSESP_TEST_DEFAULT "boiler"
+
 class Test {
   public:
-    static void run_test(uuid::console::Shell & shell, const std::string & command); // only for testing
+    static void run_test(uuid::console::Shell & shell, const std::string & command);
+    static bool run_test(const char * command, int8_t id = 0);
     static void dummy_mqtt_commands(const char * message);
     static void rx_telegram(const std::vector<uint8_t> & data);
     static void uart_telegram(const std::vector<uint8_t> & rx_data);
     static void uart_telegram(const char * rx_data);
     static void uart_telegram_withCRC(const char * rx_data);
+    static void add_device(uint8_t device_id, uint8_t product_id);
 };
 
 } // namespace emsesp

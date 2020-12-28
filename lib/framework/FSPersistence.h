@@ -11,7 +11,7 @@ class FSPersistence {
                   JsonStateUpdater<T>  stateUpdater,
                   StatefulService<T> * statefulService,
                   FS *                 fs,
-                  char const *         filePath,
+                  const char *         filePath,
                   size_t               bufferSize = DEFAULT_BUFFER_SIZE)
         : _stateReader(stateReader)
         , _stateUpdater(stateUpdater)
@@ -33,10 +33,12 @@ class FSPersistence {
                 jsonDocument.shrinkToFit(); // added by proddy
                 JsonObject jsonObject = jsonDocument.as<JsonObject>();
 
-                // debug added by Proddy
-                // Serial.printf("Read File: %s: ", _filePath);
-                // serializeJson(jsonDocument, Serial);
-                // Serial.println();
+// debug added by Proddy
+#if defined(EMSESP_FORCE_SERIAL)
+                Serial.printf("Read File: %s: ", _filePath);
+                serializeJson(jsonDocument, Serial);
+                Serial.println();
+#endif
 
                 _statefulService->updateWithoutPropagation(jsonObject, _stateUpdater);
                 settingsFile.close();
@@ -65,7 +67,7 @@ class FSPersistence {
         }
 
 // debug added by Proddy
-#if defined(EMSESP_DEBUG)
+#if defined(EMSESP_FORCE_SERIAL)
         Serial.printf("Write File: %s: ", _filePath);
         serializeJson(jsonDocument, Serial);
         Serial.println();
@@ -95,7 +97,7 @@ class FSPersistence {
     JsonStateUpdater<T>  _stateUpdater;
     StatefulService<T> * _statefulService;
     FS *                 _fs;
-    char const *         _filePath;
+    const char *         _filePath;
     size_t               _bufferSize;
     update_handler_id_t  _updateHandlerId;
 
