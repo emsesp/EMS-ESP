@@ -130,7 +130,7 @@ uint8_t EMSESP::check_master_device(const uint8_t device_id, const uint16_t type
             }
         }
         // look for ids that are only handled by master
-        for (uint8_t i = 0; i < sizeof(master_ids); i++) {
+        for (uint8_t i = 0; i < sizeof(master_ids) / 2; i++) {
             if (type_id == master_ids[i]) {
                 return 0x18;
             }
