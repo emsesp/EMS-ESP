@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - prevent MQTT publish messages from sending twice
 - repeated output on read commands
 - heating_active for ems+
+- fix telegrams matched to masterthermostat 0x18
 
 ### Changed
 - optimized MQTT for HA to reduce heap fragmentation issues
