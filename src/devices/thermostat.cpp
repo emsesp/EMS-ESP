@@ -964,7 +964,7 @@ void Thermostat::register_mqtt_ha_config(uint8_t hc_num) {
     Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(mode), device_type(), "mode", nullptr, nullptr);
 
     Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(seltemp), device_type(), "seltemp", F_(degrees), F_(icontemperature));
-    Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F("hatemp"), device_type(), "hatemp", F_(degrees), F_(icontemperature));
+    Mqtt::register_mqtt_ha_sensor(hc_name, nullptr, F_(currtemp), device_type(), "hatemp", F_(degrees), F_(icontemperature));
 
     switch (model()) {
     case EMS_DEVICE_FLAG_RC100:
