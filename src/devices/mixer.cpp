@@ -56,7 +56,7 @@ Mixer::Mixer(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
 }
 
 // output json to web UI
-void Mixer::device_info_web(JsonArray & root) {
+void Mixer::device_info_web(JsonArray & root, uint8_t & part) {
     if (type() == Type::NONE) {
         return; // don't have any values yet
     }

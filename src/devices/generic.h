@@ -37,7 +37,7 @@ class Generic : public EMSdevice {
 
     virtual void publish_values(JsonObject & json, bool force);
     virtual bool export_values(JsonObject & json);
-    virtual void device_info_web(JsonArray & root);
+    virtual void device_info_web(JsonArray & root, uint8_t & part);
     virtual bool updated_values();
 
   private:

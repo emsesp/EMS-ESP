@@ -36,7 +36,7 @@ Switch::Switch(uint8_t device_type, uint8_t device_id, uint8_t product_id, const
 }
 
 // fetch the values into a JSON document for display in the web
-void Switch::device_info_web(JsonArray & root) {
+void Switch::device_info_web(JsonArray & root, uint8_t & part) {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
     JsonObject                                     json = doc.to<JsonObject>();
     if (export_values(json)) {

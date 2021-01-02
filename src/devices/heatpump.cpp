@@ -47,7 +47,7 @@ bool Heatpump::export_values(JsonObject & json) {
     return json.size();
 }
 
-void Heatpump::device_info_web(JsonArray & root) {
+void Heatpump::device_info_web(JsonArray & root, uint8_t & part) {
     // fetch the values into a JSON document
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
     JsonObject                                     json = doc.to<JsonObject>();

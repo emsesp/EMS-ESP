@@ -62,7 +62,7 @@ Solar::Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
 }
 
 // print to web
-void Solar::device_info_web(JsonArray & root) {
+void Solar::device_info_web(JsonArray & root, uint8_t & part) {
     // fetch the values into a JSON document
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
     JsonObject                                      json = doc.to<JsonObject>();

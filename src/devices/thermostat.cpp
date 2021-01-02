@@ -187,70 +187,73 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
 }
 
 // prepare data for Web UI
-void Thermostat::device_info_web(JsonArray & root) {
+void Thermostat::device_info_web(JsonArray & root, uint8_t & part) {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_LARGE> doc;
-    JsonObject                                     json_main = doc.to<JsonObject>();
-    if (export_values_main(json_main)) {
-        create_value_json(root, F("time"), nullptr, F_(time), nullptr, json_main);
-        create_value_json(root, F("errorcode"), nullptr, F_(error), nullptr, json_main);
-        create_value_json(root, F("lastcode"), nullptr, F_(lastCode), nullptr, json_main);
-        create_value_json(root, F("display"), nullptr, F_(display), nullptr, json_main);
-        create_value_json(root, F("language"), nullptr, F_(language), nullptr, json_main);
-        create_value_json(root, F("offsetclock"), nullptr, F_(offsetclock), nullptr, json_main);
-        create_value_json(root, F("dampedtemp"), nullptr, F_(dampedtemp), F_(degrees), json_main);
-        create_value_json(root, F("inttemp1"), nullptr, F_(inttemp1), F_(degrees), json_main);
-        create_value_json(root, F("inttemp2"), nullptr, F_(inttemp2), F_(degrees), json_main);
-        create_value_json(root, F("intoffset"), nullptr, F_(intoffset), nullptr, json_main);
-        create_value_json(root, F("minexttemp"), nullptr, F_(minexttemp), F_(degrees), json_main);
-        create_value_json(root, F("building"), nullptr, F_(building), nullptr, json_main);
-        create_value_json(root, F("floordry"), nullptr, F_(floordry), nullptr, json_main);
-        create_value_json(root, F("floordrytemp"), nullptr, F_(floordrytemp), F_(degrees), json_main);
-        create_value_json(root, F("wwmode"), nullptr, F_(wwmode), nullptr, json_main);
-        create_value_json(root, F("wwtemp"), nullptr, F_(wwtemp), nullptr, json_main);
-        create_value_json(root, F("wwtemplow"), nullptr, F_(wwtemplow), nullptr, json_main);
-        create_value_json(root, F("wwextra1"), nullptr, F_(wwextra1), nullptr, json_main);
-        create_value_json(root, F("wwcircmode"), nullptr, F_(wwcircmode), nullptr, json_main);
-    }
-    doc.clear();
-    JsonObject json_hc = doc.to<JsonObject>();
+    if (part == 0) {
+        JsonObject json_main = doc.to<JsonObject>();
+        if (export_values_main(json_main)) {
+            create_value_json(root, F("time"), nullptr, F_(time), nullptr, json_main);
+            create_value_json(root, F("errorcode"), nullptr, F_(error), nullptr, json_main);
+            create_value_json(root, F("lastcode"), nullptr, F_(lastCode), nullptr, json_main);
+            create_value_json(root, F("display"), nullptr, F_(display), nullptr, json_main);
+            create_value_json(root, F("language"), nullptr, F_(language), nullptr, json_main);
+            create_value_json(root, F("offsetclock"), nullptr, F_(offsetclock), nullptr, json_main);
+            create_value_json(root, F("dampedtemp"), nullptr, F_(dampedtemp), F_(degrees), json_main);
+            create_value_json(root, F("inttemp1"), nullptr, F_(inttemp1), F_(degrees), json_main);
+            create_value_json(root, F("inttemp2"), nullptr, F_(inttemp2), F_(degrees), json_main);
+            create_value_json(root, F("intoffset"), nullptr, F_(intoffset), nullptr, json_main);
+            create_value_json(root, F("minexttemp"), nullptr, F_(minexttemp), F_(degrees), json_main);
+            create_value_json(root, F("building"), nullptr, F_(building), nullptr, json_main);
+            create_value_json(root, F("floordry"), nullptr, F_(floordry), nullptr, json_main);
+            create_value_json(root, F("floordrytemp"), nullptr, F_(floordrytemp), F_(degrees), json_main);
+            create_value_json(root, F("wwmode"), nullptr, F_(wwmode), nullptr, json_main);
+            create_value_json(root, F("wwtemp"), nullptr, F_(wwtemp), nullptr, json_main);
+            create_value_json(root, F("wwtemplow"), nullptr, F_(wwtemplow), nullptr, json_main);
+            create_value_json(root, F("wwextra1"), nullptr, F_(wwextra1), nullptr, json_main);
+            create_value_json(root, F("wwcircmode"), nullptr, F_(wwcircmode), nullptr, json_main);
+        }
+        part++;
+    } else if (part == 1) {
+       JsonObject json_hc = doc.to<JsonObject>();
+        if (export_values_hc(Mqtt::Format::NESTED, json_hc)) {
+            // display for each active heating circuit
+            for (const auto & hc : heating_circuits_) {
+                if (hc->is_active()) {
+                    char prefix_str[10];
+                    snprintf_P(prefix_str, sizeof(prefix_str), PSTR("hc%d"), hc->hc_num());
+                    JsonObject json = json_hc[prefix_str];
 
-    if (export_values_hc(Mqtt::Format::NESTED, json_hc)) {
-        // display for each active heating circuit
-        for (const auto & hc : heating_circuits_) {
-            if (hc->is_active()) {
-                char prefix_str[10];
-                snprintf_P(prefix_str, sizeof(prefix_str), PSTR("hc%d"), hc->hc_num());
-                JsonObject json = json_hc[prefix_str];
+                    snprintf_P(prefix_str, sizeof(prefix_str), PSTR("(hc %d) "), hc->hc_num());
 
-                snprintf_P(prefix_str, sizeof(prefix_str), PSTR("(hc %d) "), hc->hc_num());
-
-                create_value_json(root, F("seltemp"), FPSTR(prefix_str), F_(seltemp), F_(degrees), json);
-                create_value_json(root, F("currtemp"), FPSTR(prefix_str), F_(currtemp), F_(degrees), json);
-                create_value_json(root, F("heattemp"), FPSTR(prefix_str), F_(heattemp), F_(degrees), json);
-                create_value_json(root, F("comforttemp"), FPSTR(prefix_str), F_(comforttemp), F_(degrees), json);
-                create_value_json(root, F("daytemp"), FPSTR(prefix_str), F_(daytemp), F_(degrees), json);
-                create_value_json(root, F("ecotemp"), FPSTR(prefix_str), F_(ecotemp), F_(degrees), json);
-                create_value_json(root, F("nighttemp"), FPSTR(prefix_str), F_(nighttemp), F_(degrees), json);
-                create_value_json(root, F("manualtemp"), FPSTR(prefix_str), F_(manualtemp), F_(degrees), json);
-                create_value_json(root, F("holidaytemp"), FPSTR(prefix_str), F_(holidaytemp), F_(degrees), json);
-                create_value_json(root, F("nofrosttemp"), FPSTR(prefix_str), F_(nofrosttemp), F_(degrees), json);
-                create_value_json(root, F("heatingtype"), FPSTR(prefix_str), F_(heatingtype), nullptr, json);
-                create_value_json(root, F("targetflowtemp"), FPSTR(prefix_str), F_(targetflowtemp), F_(degrees), json);
-                create_value_json(root, F("offsettemp"), FPSTR(prefix_str), F_(offsettemp), F_(degrees), json);
-                create_value_json(root, F("designtemp"), FPSTR(prefix_str), F_(designtemp), F_(degrees), json);
-                create_value_json(root, F("roominfluence"), FPSTR(prefix_str), F_(roominfluence), F_(degrees), json);
-                create_value_json(root, F("flowtempoffset"), FPSTR(prefix_str), F_(flowtempoffset), F_(degrees), json);
-                create_value_json(root, F("minflowtemp"), FPSTR(prefix_str), F_(minflowtemp), F_(degrees), json);
-                create_value_json(root, F("maxflowtemp"), FPSTR(prefix_str), F_(maxflowtemp), F_(degrees), json);
-                create_value_json(root, F("summertemp"), FPSTR(prefix_str), F_(summertemp), F_(degrees), json);
-                create_value_json(root, F("summermode"), FPSTR(prefix_str), F_(summermode), F_(degrees), json);
-                create_value_json(root, F("reducemode"), FPSTR(prefix_str), F_(reducemode), nullptr, json);
-                create_value_json(root, F("program"), FPSTR(prefix_str), F_(program), nullptr, json);
-                create_value_json(root, F("controlmode"), FPSTR(prefix_str), F_(controlmode), nullptr, json);
-                create_value_json(root, F("mode"), FPSTR(prefix_str), F_(mode), nullptr, json);
-                create_value_json(root, F("modetype"), FPSTR(prefix_str), F_(modetype), nullptr, json);
+                    create_value_json(root, F("seltemp"), FPSTR(prefix_str), F_(seltemp), F_(degrees), json);
+                    create_value_json(root, F("currtemp"), FPSTR(prefix_str), F_(currtemp), F_(degrees), json);
+                    create_value_json(root, F("heattemp"), FPSTR(prefix_str), F_(heattemp), F_(degrees), json);
+                    create_value_json(root, F("comforttemp"), FPSTR(prefix_str), F_(comforttemp), F_(degrees), json);
+                    create_value_json(root, F("daytemp"), FPSTR(prefix_str), F_(daytemp), F_(degrees), json);
+                    create_value_json(root, F("ecotemp"), FPSTR(prefix_str), F_(ecotemp), F_(degrees), json);
+                    create_value_json(root, F("nighttemp"), FPSTR(prefix_str), F_(nighttemp), F_(degrees), json);
+                    create_value_json(root, F("manualtemp"), FPSTR(prefix_str), F_(manualtemp), F_(degrees), json);
+                    create_value_json(root, F("holidaytemp"), FPSTR(prefix_str), F_(holidaytemp), F_(degrees), json);
+                    create_value_json(root, F("nofrosttemp"), FPSTR(prefix_str), F_(nofrosttemp), F_(degrees), json);
+                    create_value_json(root, F("heatingtype"), FPSTR(prefix_str), F_(heatingtype), nullptr, json);
+                    create_value_json(root, F("targetflowtemp"), FPSTR(prefix_str), F_(targetflowtemp), F_(degrees), json);
+                    create_value_json(root, F("offsettemp"), FPSTR(prefix_str), F_(offsettemp), F_(degrees), json);
+                    create_value_json(root, F("designtemp"), FPSTR(prefix_str), F_(designtemp), F_(degrees), json);
+                    create_value_json(root, F("roominfluence"), FPSTR(prefix_str), F_(roominfluence), F_(degrees), json);
+                    create_value_json(root, F("flowtempoffset"), FPSTR(prefix_str), F_(flowtempoffset), F_(degrees), json);
+                    create_value_json(root, F("minflowtemp"), FPSTR(prefix_str), F_(minflowtemp), F_(degrees), json);
+                    create_value_json(root, F("maxflowtemp"), FPSTR(prefix_str), F_(maxflowtemp), F_(degrees), json);
+                    create_value_json(root, F("summertemp"), FPSTR(prefix_str), F_(summertemp), F_(degrees), json);
+                    create_value_json(root, F("summermode"), FPSTR(prefix_str), F_(summermode), F_(degrees), json);
+                    create_value_json(root, F("reducemode"), FPSTR(prefix_str), F_(reducemode), nullptr, json);
+                    create_value_json(root, F("program"), FPSTR(prefix_str), F_(program), nullptr, json);
+                    create_value_json(root, F("controlmode"), FPSTR(prefix_str), F_(controlmode), nullptr, json);
+                    create_value_json(root, F("mode"), FPSTR(prefix_str), F_(mode), nullptr, json);
+                    create_value_json(root, F("modetype"), FPSTR(prefix_str), F_(modetype), nullptr, json);
+                }
             }
         }
+        part = 0; // no more parts
     }
 }
 
@@ -1861,7 +1864,10 @@ bool Thermostat::set_holiday(const char * value, const int8_t id) {
         LOG_WARNING(F("Set holiday: Heating Circuit %d not found or activated for device ID 0x%02X"), hc_num, device_id());
         return false;
     }
-
+    if (hd.length() != 21 || hd[6] != '2' || hd[17] != '2') {
+        LOG_WARNING(F("Set holiday: Invalid value"));
+        return false;
+    }
     uint8_t data[6];
     data[0] = (hd[0] - '0') * 10 + (hd[1] - '0');
     data[1] = (hd[3] - '0') * 10 + (hd[4] - '0');

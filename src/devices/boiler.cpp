@@ -77,7 +77,6 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_mqtt_cmd(F("pumpmodmax"), [&](const char * value, const int8_t id) { return set_max_pump(value, id); });
     register_mqtt_cmd(F("pumpmodmin"), [&](const char * value, const int8_t id) { return set_min_pump(value, id); });
 
-
     EMSESP::send_read_request(0x10, device_id); // read last errorcode on start (only published on errors)
     EMSESP::send_read_request(0x11, device_id); // read last errorcode on start (only published on errors)
     EMSESP::send_read_request(0x15, device_id); // read maintenace data on start (only published on change)
@@ -214,114 +213,118 @@ void Boiler::register_mqtt_ha_config_ww() {
 }
 
 // send stuff to the Web UI
-void Boiler::device_info_web(JsonArray & root) {
+void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
     // fetch the values into a JSON document
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_LARGE> doc;
     JsonObject                                     json = doc.to<JsonObject>();
-    if (!export_values_main(json, true)) {
-        return; // empty
-    }
+    if (part == 0) {
+        if (!export_values_main(json, true)) {
+            return; // empty
+        }
 
-    create_value_json(root, F("heatingActive"), nullptr, F_(heatingActive), nullptr, json);
-    create_value_json(root, F("tapwaterActive"), nullptr, F_(tapwaterActive), nullptr, json);
-    create_value_json(root, F("serviceCode"), nullptr, F_(serviceCode), nullptr, json);
-    create_value_json(root, F("serviceCodeNumber"), nullptr, F_(serviceCodeNumber), nullptr, json);
-    create_value_json(root, F("lastCode"), nullptr, F_(lastCode), nullptr, json);
-    create_value_json(root, F("selFlowTemp"), nullptr, F_(selFlowTemp), F_(degrees), json);
-    create_value_json(root, F("selBurnPow"), nullptr, F_(selBurnPow), F_(percent), json);
-    create_value_json(root, F("curBurnPow"), nullptr, F_(curBurnPow), F_(percent), json);
-    create_value_json(root, F("pumpMod"), nullptr, F_(pumpMod), F_(percent), json);
-    create_value_json(root, F("pumpMod2"), nullptr, F_(pumpMod2), F_(percent), json);
-    create_value_json(root, F("outdoorTemp"), nullptr, F_(outdoorTemp), F_(degrees), json);
-    create_value_json(root, F("curFlowTemp"), nullptr, F_(curFlowTemp), F_(degrees), json);
-    create_value_json(root, F("retTemp"), nullptr, F_(retTemp), F_(degrees), json);
-    create_value_json(root, F("switchTemp"), nullptr, F_(switchTemp), F_(degrees), json);
-    create_value_json(root, F("sysPress"), nullptr, F_(sysPress), nullptr, json);
-    create_value_json(root, F("boilTemp"), nullptr, F_(boilTemp), F_(degrees), json);
-    create_value_json(root, F("burnGas"), nullptr, F_(burnGas), nullptr, json);
-    create_value_json(root, F("flameCurr"), nullptr, F_(flameCurr), F_(uA), json);
-    create_value_json(root, F("heatPump"), nullptr, F_(heatPump), nullptr, json);
-    create_value_json(root, F("fanWork"), nullptr, F_(fanWork), nullptr, json);
-    create_value_json(root, F("ignWork"), nullptr, F_(ignWork), nullptr, json);
-    create_value_json(root, F("heatingActivated"), nullptr, F_(heatingActivated), nullptr, json);
-    create_value_json(root, F("heatingTemp"), nullptr, F_(heatingTemp), F_(degrees), json);
-    create_value_json(root, F("pumpModMax"), nullptr, F_(pumpModMax), F_(percent), json);
-    create_value_json(root, F("pumpModMin"), nullptr, F_(pumpModMin), F_(percent), json);
-    create_value_json(root, F("pumpDelay"), nullptr, F_(pumpDelay), F_(min), json);
-    create_value_json(root, F("burnMinPeriod"), nullptr, F_(burnMinPeriod), F_(min), json);
-    create_value_json(root, F("burnMinPower"), nullptr, F_(burnMinPower), F_(percent), json);
-    create_value_json(root, F("burnMaxPower"), nullptr, F_(burnMaxPower), F_(percent), json);
-    create_value_json(root, F("boilHystOn"), nullptr, F_(boilHystOn), F_(degrees), json);
-    create_value_json(root, F("boilHystOff"), nullptr, F_(boilHystOff), F_(degrees), json);
-    create_value_json(root, F("setFlowTemp"), nullptr, F_(setFlowTemp), F_(degrees), json);
-    create_value_json(root, F("setBurnPow"), nullptr, F_(setBurnPow), F_(percent), json);
-    create_value_json(root, F("burnStarts"), nullptr, F_(burnStarts), nullptr, json);
-    create_value_json(root, F("burnWorkMin"), nullptr, F_(burnWorkMin), nullptr, json);
-    create_value_json(root, F("heatWorkMin"), nullptr, F_(heatWorkMin), nullptr, json);
-    create_value_json(root, F("UBAuptime"), nullptr, F_(UBAuptime), nullptr, json);
+        create_value_json(root, F("heatingActive"), nullptr, F_(heatingActive), nullptr, json);
+        create_value_json(root, F("tapwaterActive"), nullptr, F_(tapwaterActive), nullptr, json);
+        create_value_json(root, F("serviceCode"), nullptr, F_(serviceCode), nullptr, json);
+        create_value_json(root, F("serviceCodeNumber"), nullptr, F_(serviceCodeNumber), nullptr, json);
+        create_value_json(root, F("lastCode"), nullptr, F_(lastCode), nullptr, json);
+        create_value_json(root, F("selFlowTemp"), nullptr, F_(selFlowTemp), F_(degrees), json);
+        create_value_json(root, F("selBurnPow"), nullptr, F_(selBurnPow), F_(percent), json);
+        create_value_json(root, F("curBurnPow"), nullptr, F_(curBurnPow), F_(percent), json);
+        create_value_json(root, F("pumpMod"), nullptr, F_(pumpMod), F_(percent), json);
+        create_value_json(root, F("pumpMod2"), nullptr, F_(pumpMod2), F_(percent), json);
+        create_value_json(root, F("outdoorTemp"), nullptr, F_(outdoorTemp), F_(degrees), json);
+        create_value_json(root, F("curFlowTemp"), nullptr, F_(curFlowTemp), F_(degrees), json);
+        create_value_json(root, F("retTemp"), nullptr, F_(retTemp), F_(degrees), json);
+        create_value_json(root, F("switchTemp"), nullptr, F_(switchTemp), F_(degrees), json);
+        create_value_json(root, F("sysPress"), nullptr, F_(sysPress), nullptr, json);
+        create_value_json(root, F("boilTemp"), nullptr, F_(boilTemp), F_(degrees), json);
+        create_value_json(root, F("burnGas"), nullptr, F_(burnGas), nullptr, json);
+        create_value_json(root, F("flameCurr"), nullptr, F_(flameCurr), F_(uA), json);
+        create_value_json(root, F("heatPump"), nullptr, F_(heatPump), nullptr, json);
+        create_value_json(root, F("fanWork"), nullptr, F_(fanWork), nullptr, json);
+        create_value_json(root, F("ignWork"), nullptr, F_(ignWork), nullptr, json);
+        create_value_json(root, F("heatingActivated"), nullptr, F_(heatingActivated), nullptr, json);
+        create_value_json(root, F("heatingTemp"), nullptr, F_(heatingTemp), F_(degrees), json);
+        create_value_json(root, F("pumpModMax"), nullptr, F_(pumpModMax), F_(percent), json);
+        create_value_json(root, F("pumpModMin"), nullptr, F_(pumpModMin), F_(percent), json);
+        create_value_json(root, F("pumpDelay"), nullptr, F_(pumpDelay), F_(min), json);
+        create_value_json(root, F("burnMinPeriod"), nullptr, F_(burnMinPeriod), F_(min), json);
+        create_value_json(root, F("burnMinPower"), nullptr, F_(burnMinPower), F_(percent), json);
+        create_value_json(root, F("burnMaxPower"), nullptr, F_(burnMaxPower), F_(percent), json);
+        create_value_json(root, F("boilHystOn"), nullptr, F_(boilHystOn), F_(degrees), json);
+        create_value_json(root, F("boilHystOff"), nullptr, F_(boilHystOff), F_(degrees), json);
+        create_value_json(root, F("setFlowTemp"), nullptr, F_(setFlowTemp), F_(degrees), json);
+        create_value_json(root, F("setBurnPow"), nullptr, F_(setBurnPow), F_(percent), json);
+        create_value_json(root, F("burnStarts"), nullptr, F_(burnStarts), nullptr, json);
+        create_value_json(root, F("burnWorkMin"), nullptr, F_(burnWorkMin), nullptr, json);
+        create_value_json(root, F("heatWorkMin"), nullptr, F_(heatWorkMin), nullptr, json);
+        create_value_json(root, F("UBAuptime"), nullptr, F_(UBAuptime), nullptr, json);
 
-    // information
-    create_value_json(root, F("upTimeControl"), nullptr, F_(upTimeControl), nullptr, json);
-    create_value_json(root, F("upTimeCompHeating"), nullptr, F_(upTimeCompHeating), nullptr, json);
-    create_value_json(root, F("upTimeCompCooling"), nullptr, F_(upTimeCompCooling), nullptr, json);
-    create_value_json(root, F("upTimeCompWw"), nullptr, F_(upTimeCompWw), nullptr, json);
-    create_value_json(root, F("heatingStarts"), nullptr, F_(heatingStarts), nullptr, json);
-    create_value_json(root, F("coolingStarts"), nullptr, F_(coolingStarts), nullptr, json);
-    create_value_json(root, F("wWStarts2"), nullptr, F_(wWStarts2), nullptr, json);
-    create_value_json(root, F("nrgConsTotal"), nullptr, F_(nrgConsTotal), F_(kwh), json);
-    create_value_json(root, F("auxElecHeatNrgConsTotal"), nullptr, F_(auxElecHeatNrgConsTotal), F_(kwh), json);
-    create_value_json(root, F("auxElecHeatNrgConsHeating"), nullptr, F_(auxElecHeatNrgConsHeating), F_(kwh), json);
-    create_value_json(root, F("auxElecHeatNrgConsDHW"), nullptr, F_(auxElecHeatNrgConsDHW), F_(kwh), json);
-    create_value_json(root, F("nrgConsCompTotal"), nullptr, F_(nrgConsCompTotal), F_(kwh), json);
-    create_value_json(root, F("nrgConsCompHeating"), nullptr, F_(nrgConsCompHeating), F_(kwh), json);
-    create_value_json(root, F("nrgConsCompWw"), nullptr, F_(nrgConsCompWw), F_(kwh), json);
-    create_value_json(root, F("nrgConsCoolingTotal"), nullptr, F_(nrgConsCompCooling), F_(kwh), json);
-    create_value_json(root, F("nrgSuppTotal"), nullptr, F_(nrgSuppTotal), F_(kwh), json);
-    create_value_json(root, F("nrgSuppHeating"), nullptr, F_(nrgSuppHeating), F_(kwh), json);
-    create_value_json(root, F("nrgSuppWw"), nullptr, F_(nrgSuppWw), F_(kwh), json);
-    create_value_json(root, F("nrgSuppCooling"), nullptr, F_(nrgSuppCooling), F_(kwh), json);
-    create_value_json(root, F("maintenanceMessage"), nullptr, F_(maintenanceMessage), nullptr, json);
-    if (maintenanceType_ == 1) {
-        create_value_json(root, F("maintenance"), nullptr, F_(maintenance), F_(hours), json);
-    } else {
-        create_value_json(root, F("maintenance"), nullptr, F_(maintenance), nullptr, json);
-    }
-    // create_value_json(root, F("maintenance"), nullptr, F_(maintenance), nullptr, json);
-    // create_value_json(root, F("maintenanceTime"), nullptr, F_(maintenanceTime), F_(hours), json);
-    // create_value_json(root, F("maintenanceDate"), nullptr, F_(maintenanceDate), nullptr, json);
-    doc.clear();
-    if (!export_values_ww(json, true)) { // append ww values
-        return;
-    }
+        // information
+        create_value_json(root, F("upTimeControl"), nullptr, F_(upTimeControl), nullptr, json);
+        create_value_json(root, F("upTimeCompHeating"), nullptr, F_(upTimeCompHeating), nullptr, json);
+        create_value_json(root, F("upTimeCompCooling"), nullptr, F_(upTimeCompCooling), nullptr, json);
+        create_value_json(root, F("upTimeCompWw"), nullptr, F_(upTimeCompWw), nullptr, json);
+        create_value_json(root, F("heatingStarts"), nullptr, F_(heatingStarts), nullptr, json);
+        create_value_json(root, F("coolingStarts"), nullptr, F_(coolingStarts), nullptr, json);
+        create_value_json(root, F("wWStarts2"), nullptr, F_(wWStarts2), nullptr, json);
+        create_value_json(root, F("nrgConsTotal"), nullptr, F_(nrgConsTotal), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsTotal"), nullptr, F_(auxElecHeatNrgConsTotal), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsHeating"), nullptr, F_(auxElecHeatNrgConsHeating), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsDHW"), nullptr, F_(auxElecHeatNrgConsDHW), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompTotal"), nullptr, F_(nrgConsCompTotal), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompHeating"), nullptr, F_(nrgConsCompHeating), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompWw"), nullptr, F_(nrgConsCompWw), F_(kwh), json);
+        create_value_json(root, F("nrgConsCoolingTotal"), nullptr, F_(nrgConsCompCooling), F_(kwh), json);
+        create_value_json(root, F("nrgSuppTotal"), nullptr, F_(nrgSuppTotal), F_(kwh), json);
+        create_value_json(root, F("nrgSuppHeating"), nullptr, F_(nrgSuppHeating), F_(kwh), json);
+        create_value_json(root, F("nrgSuppWw"), nullptr, F_(nrgSuppWw), F_(kwh), json);
+        create_value_json(root, F("nrgSuppCooling"), nullptr, F_(nrgSuppCooling), F_(kwh), json);
+        create_value_json(root, F("maintenanceMessage"), nullptr, F_(maintenanceMessage), nullptr, json);
+        if (maintenanceType_ == 1) {
+            create_value_json(root, F("maintenance"), nullptr, F_(maintenance), F_(hours), json);
+        } else {
+            create_value_json(root, F("maintenance"), nullptr, F_(maintenance), nullptr, json);
+        }
+        // create_value_json(root, F("maintenance"), nullptr, F_(maintenance), nullptr, json);
+        // create_value_json(root, F("maintenanceTime"), nullptr, F_(maintenanceTime), F_(hours), json);
+        // create_value_json(root, F("maintenanceDate"), nullptr, F_(maintenanceDate), nullptr, json);
+        part++;
+    } else if (part == 1) {
+        if (!export_values_ww(json, true)) { // append ww values
+            return;
+        }
 
-    // ww
-    create_value_json(root, F("wWSelTemp"), nullptr, F_(wWSelTemp), F_(degrees), json);
-    create_value_json(root, F("wWSetTemp"), nullptr, F_(wWSetTemp), F_(degrees), json);
-    create_value_json(root, F("wWDisinfectionTemp"), nullptr, F_(wWDisinfectionTemp), F_(degrees), json);
-    create_value_json(root, F("wWType"), nullptr, F_(wWType), nullptr, json);
-    create_value_json(root, F("wWChargeType"), nullptr, F_(wWChargeType), nullptr, json);
-    create_value_json(root, F("wWCircPump"), nullptr, F_(wWCircPump), nullptr, json);
-    create_value_json(root, F("wWCircPumpMode"), nullptr, F_(wWCircPumpMode), nullptr, json);
-    create_value_json(root, F("wWCirc"), nullptr, F_(wWCirc), nullptr, json);
-    create_value_json(root, F("wWCurTemp"), nullptr, F_(wWCurTemp), F_(degrees), json);
-    create_value_json(root, F("wWCurTemp2"), nullptr, F_(wWCurTemp2), F_(degrees), json);
-    create_value_json(root, F("wWCurFlow"), nullptr, F_(wWCurFlow), F("l/min"), json);
-    create_value_json(root, F("wwStorageTemp1"), nullptr, F_(wwStorageTemp1), F_(degrees), json);
-    create_value_json(root, F("wwStorageTemp2"), nullptr, F_(wwStorageTemp2), F_(degrees), json);
-    create_value_json(root, F("exhaustTemp"), nullptr, F_(exhaustTemp), F_(degrees), json);
-    create_value_json(root, F("wWActivated"), nullptr, F_(wWActivated), nullptr, json);
-    create_value_json(root, F("wWOneTime"), nullptr, F_(wWOneTime), nullptr, json);
-    create_value_json(root, F("wWDisinfecting"), nullptr, F_(wWDisinfecting), nullptr, json);
-    create_value_json(root, F("wWCharging"), nullptr, F_(wWCharging), nullptr, json);
-    create_value_json(root, F("wWRecharging"), nullptr, F_(wWRecharging), nullptr, json);
-    create_value_json(root, F("wWTempOK"), nullptr, F_(wWTempOK), nullptr, json);
-    create_value_json(root, F("wWActive"), nullptr, F_(wWActive), nullptr, json);
-    create_value_json(root, F("wWHeat"), nullptr, F_(wWHeat), nullptr, json);
-    create_value_json(root, F("wWSetPumpPower"), nullptr, F_(wWSetPumpPower), F_(percent), json);
-    create_value_json(root, F("wwMixTemperature"), nullptr, F_(wwMixTemperature), F_(degrees), json);
-    create_value_json(root, F("wwBufferTemperature"), nullptr, F_(wwBufferTemperature), F_(degrees), json);
-    create_value_json(root, F("wWStarts"), nullptr, F_(wWStarts), nullptr, json);
-    create_value_json(root, F("wWWorkM"), nullptr, F_(wWWorkM), nullptr, json);
+        // ww
+        create_value_json(root, F("wWSelTemp"), nullptr, F_(wWSelTemp), F_(degrees), json);
+        create_value_json(root, F("wWSetTemp"), nullptr, F_(wWSetTemp), F_(degrees), json);
+        create_value_json(root, F("wWDisinfectionTemp"), nullptr, F_(wWDisinfectionTemp), F_(degrees), json);
+        create_value_json(root, F("wWType"), nullptr, F_(wWType), nullptr, json);
+        create_value_json(root, F("wWChargeType"), nullptr, F_(wWChargeType), nullptr, json);
+        create_value_json(root, F("wWCircPump"), nullptr, F_(wWCircPump), nullptr, json);
+        create_value_json(root, F("wWCircPumpMode"), nullptr, F_(wWCircPumpMode), nullptr, json);
+        create_value_json(root, F("wWCirc"), nullptr, F_(wWCirc), nullptr, json);
+        create_value_json(root, F("wWCurTemp"), nullptr, F_(wWCurTemp), F_(degrees), json);
+        create_value_json(root, F("wWCurTemp2"), nullptr, F_(wWCurTemp2), F_(degrees), json);
+        create_value_json(root, F("wWCurFlow"), nullptr, F_(wWCurFlow), F("l/min"), json);
+        create_value_json(root, F("wwStorageTemp1"), nullptr, F_(wwStorageTemp1), F_(degrees), json);
+        create_value_json(root, F("wwStorageTemp2"), nullptr, F_(wwStorageTemp2), F_(degrees), json);
+        create_value_json(root, F("exhaustTemp"), nullptr, F_(exhaustTemp), F_(degrees), json);
+        create_value_json(root, F("wWActivated"), nullptr, F_(wWActivated), nullptr, json);
+        create_value_json(root, F("wWOneTime"), nullptr, F_(wWOneTime), nullptr, json);
+        create_value_json(root, F("wWDisinfecting"), nullptr, F_(wWDisinfecting), nullptr, json);
+        create_value_json(root, F("wWCharging"), nullptr, F_(wWCharging), nullptr, json);
+        create_value_json(root, F("wWRecharging"), nullptr, F_(wWRecharging), nullptr, json);
+        create_value_json(root, F("wWTempOK"), nullptr, F_(wWTempOK), nullptr, json);
+        create_value_json(root, F("wWActive"), nullptr, F_(wWActive), nullptr, json);
+        create_value_json(root, F("wWHeat"), nullptr, F_(wWHeat), nullptr, json);
+        create_value_json(root, F("wWSetPumpPower"), nullptr, F_(wWSetPumpPower), F_(percent), json);
+        create_value_json(root, F("wwMixTemperature"), nullptr, F_(wwMixTemperature), F_(degrees), json);
+        create_value_json(root, F("wwBufferTemperature"), nullptr, F_(wwBufferTemperature), F_(degrees), json);
+        create_value_json(root, F("wWStarts"), nullptr, F_(wWStarts), nullptr, json);
+        create_value_json(root, F("wWWorkM"), nullptr, F_(wWWorkM), nullptr, json);
+        part = 0; // no more parts
+    }
 }
 
 bool Boiler::export_values(JsonObject & json) {
@@ -1308,6 +1311,7 @@ bool Boiler::set_flow_temp(const char * value, const int8_t id) {
 
     LOG_INFO(F("Setting boiler flow temperature to %d C"), v);
     // some boiler have it in 0x1A, some in 0x35, but both telegrams are sometimes writeonly
+    write_command(0x35, 3, v);
     write_command(EMS_TYPE_UBASetPoints, 0, v, EMS_TYPE_UBASetPoints);
     // write_command(0x35, 3, v, 0x35);
 

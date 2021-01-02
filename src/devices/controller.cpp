@@ -28,7 +28,7 @@ Controller::Controller(uint8_t device_type, uint8_t device_id, uint8_t product_i
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
 }
 
-void Controller::device_info_web(JsonArray & root) {
+void Controller::device_info_web(JsonArray & root, uint8_t & part) {
 }
 
 // publish values via MQTT
