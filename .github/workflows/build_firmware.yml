@@ -8,6 +8,8 @@ on:
     #   - '*.*.*'
     paths:
     - 'CHANGELOG_LATEST.md'
+  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
         
