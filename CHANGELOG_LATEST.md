@@ -7,5 +7,6 @@
 
 ### Changed
 - split `show values` in smaller packages (edited)
+- extended length of IP/hostname from 32 to 48 chars (#676)
 
 ### Removed
