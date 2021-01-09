@@ -4,6 +4,7 @@
 
 ### Fixed
 - telegrams matched to masterthermostat 0x18
+- Boiler Junkers Cerapur Aero
 
 ### Changed
 - split `show values` in smaller packages (edited)
