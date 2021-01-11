@@ -7,7 +7,7 @@
 - Boiler Junkers Cerapur Aero
 
 ### Changed
-- split `show values` in smaller packages (edited)
+- split `show values` in smaller packages and separate heating circuits
 - extended length of IP/hostname from 32 to 48 chars (#676)
 - check flowsensor for `tap_water_active`
 - serviceCode `~H` instead of nonacii 3-dashes

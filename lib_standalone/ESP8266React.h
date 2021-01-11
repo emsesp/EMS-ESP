@@ -28,6 +28,7 @@ class DummySettings {
     uint8_t  mqtt_format             = 3;  // 1=single, 2=nested, 3=ha, 4=custom
     uint8_t  mqtt_qos                = 0;
     bool     mqtt_retain             = false;
+    String   base                    = "ems-esp";
     bool     enabled                 = true; // MQTT
     String   hostname                = "ems-esp";
     String   jwtSecret               = "ems-esp";
