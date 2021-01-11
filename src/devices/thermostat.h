@@ -135,7 +135,7 @@ class Thermostat : public EMSdevice {
 
     void add_commands();
     bool export_values_main(JsonObject & doc);
-    bool export_values_hc(uint8_t mqtt_format, JsonObject & doc);
+    bool export_values_hc(std::shared_ptr<Thermostat::HeatingCircuit> hc, JsonObject & doc);
 
     bool ha_registered() const {
         return ha_registered_;
