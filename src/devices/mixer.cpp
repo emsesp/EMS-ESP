@@ -146,8 +146,8 @@ void Mixer::register_mqtt_ha_config() {
 
     doc["ic"] = FJSON("mdi:home-thermometer-outline");
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/mixer_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/mixer_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["val_tpl"] = FJSON("{{value_json.type}}"); // HA needs a single value. We take the type which is wwc or hc

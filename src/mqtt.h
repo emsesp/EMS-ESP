@@ -149,6 +149,10 @@ class Mqtt {
         return mqttClient_;
     }
 
+    static std::string base() {
+        return mqtt_base_;
+    }
+
   private:
     static uuid::log::Logger logger_;
 
@@ -195,7 +199,7 @@ class Mqtt {
     struct MQTTSubFunction {
         uint8_t            device_type_;      // which device type, from DeviceType::
         const std::string  topic_;            // short topic name
-        const std::string  full_topic_;       // the fully qualified topic name, usually with the hostname prefixed
+        const std::string  full_topic_;       // the fully qualified topic name, usually with the base prefixed
         mqtt_subfunction_p mqtt_subfunction_; // can be empty
 
         MQTTSubFunction(uint8_t device_type, const std::string && topic, const std::string && full_topic, mqtt_subfunction_p mqtt_subfunction)
@@ -222,7 +226,7 @@ class Mqtt {
     static uint8_t  connectcount_;
 
     // settings, copied over
-    static std::string hostname_;
+    static std::string mqtt_base_;
     static uint8_t     mqtt_qos_;
     static bool        mqtt_retain_;
     static uint32_t    publish_time_;

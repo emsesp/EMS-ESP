@@ -25,7 +25,7 @@ namespace emsesp {
 AsyncMqttClient * Mqtt::mqttClient_;
 
 // static parameters we make global
-std::string Mqtt::hostname_;
+std::string Mqtt::mqtt_base_;
 uint8_t     Mqtt::mqtt_qos_;
 bool        Mqtt::mqtt_retain_;
 uint32_t    Mqtt::publish_time_boiler_;
@@ -77,7 +77,6 @@ void Mqtt::subscribe(const uint8_t device_type, const std::string & topic, mqtt_
     if (message == nullptr) {
         return;
     }
-
     // register in our libary with the callback function.
     // We store both the original topic and the fully-qualified one
     mqtt_subfunctions_.emplace_back(device_type, std::move(topic), std::move(message->topic), std::move(cb));
@@ -343,8 +342,7 @@ void Mqtt::start() {
     mqttClient_ = EMSESP::esp8266React.getMqttClient();
 
     // get the hostname, which we'll use to prefix to all topics
-    EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & wifiSettings) { hostname_ = wifiSettings.hostname.c_str(); });
-
+    // EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & wifiSettings) { hostname_ = wifiSettings.hostname.c_str(); });
     // fetch MQTT settings
     EMSESP::esp8266React.getMqttSettingsService()->read([&](MqttSettings & mqttSettings) {
         publish_time_boiler_     = mqttSettings.publish_time_boiler * 1000; // convert to milliseconds
@@ -357,6 +355,7 @@ void Mqtt::start() {
         mqtt_retain_             = mqttSettings.mqtt_retain;
         mqtt_format_             = mqttSettings.mqtt_format;
         mqtt_enabled_            = mqttSettings.enabled;
+        mqtt_base_               = mqttSettings.base.c_str();
     });
 
     // if MQTT disabled, quit
@@ -386,11 +385,9 @@ void Mqtt::start() {
         }
     });
 
-    // create will_topic with the hostname prefixed. It has to be static because asyncmqttclient destroys the reference
+    // create will_topic with the base prefixed. It has to be static because asyncmqttclient destroys the reference
     static char will_topic[MQTT_TOPIC_MAX_SIZE];
-    strlcpy(will_topic, hostname_.c_str(), MQTT_TOPIC_MAX_SIZE);
-    strlcat(will_topic, "/", MQTT_TOPIC_MAX_SIZE);
-    strlcat(will_topic, "status", MQTT_TOPIC_MAX_SIZE);
+    snprintf_P(will_topic, MQTT_TOPIC_MAX_SIZE, PSTR("%s/status"), mqtt_base_.c_str());
     mqttClient_->setWill(will_topic, 1, true, "offline"); // with qos 1, retain true
 
     mqttClient_->onMessage([this](char * topic, char * payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
@@ -510,7 +507,7 @@ void Mqtt::ha_status() {
 
     doc["name"]    = FJSON("EMS-ESP status");
     doc["uniq_id"] = FJSON("status");
-    doc["~"]       = System::hostname(); // ems-esp
+    doc["~"]       = mqtt_base_.c_str(); // ems-esp
     // doc["avty_t"]      = FJSON("~/status");
     doc["json_attr_t"] = FJSON("~/heartbeat");
     doc["stat_t"]      = FJSON("~/heartbeat");
@@ -529,7 +526,7 @@ void Mqtt::ha_status() {
 }
 
 // add sub or pub task to the queue.
-// a fully-qualified topic is created by prefixing the hostname, unless it's HA
+// a fully-qualified topic is created by prefixing the base, unless it's HA
 // returns a pointer to the message created
 std::shared_ptr<const MqttMessage> Mqtt::queue_message(const uint8_t operation, const std::string & topic, const std::string & payload, bool retain) {
     if (topic.empty()) {
@@ -542,9 +539,9 @@ std::shared_ptr<const MqttMessage> Mqtt::queue_message(const uint8_t operation, 
         // leave topic as it is
         message = std::make_shared<MqttMessage>(operation, topic, payload, retain);
     } else {
-        // prefix the hostname
+        // prefix the base
         std::string full_topic(100, '\0');
-        snprintf_P(&full_topic[0], full_topic.capacity() + 1, PSTR("%s/%s"), hostname_.c_str(), topic.c_str());
+        snprintf_P(&full_topic[0], full_topic.capacity() + 1, PSTR("%s/%s"), mqtt_base_.c_str(), topic.c_str());
         message = std::make_shared<MqttMessage>(operation, full_topic, payload, retain);
     }
 
@@ -746,7 +743,7 @@ void Mqtt::register_mqtt_ha_binary_sensor(const __FlashStringHelper * name, cons
     doc["uniq_id"] = entity;
 
     char state_t[50];
-    snprintf_P(state_t, sizeof(state_t), PSTR("%s/%s"), hostname_.c_str(), entity);
+    snprintf_P(state_t, sizeof(state_t), PSTR("%s/%s"), mqtt_base_.c_str(), entity);
     doc["stat_t"] = state_t;
 
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
@@ -814,9 +811,9 @@ void Mqtt::register_mqtt_ha_sensor(const char *                prefix,
     // state topic
     char stat_t[MQTT_TOPIC_MAX_SIZE];
     if (suffix != nullptr) {
-        snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s_data%s"), hostname_.c_str(), device_name, uuid::read_flash_string(suffix).c_str());
+        snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s_data%s"), mqtt_base_.c_str(), device_name, uuid::read_flash_string(suffix).c_str());
     } else {
-        snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s_data"), hostname_.c_str(), device_name);
+        snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/%s_data"), mqtt_base_.c_str(), device_name);
     }
 
     // value template

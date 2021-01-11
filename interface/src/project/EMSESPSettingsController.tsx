@@ -265,7 +265,7 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                         value="trace_raw"
                     />
                 }
-                label="Trace ems-telegrams in raw format"
+                label="Trace EMS telegrams in raw format"
             />
 
             <br></br>

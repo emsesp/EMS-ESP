@@ -828,7 +828,6 @@ bool System::check_upgrade() {
                     mqttSettings.enabled        = mqtt["enabled"];
                     mqttSettings.keepAlive      = FACTORY_MQTT_KEEP_ALIVE;
                     mqttSettings.cleanSession   = FACTORY_MQTT_CLEAN_SESSION;
-                    mqttSettings.maxTopicLength = FACTORY_MQTT_MAX_TOPIC_LENGTH;
 
                     return StateUpdateResult::CHANGED;
                 },
@@ -949,7 +948,6 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
         node["client_id"]               = settings.clientId;
         node["keep_alive"]              = settings.keepAlive;
         node["clean_session"]           = Helpers::render_boolean(s, settings.cleanSession);
-        node["max_topic_length"]        = settings.maxTopicLength;
         node["publish_time_boiler"]     = settings.publish_time_boiler;
         node["publish_time_thermostat"] = settings.publish_time_thermostat;
         node["publish_time_solar"]      = settings.publish_time_solar;
@@ -1074,11 +1072,12 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
         node["#read requests sent"]   = EMSESP::txservice_.telegram_read_count();
         node["#write requests sent"]  = EMSESP::txservice_.telegram_write_count();
         node["#incomplete telegrams"] = EMSESP::rxservice_.telegram_error_count();
-        node["#tx fails"]             = TxService::MAXIMUM_TX_RETRIES, EMSESP::txservice_.telegram_fail_count();
+        node["#tx fails"]             = EMSESP::txservice_.telegram_fail_count();
         node["rx line quality"]       = EMSESP::rxservice_.quality();
         node["tx line quality"]       = EMSESP::txservice_.quality();
         node["#MQTT publish fails"]   = Mqtt::publish_fails();
         node["#dallas sensors"]       = EMSESP::sensor_devices().size();
+        node["#dallas fails"]         = EMSESP::sensor_fails();
     }
 
     JsonArray devices2 = json.createNestedArray("Devices");

@@ -25,6 +25,10 @@
 #define FACTORY_MQTT_HOST "test.mosquitto.org"
 #endif
 
+#ifndef FACTORY_MQTT_BASE
+#define FACTORY_MQTT_BASE "ems-esp"
+#endif
+
 #ifndef FACTORY_MQTT_PORT
 #define FACTORY_MQTT_PORT 1883
 #endif
@@ -70,6 +74,7 @@ class MqttSettings {
     // host and port - if enabled
     bool     enabled;
     String   host;
+    String   base;
     uint16_t port;
 
     // username and password
@@ -82,7 +87,7 @@ class MqttSettings {
     // connection settings
     uint16_t keepAlive;
     bool     cleanSession;
-    uint16_t maxTopicLength;
+    // uint16_t maxTopicLength;
 
     // proddy EMS-ESP specific
     uint16_t publish_time_boiler;

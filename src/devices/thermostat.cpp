@@ -847,8 +847,8 @@ void Thermostat::register_mqtt_ha_config() {
     doc["uniq_id"] = FJSON("thermostat");
     doc["ic"]      = FJSON("mdi:home-thermometer-outline");
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/thermostat_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/thermostat_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["name"]    = FJSON("Thermostat Status");
@@ -912,7 +912,7 @@ void Thermostat::register_mqtt_ha_config(uint8_t hc_num) {
     doc["uniq_id"]     = str2;
     doc["mode_cmd_t"]  = str3;
     doc["temp_cmd_t"]  = str3;
-    doc["~"]           = System::hostname(); // ems-esp
+    doc["~"]           = Mqtt::base(); // ems-esp
     doc["mode_stat_t"] = FJSON("~/thermostat_data");
     doc["temp_stat_t"] = FJSON("~/thermostat_data");
     doc["curr_temp_t"] = FJSON("~/thermostat_data");

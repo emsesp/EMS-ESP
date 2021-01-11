@@ -72,9 +72,9 @@ class System {
     bool check_upgrade();
     void send_heartbeat();
 
-    static std::string hostname() {
-        return hostname_;
-    }
+    // static std::string hostname() {
+    //     return hostname_;
+    // }
 
     static void hostname(std::string hostname) {
         hostname_ = hostname;

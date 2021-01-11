@@ -121,8 +121,8 @@ void Solar::register_mqtt_ha_config() {
     doc["uniq_id"] = F_(solar);
     doc["ic"]      = F_(iconthermostat);
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/solar_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/solar_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["val_tpl"] = FJSON("{{value_json.solarPump}}");
