@@ -147,30 +147,30 @@ void Boiler::register_mqtt_ha_config() {
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(burnWorkMin), device_type(), "burnWorkMin", F_(min), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatWorkMin), device_type(), "heatWorkMin", F_(min), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(UBAuptime), device_type(), "UBAuptime", F_(min), nullptr);
-    // information
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(upTimeControl), device_type(), "upTimeControl", F_(min), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(upTimeCompHeating), device_type(), "upTimeCompHeating", F_(min), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(upTimeCompCooling), device_type(), "upTimeCompCooling", F_(min), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(upTimeCompWw), device_type(), "upTimeCompWw", F_(min), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatingStarts), device_type(), "heatingStarts", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(coolingStarts), device_type(), "coolingStarts_", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(wWStarts2), device_type(), "wWStarts2", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgConsTotal), device_type(), "nrgConsTotal", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(auxElecHeatNrgConsTotal), device_type(), "auxElecHeatNrgConsTotal_", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(auxElecHeatNrgConsHeating), device_type(), "auxElecHeatNrgConsHeating", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(auxElecHeatNrgConsDHW), device_type(), "auxElecHeatNrgConsDHW", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgConsCompTotal), device_type(), "nrgConsCompTotal", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgConsCompHeating), device_type(), "nrgConsCompHeating", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgConsCompWw), device_type(), "nrgConsCompWw", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgConsCompCooling), device_type(), "nrgConsCompCooling", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgSuppTotal), device_type(), "nrgSuppTotal_", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgSuppHeating), device_type(), "nrgSuppHeating", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgSuppWw), device_type(), "nrgSuppWw", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(nrgSuppCooling), device_type(), "nrgSuppCooling", F_(kwh), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(maintenanceMessage), device_type(), "maintenanceMessage", nullptr, nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(maintenance), device_type(), "maintenance", nullptr, nullptr);
     // Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(maintenanceTime), device_type(), "maintenanceTime", F_(hours), nullptr);
     // Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(maintenanceDate), device_type(), "maintenanceDate", nullptr, nullptr);
+    // information
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(upTimeControl), device_type(), "upTimeControl", F_(min), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(upTimeCompHeating), device_type(), "upTimeCompHeating", F_(min), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(upTimeCompCooling), device_type(), "upTimeCompCooling", F_(min), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(upTimeCompWw), device_type(), "upTimeCompWw", F_(min), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(heatingStarts), device_type(), "heatingStarts", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(coolingStarts), device_type(), "coolingStarts_", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(wWStarts2), device_type(), "wWStarts2", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgConsTotal), device_type(), "nrgConsTotal", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(auxElecHeatNrgConsTotal), device_type(), "auxElecHeatNrgConsTotal_", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(auxElecHeatNrgConsHeating), device_type(), "auxElecHeatNrgConsHeating", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(auxElecHeatNrgConsDHW), device_type(), "auxElecHeatNrgConsDHW", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgConsCompTotal), device_type(), "nrgConsCompTotal", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgConsCompHeating), device_type(), "nrgConsCompHeating", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgConsCompWw), device_type(), "nrgConsCompWw", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgConsCompCooling), device_type(), "nrgConsCompCooling", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgSuppTotal), device_type(), "nrgSuppTotal_", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgSuppHeating), device_type(), "nrgSuppHeating", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgSuppWw), device_type(), "nrgSuppWw", F_(kwh), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(nrgSuppCooling), device_type(), "nrgSuppCooling", F_(kwh), nullptr);
     mqtt_ha_config_ = true; // done
 }
 
@@ -218,7 +218,7 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_LARGE> doc;
     JsonObject                                     json = doc.to<JsonObject>();
     if (part == 0) {
-        part = 1; // next part after this
+        part = 1; // we have another part
         if (!export_values_main(json, true)) {
             return; // empty
         }
@@ -260,27 +260,6 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("burnWorkMin"), nullptr, F_(burnWorkMin), nullptr, json);
         create_value_json(root, F("heatWorkMin"), nullptr, F_(heatWorkMin), nullptr, json);
         create_value_json(root, F("UBAuptime"), nullptr, F_(UBAuptime), nullptr, json);
-
-        // information
-        create_value_json(root, F("upTimeControl"), nullptr, F_(upTimeControl), nullptr, json);
-        create_value_json(root, F("upTimeCompHeating"), nullptr, F_(upTimeCompHeating), nullptr, json);
-        create_value_json(root, F("upTimeCompCooling"), nullptr, F_(upTimeCompCooling), nullptr, json);
-        create_value_json(root, F("upTimeCompWw"), nullptr, F_(upTimeCompWw), nullptr, json);
-        create_value_json(root, F("heatingStarts"), nullptr, F_(heatingStarts), nullptr, json);
-        create_value_json(root, F("coolingStarts"), nullptr, F_(coolingStarts), nullptr, json);
-        create_value_json(root, F("wWStarts2"), nullptr, F_(wWStarts2), nullptr, json);
-        create_value_json(root, F("nrgConsTotal"), nullptr, F_(nrgConsTotal), F_(kwh), json);
-        create_value_json(root, F("auxElecHeatNrgConsTotal"), nullptr, F_(auxElecHeatNrgConsTotal), F_(kwh), json);
-        create_value_json(root, F("auxElecHeatNrgConsHeating"), nullptr, F_(auxElecHeatNrgConsHeating), F_(kwh), json);
-        create_value_json(root, F("auxElecHeatNrgConsDHW"), nullptr, F_(auxElecHeatNrgConsDHW), F_(kwh), json);
-        create_value_json(root, F("nrgConsCompTotal"), nullptr, F_(nrgConsCompTotal), F_(kwh), json);
-        create_value_json(root, F("nrgConsCompHeating"), nullptr, F_(nrgConsCompHeating), F_(kwh), json);
-        create_value_json(root, F("nrgConsCompWw"), nullptr, F_(nrgConsCompWw), F_(kwh), json);
-        create_value_json(root, F("nrgConsCoolingTotal"), nullptr, F_(nrgConsCompCooling), F_(kwh), json);
-        create_value_json(root, F("nrgSuppTotal"), nullptr, F_(nrgSuppTotal), F_(kwh), json);
-        create_value_json(root, F("nrgSuppHeating"), nullptr, F_(nrgSuppHeating), F_(kwh), json);
-        create_value_json(root, F("nrgSuppWw"), nullptr, F_(nrgSuppWw), F_(kwh), json);
-        create_value_json(root, F("nrgSuppCooling"), nullptr, F_(nrgSuppCooling), F_(kwh), json);
         create_value_json(root, F("maintenanceMessage"), nullptr, F_(maintenanceMessage), nullptr, json);
         if (maintenanceType_ == 1) {
             create_value_json(root, F("maintenance"), nullptr, F_(maintenance), F_(hours), json);
@@ -291,11 +270,10 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         // create_value_json(root, F("maintenanceTime"), nullptr, F_(maintenanceTime), F_(hours), json);
         // create_value_json(root, F("maintenanceDate"), nullptr, F_(maintenanceDate), nullptr, json);
     } else if (part == 1) {
-        part = 0; // no more parts after this
+        part = 2;
         if (!export_values_ww(json, true)) { // append ww values
             return;
         }
-
         // ww
         create_value_json(root, F("wWSelTemp"), nullptr, F_(wWSelTemp), F_(degrees), json);
         create_value_json(root, F("wWSetTemp"), nullptr, F_(wWSetTemp), F_(degrees), json);
@@ -324,6 +302,30 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("wwBufferTemperature"), nullptr, F_(wwBufferTemperature), F_(degrees), json);
         create_value_json(root, F("wWStarts"), nullptr, F_(wWStarts), nullptr, json);
         create_value_json(root, F("wWWorkM"), nullptr, F_(wWWorkM), nullptr, json);
+    } else if (part == 2) {
+        part = 0; // no more parts
+        if (!export_values_info(json, true)) { // append info values
+            return;
+        }
+        create_value_json(root, F("upTimeControl"), nullptr, F_(upTimeControl), nullptr, json);
+        create_value_json(root, F("upTimeCompHeating"), nullptr, F_(upTimeCompHeating), nullptr, json);
+        create_value_json(root, F("upTimeCompCooling"), nullptr, F_(upTimeCompCooling), nullptr, json);
+        create_value_json(root, F("upTimeCompWw"), nullptr, F_(upTimeCompWw), nullptr, json);
+        create_value_json(root, F("heatingStarts"), nullptr, F_(heatingStarts), nullptr, json);
+        create_value_json(root, F("coolingStarts"), nullptr, F_(coolingStarts), nullptr, json);
+        create_value_json(root, F("wWStarts2"), nullptr, F_(wWStarts2), nullptr, json);
+        create_value_json(root, F("nrgConsTotal"), nullptr, F_(nrgConsTotal), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsTotal"), nullptr, F_(auxElecHeatNrgConsTotal), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsHeating"), nullptr, F_(auxElecHeatNrgConsHeating), F_(kwh), json);
+        create_value_json(root, F("auxElecHeatNrgConsDHW"), nullptr, F_(auxElecHeatNrgConsDHW), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompTotal"), nullptr, F_(nrgConsCompTotal), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompHeating"), nullptr, F_(nrgConsCompHeating), F_(kwh), json);
+        create_value_json(root, F("nrgConsCompWw"), nullptr, F_(nrgConsCompWw), F_(kwh), json);
+        create_value_json(root, F("nrgConsCoolingTotal"), nullptr, F_(nrgConsCompCooling), F_(kwh), json);
+        create_value_json(root, F("nrgSuppTotal"), nullptr, F_(nrgSuppTotal), F_(kwh), json);
+        create_value_json(root, F("nrgSuppHeating"), nullptr, F_(nrgSuppHeating), F_(kwh), json);
+        create_value_json(root, F("nrgSuppWw"), nullptr, F_(nrgSuppWw), F_(kwh), json);
+        create_value_json(root, F("nrgSuppCooling"), nullptr, F_(nrgSuppCooling), F_(kwh), json);
     }
 }
 
@@ -332,6 +334,7 @@ bool Boiler::export_values(JsonObject & json) {
         return false;
     }
     export_values_ww(json); // append ww values
+    export_values_info(json); // append info values
     return true;
 }
 
@@ -394,7 +397,6 @@ bool Boiler::export_values_ww(JsonObject & json, const bool textformat) {
         if (wWCircPumpMode_ == 7) {
             json["wWCircPumpMode"] = FJSON("continuous");
         } else {
-            char s[7];
             char buffer[2];
             buffer[0] = (wWCircPumpMode_ % 10) + '0';
             buffer[1] = '\0';
@@ -702,7 +704,21 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
         }
     }
 
-    // Service Code & Service Code Number
+/*
+    // Service Code & Service Code Number. Priority error - maintenance - workingcode
+    if ((serviceCode_[0] >= '1' && serviceCode_[0] <= '9') || (serviceCode_[0] >= 'A' && serviceCode_[0] <= 'Z')) {
+        json["serviceCode"] = serviceCode_;
+    } else if (Helpers::hasValue(maintenanceMessage_) && maintenanceMessage_ > 0) {
+        char s[5];
+        snprintf_P(s, sizeof(s), PSTR("H%02d"), maintenanceMessage_);
+        json["serviceCode"] = s;
+    } else if (serviceCode_[0] == 0xF0) {
+        json["serviceCode"] = FJSON("~H");
+    } else {
+        json["serviceCode"] = serviceCode_;
+    }
+*/
+
     if (Helpers::hasValue(serviceCodeNumber_)) {
         if (serviceCode_[0] == 0xF0) {
             json["serviceCode"] = FJSON("~H");
@@ -716,6 +732,31 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
         json["lastCode"] = lastCode_;
     }
 
+    if (Helpers::hasValue(maintenanceMessage_)) {
+        if (maintenanceMessage_ > 0) {
+            char s[5];
+            snprintf_P(s, sizeof(s), PSTR("H%02d"), maintenanceMessage_);
+            json["maintenanceMessage"] = s;
+        } else {
+            json["maintenanceMessage"] = " ";
+        }
+    }
+
+    if (Helpers::hasValue(maintenanceType_)) {
+        if (maintenanceType_ == 0) {
+            json["maintenance"] = FJSON("off");
+        } else if (maintenanceType_ == 1) {
+            json["maintenance"] = maintenanceTime_ * 100;
+        } else if (maintenanceType_ == 2) {
+            json["maintenance"] = maintenanceDate_;
+        }
+    }
+
+    return (json.size());
+}
+
+// creates JSON doc from values,  returns false if empty
+bool Boiler::export_values_info(JsonObject & json, const bool textformat) {
     // Total heat operating time
     if (Helpers::hasValue(upTimeControl_)) {
         if (textformat) {
@@ -830,29 +871,8 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
     if (Helpers::hasValue(nrgSuppCooling_)) {
         json["nrgSuppCooling"] = nrgSuppCooling_;
     }
-
-    if (Helpers::hasValue(maintenanceMessage_)) {
-        if (maintenanceMessage_ > 0) {
-            char s[5];
-            snprintf_P(s, sizeof(s), PSTR("H%02d"), maintenanceMessage_);
-            json["maintenanceMessage"] = s;
-        } else {
-            json["maintenanceMessage"] = " ";
-        }
-    }
-
-    if (Helpers::hasValue(maintenanceType_)) {
-        if (maintenanceType_ == 0) {
-            json["maintenance"] = FJSON("off");
-        } else if (maintenanceType_ == 1) {
-            json["maintenance"] = maintenanceTime_ * 100;
-        } else if (maintenanceType_ == 2) {
-            json["maintenance"] = maintenanceDate_;
-        }
-    }
-
     return (json.size());
-} // namespace emsesp
+}
 
 // publish values via MQTT
 void Boiler::publish_values(JsonObject & json, bool force) {
@@ -882,7 +902,11 @@ void Boiler::publish_values(JsonObject & json, bool force) {
     if (export_values_ww(json_data)) {
         Mqtt::publish(F("boiler_data_ww"), json_data);
     }
+    json_data.clear();
 
+    if (export_values_info(json_data)) {
+        Mqtt::publish(F("boiler_data_info"), json_data);
+    }
     // send out heating and tapwater status
     check_active(force);
 }
@@ -928,7 +952,6 @@ void Boiler::check_active(const bool force) {
     } else {
         b   = ((boilerState_ & 0x0A) == 0x0A);
     }
-
     val = b ? EMS_VALUE_BOOL_ON : EMS_VALUE_BOOL_OFF;
     if (tapwaterActive_ != val || force) {
         tapwaterActive_ = val;
@@ -1118,7 +1141,7 @@ void Boiler::process_UBAMonitorSlowPlus(std::shared_ptr<const Telegram> telegram
     changed_ |= telegram->read_value(burnWorkMin_, 13, 3); // force to 3 bytes
     changed_ |= telegram->read_value(heatWorkMin_, 19, 3); // force to 3 bytes
     changed_ |= telegram->read_value(pumpMod_, 25);
-    // temperature measurements at 4, see #620
+    // temperature measurements at 4, see #620, outdoortemp?
 }
 
 /*

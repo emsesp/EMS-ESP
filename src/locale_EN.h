@@ -327,3 +327,4 @@ MAKE_PSTR(iconheatpump, "mdi:water-pump")
 
 // MQTT topic suffix
 MAKE_PSTR(mqtt_suffix_ww, "_ww")
+MAKE_PSTR(mqtt_suffix_info, "_info")
