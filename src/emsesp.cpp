@@ -67,6 +67,7 @@ uint8_t  EMSESP::publish_all_idx_          = 0;
 uint8_t  EMSESP::unique_id_count_          = 0;
 bool     EMSESP::trace_raw_                = false;
 uint64_t EMSESP::tx_delay_                 = 0;
+bool     EMSESP::force_scan_               = false;
 
 // for a specific EMS device go and request data values
 // or if device_id is 0 it will fetch from all our known and active devices
@@ -104,6 +105,7 @@ uint8_t EMSESP::count_devices(const uint8_t device_type) {
 void EMSESP::scan_devices() {
     EMSESP::clear_all_devices();
     EMSESP::send_read_request(EMSdevice::EMS_TYPE_UBADevices, EMSdevice::EMS_DEVICE_ID_BOILER);
+    force_scan_ = true;
 }
 
 /**
@@ -568,7 +570,8 @@ void EMSESP::process_UBADevices(std::shared_ptr<const Telegram> telegram) {
                     // when the version info is received, it will automagically add the device
                     // always skip modem device 0x0D, it does not reply to version request
                     // see https://github.com/proddy/EMS-ESP/issues/460#issuecomment-709553012
-                    if ((device_id != EMSbus::ems_bus_id()) && !(EMSESP::device_exists(device_id)) && (device_id != 0x0D) && (device_id != 0x0C)) {
+                    if ((device_id != EMSbus::ems_bus_id()) && (!(EMSESP::device_exists(device_id)) || force_scan_) &&
+                        (device_id != 0x0B) && (device_id != 0x0C) && (device_id != 0x0D)) {
                         LOG_DEBUG(F("New EMS device detected with ID 0x%02X. Requesting version information."), device_id);
                         send_read_request(EMSdevice::EMS_TYPE_VERSION, device_id);
                     }
@@ -577,6 +580,7 @@ void EMSESP::process_UBADevices(std::shared_ptr<const Telegram> telegram) {
             }
         }
     }
+    force_scan_ = false;
 }
 
 // process the Version telegram (type 0x02), which is a common type
