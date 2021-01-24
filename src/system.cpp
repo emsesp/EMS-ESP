@@ -20,6 +20,9 @@
 #include "emsesp.h" // for send_raw_telegram() command
 
 #include "version.h" // firmware version of EMS-ESP
+#if defined(ESP32)
+#include "driver/adc.h"
+#endif
 
 #if defined(EMSESP_TEST)
 #include "test/test.h"
@@ -41,7 +44,6 @@ uint8_t     System::led_gpio_       = 0;
 uint16_t    System::analog_         = 0;
 bool        System::analog_enabled_ = false;
 bool        System::syslog_enabled_ = false;
-std::string System::hostname_;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
@@ -219,6 +221,13 @@ void System::other_init() {
         Helpers::bool_format(settings.bool_format);
         analog_enabled_ = settings.analog_enabled;
     });
+#ifdef ESP32
+    if (analog_enabled_) {
+        adc_power_on();
+    } else {
+        adc_power_off();
+    }
+#endif
 }
 
 // init stuff. This is called when settings are changed in the web
@@ -228,8 +237,6 @@ void System::init() {
     other_init();
 
     syslog_init(); // init SysLog
-
-    EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & settings) { hostname(settings.hostname.c_str()); });
 
     EMSESP::init_tx(); // start UART
 }
@@ -334,8 +341,8 @@ void System::send_heartbeat() {
     doc["uptime"]       = uuid::log::format_timestamp_ms(uuid::get_uptime_ms(), 3);
     doc["uptime_sec"]   = uuid::get_uptime_sec();
     doc["mqtt_fails"]   = Mqtt::publish_fails();
-    doc["txfails"]      = EMSESP::txservice_.telegram_fail_count();
-    doc["rxfails"]      = EMSESP::rxservice_.telegram_error_count();
+    doc["tx_fails"]     = EMSESP::txservice_.telegram_fail_count();
+    doc["rx_fails"]     = EMSESP::rxservice_.telegram_error_count();
     doc["dallas_fails"] = EMSESP::sensor_fails();
     doc["freemem"]      = free_memory;
 #if defined(ESP8266)
@@ -355,9 +362,10 @@ void System::measure_analog() {
     if (!measure_last_ || (uint32_t)(uuid::get_uptime() - measure_last_) >= SYSTEM_MEASURE_ANALOG_INTERVAL) {
         measure_last_ = uuid::get_uptime();
 #if defined(ESP8266)
-        uint16_t a = analogRead(A0);
+        // uint16_t a = analogRead(A0); // 10 bit 3,2V
+        uint16_t a = ((analogRead(A0) * 27) / 8); // scale to esp32 result in mV
 #elif defined(ESP32)
-        uint16_t a = analogRead(36);
+        uint16_t a = analogRead(36); // arduino scale mV
 #else
         uint16_t a = 0; // standalone
 #endif

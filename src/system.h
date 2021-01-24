@@ -72,14 +72,6 @@ class System {
     bool check_upgrade();
     void send_heartbeat();
 
-    // static std::string hostname() {
-    //     return hostname_;
-    // }
-
-    static void hostname(std::string hostname) {
-        hostname_ = hostname;
-    }
-
   private:
     static uuid::log::Logger logger_;
 
@@ -115,7 +107,6 @@ class System {
     static uint16_t analog_;
 
     // settings
-    static std::string hostname_;
     static bool        hide_led_;
     static uint8_t     led_gpio_;
     static bool        syslog_enabled_;
