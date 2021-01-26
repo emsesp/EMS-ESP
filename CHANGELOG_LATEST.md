@@ -1,6 +1,7 @@
 # Changelog
 
 ### Added
+- Boiler WB Greenstar 8000
 
 ### Fixed
 - telegrams matched to masterthermostat 0x18
