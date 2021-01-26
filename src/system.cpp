@@ -37,13 +37,13 @@ uuid::syslog::SyslogService System::syslog_;
 #endif
 
 // init statics
-uint32_t    System::heap_start_     = 0;
-bool        System::upload_status_  = false;
-bool        System::hide_led_       = false;
-uint8_t     System::led_gpio_       = 0;
-uint16_t    System::analog_         = 0;
-bool        System::analog_enabled_ = false;
-bool        System::syslog_enabled_ = false;
+uint32_t System::heap_start_     = 0;
+bool     System::upload_status_  = false;
+bool     System::hide_led_       = false;
+uint8_t  System::led_gpio_       = 0;
+uint16_t System::analog_         = 0;
+bool     System::analog_enabled_ = false;
+bool     System::syslog_enabled_ = false;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
@@ -826,17 +826,17 @@ bool System::check_upgrade() {
 
             EMSESP::esp8266React.getMqttSettingsService()->update(
                 [&](MqttSettings & mqttSettings) {
-                    mqttSettings.host           = mqtt["ip"] | FACTORY_MQTT_HOST;
-                    mqttSettings.mqtt_format    = (mqtt["nestedjson"] ? Mqtt::Format::NESTED : Mqtt::Format::SINGLE);
-                    mqttSettings.mqtt_qos       = mqtt["qos"] | 0;
-                    mqttSettings.mqtt_retain    = mqtt["retain"];
-                    mqttSettings.username       = mqtt["user"] | "";
-                    mqttSettings.password       = mqtt["password"] | "";
-                    mqttSettings.port           = mqtt["port"] | FACTORY_MQTT_PORT;
-                    mqttSettings.clientId       = FACTORY_MQTT_CLIENT_ID;
-                    mqttSettings.enabled        = mqtt["enabled"];
-                    mqttSettings.keepAlive      = FACTORY_MQTT_KEEP_ALIVE;
-                    mqttSettings.cleanSession   = FACTORY_MQTT_CLEAN_SESSION;
+                    mqttSettings.host         = mqtt["ip"] | FACTORY_MQTT_HOST;
+                    mqttSettings.mqtt_format  = (mqtt["nestedjson"] ? Mqtt::Format::NESTED : Mqtt::Format::SINGLE);
+                    mqttSettings.mqtt_qos     = mqtt["qos"] | 0;
+                    mqttSettings.mqtt_retain  = mqtt["retain"];
+                    mqttSettings.username     = mqtt["user"] | "";
+                    mqttSettings.password     = mqtt["password"] | "";
+                    mqttSettings.port         = mqtt["port"] | FACTORY_MQTT_PORT;
+                    mqttSettings.clientId     = FACTORY_MQTT_CLIENT_ID;
+                    mqttSettings.enabled      = mqtt["enabled"];
+                    mqttSettings.keepAlive    = FACTORY_MQTT_KEEP_ALIVE;
+                    mqttSettings.cleanSession = FACTORY_MQTT_CLEAN_SESSION;
 
                     return StateUpdateResult::CHANGED;
                 },
@@ -1026,7 +1026,7 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
     node["fragmem"] = ESP.getHeapFragmentation();
 #endif
 
-/* Use call system settings for all settings
+    /* Use call system settings for all settings
     node = json.createNestedObject("Settings");
 
     EMSESP::esp8266React.getMqttSettingsService()->read([&](MqttSettings & settings) {

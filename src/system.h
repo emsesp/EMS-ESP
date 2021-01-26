@@ -107,10 +107,10 @@ class System {
     static uint16_t analog_;
 
     // settings
-    static bool        hide_led_;
-    static uint8_t     led_gpio_;
-    static bool        syslog_enabled_;
-    static bool        analog_enabled_;
+    static bool    hide_led_;
+    static uint8_t led_gpio_;
+    static bool    syslog_enabled_;
+    static bool    analog_enabled_;
 };
 
 } // namespace emsesp

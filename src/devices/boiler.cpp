@@ -303,7 +303,7 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("wWStarts"), nullptr, F_(wWStarts), nullptr, json);
         create_value_json(root, F("wWWorkM"), nullptr, F_(wWWorkM), nullptr, json);
     } else if (part == 2) {
-        part = 0; // no more parts
+        part = 0;                              // no more parts
         if (!export_values_info(json, true)) { // append info values
             return;
         }
@@ -333,7 +333,7 @@ bool Boiler::export_values(JsonObject & json) {
     if (!export_values_main(json)) {
         return false;
     }
-    export_values_ww(json); // append ww values
+    export_values_ww(json);   // append ww values
     export_values_info(json); // append info values
     return true;
 }
@@ -704,7 +704,7 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
         }
     }
 
-/*
+    /*
     // Service Code & Service Code Number. Priority error - maintenance - workingcode
     if ((serviceCode_[0] >= '1' && serviceCode_[0] <= '9') || (serviceCode_[0] >= 'A' && serviceCode_[0] <= 'Z')) {
         json["serviceCode"] = serviceCode_;
@@ -948,9 +948,9 @@ void Boiler::check_active(const bool force) {
         flowsensor = true;
     }
     if (flowsensor) {
-        b   = ((wWCurFlow_ > 0) && ((boilerState_ & 0x0A) == 0x0A));
+        b = ((wWCurFlow_ > 0) && ((boilerState_ & 0x0A) == 0x0A));
     } else {
-        b   = ((boilerState_ & 0x0A) == 0x0A);
+        b = ((boilerState_ & 0x0A) == 0x0A);
     }
     val = b ? EMS_VALUE_BOOL_ON : EMS_VALUE_BOOL_OFF;
     if (tapwaterActive_ != val || force) {

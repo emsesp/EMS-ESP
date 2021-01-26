@@ -570,8 +570,8 @@ void EMSESP::process_UBADevices(std::shared_ptr<const Telegram> telegram) {
                     // when the version info is received, it will automagically add the device
                     // always skip modem device 0x0D, it does not reply to version request
                     // see https://github.com/proddy/EMS-ESP/issues/460#issuecomment-709553012
-                    if ((device_id != EMSbus::ems_bus_id()) && (!(EMSESP::device_exists(device_id)) || force_scan_) &&
-                        (device_id != 0x0B) && (device_id != 0x0C) && (device_id != 0x0D)) {
+                    if ((device_id != EMSbus::ems_bus_id()) && (!(EMSESP::device_exists(device_id)) || force_scan_) && (device_id != 0x0B)
+                        && (device_id != 0x0C) && (device_id != 0x0D)) {
                         LOG_DEBUG(F("New EMS device detected with ID 0x%02X. Requesting version information."), device_id);
                         send_read_request(EMSdevice::EMS_TYPE_VERSION, device_id);
                     }
@@ -701,7 +701,7 @@ void EMSESP::device_info_web(const uint8_t unique_id, JsonObject & root) {
             if (emsdevice->unique_id() == unique_id) {
                 root["name"]   = emsdevice->to_string_short(); // can't use c_str() because of scope
                 JsonArray data = root.createNestedArray("data");
-                uint8_t part = 0;
+                uint8_t   part = 0;
                 do {
                     emsdevice->device_info_web(data, part);
                 } while (part);

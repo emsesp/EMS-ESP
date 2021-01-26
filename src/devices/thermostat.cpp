@@ -274,7 +274,7 @@ bool Thermostat::export_values(JsonObject & json) {
         JsonObject json_hc;
         char       hc_name[10]; // hc{1-4}
         snprintf_P(hc_name, 10, PSTR("hc%d"), hc->hc_num());
-        json_hc   = json.createNestedObject(hc_name);
+        json_hc = json.createNestedObject(hc_name);
         has_value |= export_values_hc(hc, json_hc);
     }
     return has_value;
@@ -476,7 +476,7 @@ bool Thermostat::export_values_main(JsonObject & rootThermostat) {
 // creates JSON doc from values, for each heating circuit
 // returns false if empty
 bool Thermostat::export_values_hc(std::shared_ptr<Thermostat::HeatingCircuit> hc, JsonObject & dataThermostat) {
-    uint8_t    model = this->model();
+    uint8_t model = this->model();
 
     if (!hc->is_active()) {
         return false;
@@ -663,7 +663,8 @@ bool Thermostat::export_values_hc(std::shared_ptr<Thermostat::HeatingCircuit> hc
         dataThermostat["modetype"] = mode_tostring(hc->get_mode_type(model));
     }
 
-    return (dataThermostat.size());;
+    return (dataThermostat.size());
+    ;
 }
 
 // set up HA MQTT Discovery
