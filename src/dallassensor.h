@@ -117,6 +117,7 @@ class DallasSensor {
 
     int8_t   scancnt_     = -3;
     uint8_t  firstscan_   = 0;
+    uint8_t  scanretry_   = 0;
     uint8_t  dallas_gpio_ = 0;
     bool     parasite_    = false;
     bool     changed_     = false;

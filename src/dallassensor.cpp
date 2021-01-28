@@ -71,10 +71,20 @@ void DallasSensor::loop() {
                 YIELD;
                 bus_.skip();
                 bus_.write(CMD_CONVERT_TEMP, parasite_ ? 1 : 0);
-                state_ = State::READING;
+                state_     = State::READING;
+                scanretry_ = 0;
             } else {
                 // no sensors found
-                // LOG_ERROR(F("Bus reset failed")); // uncomment for debug
+                if (sensors_.size()) {
+                    sensorfails_++;
+                    if (++scanretry_ > 5) { // every 30 sec
+                        scanretry_ = 0;
+                        LOG_ERROR(F("Bus reset failed"));
+                        for (auto & sensor : sensors_) {
+                            sensor.temperature_c = EMS_VALUE_SHORT_NOTSET;
+                        }
+                    }
+                }
             }
             last_activity_ = time_now;
         }
@@ -86,11 +96,13 @@ void DallasSensor::loop() {
         } else if (time_now - last_activity_ > READ_TIMEOUT_MS) {
             LOG_WARNING(F("Dallas sensor read timeout"));
             state_ = State::IDLE;
+            sensorfails_++;
         }
     } else if (state_ == State::SCANNING) {
         if (time_now - last_activity_ > SCAN_TIMEOUT_MS) {
             LOG_ERROR(F("Dallas sensor scan timeout"));
             state_ = State::IDLE;
+            sensorfails_++;
         } else {
             uint8_t addr[ADDR_LEN] = {0};
 
