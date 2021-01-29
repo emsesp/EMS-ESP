@@ -17,9 +17,9 @@
  */
 
 #include "system.h"
-#include "emsesp.h" // for send_raw_telegram() command
-
+#include "emsesp.h"  // for send_raw_telegram() command
 #include "version.h" // firmware version of EMS-ESP
+
 #if defined(ESP32)
 #include "driver/adc.h"
 #endif
@@ -954,6 +954,7 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
         node["port"]     = settings.port;
         node["username"] = settings.username;
         // node["password"]                = settings.password;
+        node["base"]                    = settings.base;
         node["client_id"]               = settings.clientId;
         node["keep_alive"]              = settings.keepAlive;
         node["clean_session"]           = Helpers::render_boolean(s, settings.cleanSession);
