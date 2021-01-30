@@ -77,7 +77,7 @@ void DallasSensor::loop() {
                 // no sensors found
                 if (sensors_.size()) {
                     sensorfails_++;
-                    if (++scanretry_ > 5) { // every 30 sec
+                    if (++scanretry_ > SCAN_MAX) { // every 30 sec
                         scanretry_ = 0;
                         LOG_ERROR(F("Bus reset failed"));
                         for (auto & sensor : sensors_) {
@@ -156,7 +156,7 @@ void DallasSensor::loop() {
                     bus_.depower();
                 }
                 // check for missing sensors after some samples
-                if (++scancnt_ > 5) {
+                if (++scancnt_ > SCAN_MAX) {
                     for (auto & sensor : sensors_) {
                         if (!sensor.read) {
                             sensor.temperature_c = EMS_VALUE_SHORT_NOTSET;
@@ -165,11 +165,11 @@ void DallasSensor::loop() {
                         sensor.read = false;
                     }
                     scancnt_ = 0;
-                } else if (scancnt_ == -2) { // startup
+                } else if (scancnt_ == SCAN_START + 1) { // startup
                     firstscan_ = sensors_.size();
                     LOG_DEBUG(F("Adding %d dallassensor(s) from first scan"), firstscan_);
                 } else if ((scancnt_ <= 0) && (firstscan_ != sensors_.size())) { // check 2 times for no change of sensor #
-                    scancnt_ = -3;
+                    scancnt_ = SCAN_START;
                     sensors_.clear(); // restart scaning and clear to get correct numbering
                 }
                 state_ = State::IDLE;

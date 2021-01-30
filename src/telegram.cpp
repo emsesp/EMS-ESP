@@ -273,7 +273,7 @@ void TxService::send() {
     }
 
     // if there's nothing in the queue to transmit or sending should be delayed, send back a poll and quit
-    if (tx_telegrams_.empty() || (delayed_send_ && uuid::get_uptime() < (delayed_send_ + 2000))) {
+    if (tx_telegrams_.empty() || (delayed_send_ && uuid::get_uptime() < delayed_send_)) {
         send_poll();
         return;
     }
@@ -423,7 +423,7 @@ void TxService::add(const uint8_t  operation,
         tx_telegrams_.pop_front();
     }
 
-    if (front || (operation == Telegram::Operation::TX_WRITE)) {
+    if (front) {
         tx_telegrams_.emplace_front(tx_telegram_id_++, std::move(telegram), false); // add to front of queue
     } else {
         tx_telegrams_.emplace_back(tx_telegram_id_++, std::move(telegram), false); // add to back of queue
@@ -497,7 +497,7 @@ void TxService::add(uint8_t operation, const uint8_t * data, const uint8_t lengt
 #endif
 
     if (front) {
-        tx_telegrams_.emplace_front(tx_telegram_id_++, std::move(telegram), false); // add to back of queue
+        tx_telegrams_.emplace_front(tx_telegram_id_++, std::move(telegram), false); // add to front of queue
     } else {
         tx_telegrams_.emplace_back(tx_telegram_id_++, std::move(telegram), false); // add to back of queue
     }
@@ -612,7 +612,7 @@ uint16_t TxService::post_send_query() {
         LOG_DEBUG(F("Sending post validate read, type ID 0x%02X to dest 0x%02X"), post_typeid, dest);
         set_post_send_query(0); // reset
         // delay the request if we have a different type_id for post_send_query
-        delayed_send_ = (this->telegram_last_->type_id == post_typeid) ? 0 : uuid::get_uptime();
+        delayed_send_ = (this->telegram_last_->type_id == post_typeid) ? 0 : (uuid::get_uptime() + POST_SEND_DELAY);
     }
 
     return post_typeid;
