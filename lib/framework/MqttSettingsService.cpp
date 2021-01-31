@@ -180,7 +180,6 @@ void MqttSettings::read(MqttSettings & settings, JsonObject & root) {
     root["client_id"]     = settings.clientId;
     root["keep_alive"]    = settings.keepAlive;
     root["clean_session"] = settings.cleanSession;
-    // root["max_topic_length"] = settings.maxTopicLength;
 
     // added by proddy for EMS-ESP
     root["publish_time_boiler"]     = settings.publish_time_boiler;
@@ -206,7 +205,6 @@ StateUpdateResult MqttSettings::update(JsonObject & root, MqttSettings & setting
     newSettings.clientId     = root["client_id"] | FACTORY_MQTT_CLIENT_ID;
     newSettings.keepAlive    = root["keep_alive"] | FACTORY_MQTT_KEEP_ALIVE;
     newSettings.cleanSession = root["clean_session"] | FACTORY_MQTT_CLEAN_SESSION;
-    // newSettings.maxTopicLength = root["max_topic_length"] | FACTORY_MQTT_MAX_TOPIC_LENGTH;
 
     newSettings.publish_time_boiler     = root["publish_time_boiler"] | EMSESP_DEFAULT_PUBLISH_TIME;
     newSettings.publish_time_thermostat = root["publish_time_thermostat"] | EMSESP_DEFAULT_PUBLISH_TIME;

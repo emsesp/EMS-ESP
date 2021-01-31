@@ -6,7 +6,7 @@
 ### Fixed
 - telegrams matched to masterthermostat 0x18
 - Boiler Junkers Cerapur Aero
-- multible roomcontrollers
+- multiple roomcontrollers
 - readback after write with delay (give ems-devices time to set the value)
 
 ### Changed

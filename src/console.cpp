@@ -313,7 +313,7 @@ void EMSESPShell::add_console_commands() {
                                   } else {
                                       watch_id = Helpers::hextoint(arguments[0].c_str());
                                       if (watch_id && ((emsesp::EMSESP::watch() == EMSESP::WATCH_OFF) || (emsesp::EMSESP::watch() == EMSESP::WATCH_UNKNOWN))) {
-                                           emsesp::EMSESP::watch(EMSESP::WATCH_ON); // on
+                                          emsesp::EMSESP::watch(EMSESP::WATCH_ON); // on
                                       } else if (!watch_id) {
                                           return;
                                       }

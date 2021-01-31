@@ -60,10 +60,6 @@ static String generateClientId() {
 #define FACTORY_MQTT_CLEAN_SESSION true
 #endif
 
-#ifndef FACTORY_MQTT_MAX_TOPIC_LENGTH
-#define FACTORY_MQTT_MAX_TOPIC_LENGTH 128
-#endif
-
 #define EMSESP_DEFAULT_MQTT_FORMAT 2 // nested
 #define EMSESP_DEFAULT_MQTT_QOS 0
 #define EMSESP_DEFAULT_MQTT_RETAIN false
