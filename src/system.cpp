@@ -22,6 +22,7 @@
 
 #if defined(ESP32)
 #include "driver/adc.h"
+#include <esp_bt.h>
 #endif
 
 #if defined(EMSESP_TEST)
@@ -222,6 +223,10 @@ void System::other_init() {
         analog_enabled_ = settings.analog_enabled;
     });
 #ifdef ESP32
+    // Wifi power settings 2 - 19.5dBm, raw values 4/dBm (8-78)
+    // WiFi.setTxPower(WIFI_POWER_13dBm);
+    btStop();
+    esp_bt_controller_disable();
     if (analog_enabled_) {
         adc_power_on();
     } else {
