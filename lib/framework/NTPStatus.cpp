@@ -1,39 +1,53 @@
 #include <NTPStatus.h>
 
-NTPStatus::NTPStatus(AsyncWebServer * server, SecurityManager * securityManager) {
-    server->on(NTP_STATUS_SERVICE_PATH,
-               HTTP_GET,
-               securityManager->wrapRequest(std::bind(&NTPStatus::ntpStatus, this, std::placeholders::_1), AuthenticationPredicates::IS_AUTHENTICATED));
+NTPStatus::NTPStatus(AsyncWebServer* server, SecurityManager* securityManager) {
+  server->on(NTP_STATUS_SERVICE_PATH,
+             HTTP_GET,
+             securityManager->wrapRequest(std::bind(&NTPStatus::ntpStatus, this, std::placeholders::_1),
+                                          AuthenticationPredicates::IS_AUTHENTICATED));
 }
 
-String toISOString(tm * time, bool incOffset) {
-    char time_string[25];
-    strftime(time_string, 25, incOffset ? "%FT%T%z" : "%FT%TZ", time);
-    return String(time_string);
+/*
+ * Formats the time using the format provided.
+ *
+ * Uses a 25 byte buffer, large enough to fit an ISO time string with offset.
+ */
+String formatTime(tm* time, const char* format) {
+  char time_string[25];
+  strftime(time_string, 25, format, time);
+  return String(time_string);
 }
 
-void NTPStatus::ntpStatus(AsyncWebServerRequest * request) {
-    AsyncJsonResponse * response = new AsyncJsonResponse(false, MAX_NTP_STATUS_SIZE);
-    JsonObject          root     = response->getRoot();
+String toUTCTimeString(tm* time) {
+  return formatTime(time, "%FT%TZ");
+}
 
-    // grab the current instant in unix seconds
-    time_t now = time(nullptr);
+String toLocalTimeString(tm* time) {
+  return formatTime(time, "%FT%T");
+}
 
-    // only provide enabled/disabled status for now
-    root["status"] = sntp_enabled() ? 1 : 0;
+void NTPStatus::ntpStatus(AsyncWebServerRequest* request) {
+  AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_NTP_STATUS_SIZE);
+  JsonObject root = response->getRoot();
 
-    // the current time in UTC
-    root["time_utc"] = toISOString(gmtime(&now), false);
+  // grab the current instant in unix seconds
+  time_t now = time(nullptr);
 
-    // local time as ISO String with TZ
-    root["time_local"] = toISOString(localtime(&now), true);
+  // only provide enabled/disabled status for now
+  root["status"] = sntp_enabled() ? 1 : 0;
 
-    // the sntp server name
-    root["server"] = sntp_getservername(0);
+  // the current time in UTC
+  root["utc_time"] = toUTCTimeString(gmtime(&now));
 
-    // device uptime in seconds
-    root["uptime"] = uuid::get_uptime() / 1000;
+  // local time with offset
+  root["local_time"] = toLocalTimeString(localtime(&now));
 
-    response->setLength();
-    request->send(response);
+  // the sntp server name
+  root["server"] = sntp_getservername(0);
+
+  // device uptime in seconds
+  root["uptime"] = millis() / 1000;
+
+  response->setLength();
+  request->send(response);
 }
