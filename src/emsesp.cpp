@@ -651,12 +651,17 @@ bool EMSESP::process_telegram(std::shared_ptr<const Telegram> telegram) {
         return false;
     }
 
+    // remember if we first get scan results from UBADevices
+    static bool first_scan_done_ = false;
     // check for common types, like the Version(0x02)
     if (telegram->type_id == EMSdevice::EMS_TYPE_VERSION) {
         process_version(telegram);
         return true;
     } else if (telegram->type_id == EMSdevice::EMS_TYPE_UBADevices) {
         process_UBADevices(telegram);
+        if (telegram->dest == EMSbus::ems_bus_id()) {
+            first_scan_done_ = true;
+        }
         return true;
     }
 
@@ -664,11 +669,13 @@ bool EMSESP::process_telegram(std::shared_ptr<const Telegram> telegram) {
     // calls the associated process function for that EMS device
     // returns false if the device_id doesn't recognize it
     // after the telegram has been processed, call the updated_values() function to see if we need to force an MQTT publish
-    bool found = false;
+    bool found       = false;
+    bool knowndevice = false;
     for (const auto & emsdevice : emsdevices) {
         if (emsdevice) {
             if (emsdevice->is_device_id(telegram->src)) {
-                found = emsdevice->handle_telegram(telegram);
+                knowndevice = true;
+                found       = emsdevice->handle_telegram(telegram);
                 // if we correctly processes the telegram follow up with sending it via MQTT if needed
                 if (found && Mqtt::connected()) {
                     if ((mqtt_.get_publish_onchange(emsdevice->device_type()) && emsdevice->updated_values()) || telegram->type_id == publish_id_) {
@@ -687,6 +694,9 @@ bool EMSESP::process_telegram(std::shared_ptr<const Telegram> telegram) {
         LOG_DEBUG(F("No telegram type handler found for ID 0x%02X (src 0x%02X)"), telegram->type_id, telegram->src);
         if (watch() == WATCH_UNKNOWN) {
             LOG_NOTICE(pretty_telegram(telegram).c_str());
+        }
+        if (first_scan_done_ && !knowndevice && (telegram->src != EMSbus::ems_bus_id()) && (telegram->src != 0x0B) && (telegram->src != 0x0C) && (telegram->src != 0x0D)) {
+            send_read_request(EMSdevice::EMS_TYPE_VERSION, telegram->src);
         }
     }
 
