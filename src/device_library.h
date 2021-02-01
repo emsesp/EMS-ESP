@@ -67,7 +67,6 @@
 {203, DeviceType::THERMOSTAT, F("EasyControl CT200"), DeviceFlags::EMS_DEVICE_FLAG_EASY | DeviceFlags::EMS_DEVICE_FLAG_NO_WRITE}, // 0x18, cannot write
 
 // Thermostat - Buderus/Nefit/Bosch specific - 0x17 / 0x10 / 0x18 / 0x19
-{ 66, DeviceType::THERMOSTAT, F("RC20"), DeviceFlags::EMS_DEVICE_FLAG_RC20_2}, // 0x17
 { 67, DeviceType::THERMOSTAT, F("RC30"), DeviceFlags::EMS_DEVICE_FLAG_RC30_1},// 0x10 - based on RC35
 { 77, DeviceType::THERMOSTAT, F("RC20/Moduline 300"), DeviceFlags::EMS_DEVICE_FLAG_RC20},// 0x17
 { 78, DeviceType::THERMOSTAT, F("Moduline 400"), DeviceFlags::EMS_DEVICE_FLAG_RC30}, // 0x10
@@ -82,7 +81,7 @@
 {165, DeviceType::THERMOSTAT, F("RC100/Moduline 1000/1010"), DeviceFlags::EMS_DEVICE_FLAG_RC100}, // 0x18, 0x38
 
 // Thermostat - Sieger - 0x10 / 0x17
-{ 66, DeviceType::THERMOSTAT, F("ES72"), DeviceFlags::EMS_DEVICE_FLAG_RC20}, // first seen as remote 0x19, could also be RC20_2?
+{ 66, DeviceType::THERMOSTAT, F("ES72/RC20"), DeviceFlags::EMS_DEVICE_FLAG_RC20_2}, // 0x17 or remote
 { 76, DeviceType::THERMOSTAT, F("ES73"), DeviceFlags::EMS_DEVICE_FLAG_RC35}, // 0x10
 {113, DeviceType::THERMOSTAT, F("ES72/RC20"), DeviceFlags::EMS_DEVICE_FLAG_RC20_2}, // 0x17
 

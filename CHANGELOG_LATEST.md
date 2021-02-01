@@ -2,13 +2,13 @@
 
 ### Added
 - Boiler WB Greenstar 8000
-- Thermostat RC20 device 66
 
 ### Fixed
 - telegrams matched to masterthermostat 0x18
 - Boiler Junkers Cerapur Aero
 - multiple roomcontrollers
 - readback after write with delay (give ems-devices time to set the value)
+- Thermostat ES72/RC20, device 66 to RC20_2 command-set
 
 ### Changed
 - split `show values` in smaller packages and separate heating circuits
