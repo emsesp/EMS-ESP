@@ -21,5 +21,6 @@
 - thermostat `time` to `datetime`
 - adc scaled to mV output
 - split boiler mqtt to `data`, `data_ww`, `data_info`
+- Reduce Web UI artefact size by removing moment.js 
 
 ### Removed
