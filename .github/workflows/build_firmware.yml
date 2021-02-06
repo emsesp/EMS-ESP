@@ -1,15 +1,15 @@
-name: Build Firmware
+name: Build ESP8266 Dev Firmware
 
 on:
   push:
     branches:
-      - dev
+      - esp8266_dev
     tags:
     #   - '*.*.*'
     paths:
     - 'CHANGELOG_LATEST.md'
   workflow_dispatch:
-    branches: [ dev ]
+    branches: [ esp8266_dev ]
 
 jobs:
         
@@ -44,7 +44,6 @@ jobs:
       - name: Build images
         run: |
           platformio run -e esp8266-ci
-          platformio run -e esp32-ci
           
       - name: Delete
         uses: dev-drprasad/delete-tag-and-release@v0.1.2

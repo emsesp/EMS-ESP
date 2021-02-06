@@ -2,7 +2,7 @@ name: Standalone Build
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ dev_esp8266 ]
     paths:
     - 'src/**'
     
