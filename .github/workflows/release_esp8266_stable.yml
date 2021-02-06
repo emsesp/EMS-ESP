@@ -45,7 +45,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           body_path: BODY.txt
-          name: EMS-ESP v${{steps.fetch_version.outputs.s}}
+          name: EMS-ESP v${{steps.fetch_version.outputs.s}} (ESP8266)
           tag_name: v${{steps.fetch_version.outputs.s}}
           prerelease: false
           files: |
