@@ -36,7 +36,7 @@ void Gateway::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Gateway::export_values(JsonObject & json) {
+bool Gateway::export_values(JsonObject & json, int8_t id) {
     return true;
 }
 

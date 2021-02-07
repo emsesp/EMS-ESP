@@ -35,7 +35,7 @@ Heatpump::Heatpump(uint8_t device_type, uint8_t device_id, uint8_t product_id, c
 
 // creates JSON doc from values
 // returns false if empty
-bool Heatpump::export_values(JsonObject & json) {
+bool Heatpump::export_values(JsonObject & json, int8_t id) {
     if (Helpers::hasValue(airHumidity_)) {
         json["airHumidity"] = (float)airHumidity_ / 2;
     }

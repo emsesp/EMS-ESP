@@ -141,7 +141,7 @@ class EMSdevice {
 
     // virtual functions overrules by derived classes
     virtual void publish_values(JsonObject & json, bool force = false) = 0;
-    virtual bool export_values(JsonObject & json)                      = 0;
+    virtual bool export_values(JsonObject & json, int8_t id = -1)      = 0;
     virtual bool updated_values()                                      = 0;
     virtual void device_info_web(JsonArray & root, uint8_t & part)     = 0;
 

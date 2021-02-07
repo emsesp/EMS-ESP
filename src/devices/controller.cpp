@@ -36,7 +36,7 @@ void Controller::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Controller::export_values(JsonObject & json) {
+bool Controller::export_values(JsonObject & json, int8_t id) {
     return true;
 }
 

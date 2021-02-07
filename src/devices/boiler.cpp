@@ -332,7 +332,7 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
     }
 }
 
-bool Boiler::export_values(JsonObject & json) {
+bool Boiler::export_values(JsonObject & json, int8_t id) {
     if (!export_values_main(json)) {
         return false;
     }

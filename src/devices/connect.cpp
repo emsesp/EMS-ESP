@@ -36,7 +36,7 @@ void Connect::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Connect::export_values(JsonObject & json) {
+bool Connect::export_values(JsonObject & json, int8_t id) {
     return true;
 }
 

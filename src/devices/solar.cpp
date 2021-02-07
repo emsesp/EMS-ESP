@@ -156,7 +156,7 @@ void Solar::register_mqtt_ha_config() {
 
 // creates JSON doc from values
 // returns false if empty
-bool Solar::export_values(JsonObject & json) {
+bool Solar::export_values(JsonObject & json, int8_t id) {
     char s[10]; // for formatting strings
 
     if (Helpers::hasValue(collectorTemp_)) {

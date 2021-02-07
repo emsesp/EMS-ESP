@@ -2,6 +2,7 @@
 
 ### Added
 - Boiler WB Greenstar 8000
+- optional id to info command to output heatingcircuits separated
 
 ### Fixed
 - telegrams matched to masterthermostat 0x18

@@ -36,7 +36,7 @@ void Generic::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Generic::export_values(JsonObject & json) {
+bool Generic::export_values(JsonObject & json, int8_t id) {
     return true;
 }
 

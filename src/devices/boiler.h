@@ -39,7 +39,7 @@ class Boiler : public EMSdevice {
     Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
     virtual void publish_values(JsonObject & json, bool force);
-    virtual bool export_values(JsonObject & json);
+    virtual bool export_values(JsonObject & json, int8_t id = -1);
     virtual void device_info_web(JsonArray & root, uint8_t & part);
     virtual bool updated_values();
 
