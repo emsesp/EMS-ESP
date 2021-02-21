@@ -7,7 +7,7 @@ This is the firmware for the ESP8266.
 [![version](https://img.shields.io/github/release/proddy/EMS-ESP.svg?label=Latest%20Release)](https://github.com/proddy/EMS-ESP/blob/esp8266_stable/CHANGELOG.md)
 [![release-date](https://img.shields.io/github/release-date/proddy/EMS-ESP.svg?label=Released)](https://github.com/proddy/EMS-ESP/commits/master)
 [![license](https://img.shields.io/github/license/proddy/EMS-ESP.svg)](LICENSE)
-![Build Firmware](https://github.com/proddy/EMS-ESP/workflows/Build%20Firmware/badge.svg?branch=dev)
+[![Build ESP8266 Dev Firmware](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml/badge.svg?branch=esp8266_dev)](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/a37be4d45e5f47749b6e356c8e738a80)](https://www.codacy.com/gh/proddy/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proddy/EMS-ESP&amp;utm_campaign=Badge_Grade)
 [![downloads](https://img.shields.io/github/downloads/proddy/EMS-ESP/total.svg)](https://github.com/proddy/EMS-ESP/releases)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
