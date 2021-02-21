@@ -695,7 +695,8 @@ bool EMSESP::process_telegram(std::shared_ptr<const Telegram> telegram) {
         if (watch() == WATCH_UNKNOWN) {
             LOG_NOTICE(pretty_telegram(telegram).c_str());
         }
-        if (first_scan_done_ && !knowndevice && (telegram->src != EMSbus::ems_bus_id()) && (telegram->src != 0x0B) && (telegram->src != 0x0C) && (telegram->src != 0x0D)) {
+        if (first_scan_done_ && !knowndevice && (telegram->src != EMSbus::ems_bus_id()) && (telegram->src != 0x0B) && (telegram->src != 0x0C)
+            && (telegram->src != 0x0D)) {
             send_read_request(EMSdevice::EMS_TYPE_VERSION, telegram->src);
         }
     }
