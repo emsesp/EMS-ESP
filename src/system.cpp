@@ -325,6 +325,11 @@ void System::send_heartbeat() {
         return;
     }
 
+    // don't send if we're connecting to MQTT
+    if (Mqtt::is_connecting()) {
+        return;
+    }
+
     uint32_t free_memory = free_mem();
 
 #if defined(ESP8266)
