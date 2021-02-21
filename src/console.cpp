@@ -288,7 +288,7 @@ void EMSESPShell::add_console_commands() {
                           [](Shell & shell, const std::vector<std::string> & arguments) {
                               uint16_t value = Helpers::atoint(arguments.front().c_str());
                               telnet_.initial_idle_timeout(value * 60);
-                              shell.printfln(F("Telnet timout is %d minutes"), value);
+                              shell.printfln(F("Telnet timeout is %d minutes"), value);
                           });
 #endif
 
