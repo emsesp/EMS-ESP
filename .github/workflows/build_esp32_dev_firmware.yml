@@ -1,15 +1,15 @@
-name: Build ESP8266 Dev Firmware
+name: Build ESP32 Dev Firmware
 
 on:
   push:
     branches:
-      - esp8266_dev
+      - esp32_dev
     tags:
     #   - '*.*.*'
     paths:
     - 'CHANGELOG_LATEST.md'
   workflow_dispatch:
-    branches: [ esp8266_dev ]
+    branches: [ esp32_dev ]
 
 jobs:
         
@@ -43,14 +43,14 @@ jobs:
 
       - name: Build images
         run: |
-          platformio run -e esp8266-ci
+          platformio run -e esp32-ci
           
       - name: Delete
         uses: dev-drprasad/delete-tag-and-release@v0.1.2
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           delete_release: true 
-          tag_name: esp8266_dev
+          tag_name: esp32_dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -62,8 +62,8 @@ jobs:
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: BODY.txt
-          name: ESP8266 Development Build v${{steps.fetch_version.outputs.s}}
-          tag_name: esp8266_dev
+          name: ESP32 Development Build v${{steps.fetch_version.outputs.s}}
+          tag_name: esp32_dev
           prerelease: true
           files: |
             ./build/firmware/*.*
