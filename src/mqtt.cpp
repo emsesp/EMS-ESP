@@ -469,7 +469,7 @@ void Mqtt::set_format(uint8_t mqtt_format) {
 
 // MQTT onConnect - when a connect is established
 void Mqtt::on_connect() {
-    if (connecting_) {
+    if (connecting_) { // prevent duplicating connections
         return;
     }
 

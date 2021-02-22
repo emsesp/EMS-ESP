@@ -129,10 +129,6 @@ class Mqtt {
 #endif
     }
 
-    static bool is_connecting() {
-        return connecting_;
-    }
-
     static bool enabled() {
         return mqtt_enabled_;
     }
