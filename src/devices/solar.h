@@ -46,8 +46,8 @@ class Solar : public EMSdevice {
     void                     register_mqtt_ha_config();
 
     int16_t  collectorTemp_          = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
-    int16_t  tankBottomTemp_         = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1 cylinder, bottom (solar thermal system)
-    int16_t  tankBottomTemp2_        = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2 cylinder, bottom, or swimming pool (solar thermal system)
+    int16_t  tankBottomTemp_         = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1 cylinder, tank bottom (solar thermal system)
+    int16_t  tankBottomTemp2_        = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2 cylinder, tank bottom, or swimming pool (solar thermal system)
     int16_t  heatExchangerTemp_      = EMS_VALUE_SHORT_NOTSET; // TS6: Heat exchanger temperature sensor
     uint8_t  solarPumpModulation_    = EMS_VALUE_UINT_NOTSET;  // PS1: modulation solar pump
     uint8_t  cylinderPumpModulation_ = EMS_VALUE_UINT_NOTSET;  // PS5: modulation cylinder pump

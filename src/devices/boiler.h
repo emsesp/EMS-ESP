@@ -1,7 +1,7 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -79,14 +79,14 @@ class Boiler : public EMSdevice {
     uint8_t wWComfort_          = EMS_VALUE_UINT_NOTSET; // WW comfort mode
 
     // MC10Status
-    uint16_t wwMixTemperature_    = EMS_VALUE_USHORT_NOTSET; // mengertemperatuur
-    uint16_t wwBufferTemperature_ = EMS_VALUE_USHORT_NOTSET; // buffertemperature
+    uint16_t mixerTemp_         = EMS_VALUE_USHORT_NOTSET; // mixer temperature
+    uint16_t tankMiddleTemp_    = EMS_VALUE_USHORT_NOTSET; // tank middle temperature
 
     // UBAMonitorFast - 0x18 on EMS1
     uint8_t  selFlowTemp_       = EMS_VALUE_UINT_NOTSET;   // Selected flow temperature
     uint16_t curFlowTemp_       = EMS_VALUE_USHORT_NOTSET; // Current flow temperature
-    uint16_t wwStorageTemp1_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 1
-    uint16_t wwStorageTemp2_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 2
+    uint16_t wWStorageTemp1_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 1
+    uint16_t wWStorageTemp2_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 2
     uint16_t retTemp_           = EMS_VALUE_USHORT_NOTSET; // Return temperature
     uint8_t  burnGas_           = EMS_VALUE_BOOL_NOTSET;   // Gas on/off
     uint8_t  fanWork_           = EMS_VALUE_BOOL_NOTSET;   // Fan on/off
