@@ -123,8 +123,8 @@ void Boiler::register_mqtt_ha_config() {
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(curFlowTemp), device_type(), "curFlowTemp", F_(degrees), F_(icontemperature));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(retTemp), device_type(), "retTemp", F_(degrees), F_(icontemperature));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(mixerTemp), device_type(), "mixerTemp", F_(degrees), F_(icontemperature));
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankMiddleTemp), device_type(), "tankMiddleTemp", F_(degrees), F_(icontemperature));
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(switchTemp), device_type(), "switchTemp", F_(degrees), F_(icontemperature));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankMiddleTemp), device_type(), "tankMiddleTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(switchTemp), device_type(), "switchTemp", F_(degrees), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(sysPress), device_type(), "sysPress", F_(bar), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(boilTemp), device_type(), "boilTemp", F_(degrees), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(burnGas), device_type(), "burnGas", nullptr, F_(iconfire));
@@ -201,8 +201,8 @@ void Boiler::register_mqtt_ha_config_ww() {
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWCurTemp2), device_type(), "wWCurTemp2", F_(degrees), F_(icontemperature));
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWCurFlow), device_type(), "wWCurFlow", F("l/min"), F_(icontemperature));
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWHeat), device_type(), "wWHeat", nullptr, F_(iconvalve));
-    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wwStorageTemp1), device_type(), "wwStorageTemp1", F_(degrees), F_(icontemperature));
-    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wwStorageTemp2), device_type(), "wwStorageTemp2", F_(degrees), F_(icontemperature));
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWStorageTemp1), device_type(), "wWStorageTemp1", F_(degrees), F_(icontemperature));
+    Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWStorageTemp2), device_type(), "wWStorageTemp2", F_(degrees), F_(icontemperature));
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWActivated), device_type(), "wWActivated", nullptr, nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWOneTime), device_type(), "wWOneTime", nullptr, nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWDisinfecting), device_type(), "wWDisinfecting", nullptr, nullptr);
@@ -244,7 +244,7 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("switchTemp"), nullptr, F_(switchTemp), F_(degrees), json);
         create_value_json(root, F("mixerTemp"), nullptr, F_(mixerTemp), F_(degrees), json);
         create_value_json(root, F("tankMiddleTemp"), nullptr, F_(tankMiddleTemp), F_(degrees), json);
-        create_value_json(root, F("sysPress"), nullptr, F_(sysPress), nullptr, json);
+        create_value_json(root, F("sysPress"), nullptr, F_(sysPress), F_(bar), json);
         create_value_json(root, F("boilTemp"), nullptr, F_(boilTemp), F_(degrees), json);
         create_value_json(root, F("burnGas"), nullptr, F_(burnGas), nullptr, json);
         create_value_json(root, F("flameCurr"), nullptr, F_(flameCurr), F_(uA), json);
@@ -287,8 +287,8 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("wWCurTemp"), nullptr, F_(wWCurTemp), F_(degrees), json);
         create_value_json(root, F("wWCurTemp2"), nullptr, F_(wWCurTemp2), F_(degrees), json);
         create_value_json(root, F("wWCurFlow"), nullptr, F_(wWCurFlow), F("l/min"), json);
-        create_value_json(root, F("wwStorageTemp1"), nullptr, F_(wwStorageTemp1), F_(degrees), json);
-        create_value_json(root, F("wwStorageTemp2"), nullptr, F_(wwStorageTemp2), F_(degrees), json);
+        create_value_json(root, F("wWStorageTemp1"), nullptr, F_(wWStorageTemp1), F_(degrees), json);
+        create_value_json(root, F("wWStorageTemp2"), nullptr, F_(wWStorageTemp2), F_(degrees), json);
         create_value_json(root, F("exhaustTemp"), nullptr, F_(exhaustTemp), F_(degrees), json);
         create_value_json(root, F("wWActivated"), nullptr, F_(wWActivated), nullptr, json);
         create_value_json(root, F("wWOneTime"), nullptr, F_(wWOneTime), nullptr, json);
@@ -430,13 +430,13 @@ bool Boiler::export_values_ww(JsonObject & json, const bool textformat) {
     }
 
     // Warm water storage temperature (intern)
-    if (Helpers::hasValue(wwStorageTemp1_)) {
-        json["wwStorageTemp1"] = (float)wwStorageTemp1_ / 10;
+    if (Helpers::hasValue(wWStorageTemp1_)) {
+        json["wWStorageTemp1"] = (float)wWStorageTemp1_ / 10;
     }
 
     // Warm water storage temperature (extern)
-    if (Helpers::hasValue(wwStorageTemp2_)) {
-        json["wwStorageTemp2"] = (float)wwStorageTemp2_ / 10;
+    if (Helpers::hasValue(wWStorageTemp2_)) {
+        json["wWStorageTemp2"] = (float)wWStorageTemp2_ / 10;
     }
 
     // Warm Water activated bool
@@ -1013,9 +1013,9 @@ void Boiler::process_UBAMonitorFast(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_bitvalue(wWCirc_, 7, 7);
 
     // warm water storage sensors (if present)
-    // wwStorageTemp2 is also used by some brands as the boiler temperature - see https://github.com/proddy/EMS-ESP/issues/206
-    changed_ |= telegram->read_value(wwStorageTemp1_, 9);  // 0x8300 if not available
-    changed_ |= telegram->read_value(wwStorageTemp2_, 11); // 0x8000 if not available - this is boiler temp
+    // wWStorageTemp2 is also used by some brands as the boiler temperature - see https://github.com/proddy/EMS-ESP/issues/206
+    changed_ |= telegram->read_value(wWStorageTemp1_, 9);  // 0x8300 if not available
+    changed_ |= telegram->read_value(wWStorageTemp2_, 11); // 0x8000 if not available - this is boiler temp
 
     changed_ |= telegram->read_value(retTemp_, 13);
     changed_ |= telegram->read_value(flameCurr_, 15);

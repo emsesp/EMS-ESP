@@ -85,8 +85,8 @@ class Boiler : public EMSdevice {
     // UBAMonitorFast - 0x18 on EMS1
     uint8_t  selFlowTemp_       = EMS_VALUE_UINT_NOTSET;   // Selected flow temperature
     uint16_t curFlowTemp_       = EMS_VALUE_USHORT_NOTSET; // Current flow temperature
-    uint16_t wwStorageTemp1_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 1
-    uint16_t wwStorageTemp2_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 2
+    uint16_t wWStorageTemp1_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 1
+    uint16_t wWStorageTemp2_    = EMS_VALUE_USHORT_NOTSET; // warm water storage temp 2
     uint16_t retTemp_           = EMS_VALUE_USHORT_NOTSET; // Return temperature
     uint8_t  burnGas_           = EMS_VALUE_BOOL_NOTSET;   // Gas on/off
     uint8_t  fanWork_           = EMS_VALUE_BOOL_NOTSET;   // Fan on/off
