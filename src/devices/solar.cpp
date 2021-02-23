@@ -162,11 +162,11 @@ bool Solar::export_values(JsonObject & json, int8_t id) {
     if (Helpers::hasValue(collectorTemp_)) {
         json["collectorTemp"] = (float)collectorTemp_ / 10;
     }
-
+    // tank bottom temperature (TS3)
     if (Helpers::hasValue(tankBottomTemp_)) {
         json["tankBottomTemp"] = (float)tankBottomTemp_ / 10;
     }
-
+    // tank bottom temperature or swimming pool (TS5)
     if (Helpers::hasValue(tankBottomTemp2_)) {
         json["tankBottomTemp2"] = (float)tankBottomTemp2_ / 10;
     }
@@ -313,8 +313,8 @@ void Solar::process_SM100ParamCfg(std::shared_ptr<const Telegram> telegram) {
  */
 void Solar::process_SM100Monitor(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(collectorTemp_, 0);      // is *10 - TS1: Temperature sensor for collector array 1
-    changed_ |= telegram->read_value(tankBottomTemp_, 2);     // is *10 - TS2: Temperature sensor 1 cylinder, bottom
-    changed_ |= telegram->read_value(tankBottomTemp2_, 16);   // is *10 - TS5: Temperature sensor 2 cylinder, bottom, or swimming pool
+    changed_ |= telegram->read_value(tankBottomTemp_, 2);     // is *10 - TS2: Temperature sensor 1 cylinder, tank bottom
+    changed_ |= telegram->read_value(tankBottomTemp2_, 16);   // is *10 - TS5: Temperature sensor 2 cylinder, tank bottom, or swimming pool
     changed_ |= telegram->read_value(heatExchangerTemp_, 20); // is *10 - TS6: Heat exchanger temperature sensor
 }
 

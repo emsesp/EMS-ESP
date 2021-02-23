@@ -1,7 +1,7 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -163,8 +163,8 @@ MAKE_PSTR(retTemp, "Return temperature")
 MAKE_PSTR(switchTemp, "Mixer switch temperature")
 MAKE_PSTR(sysPress, "System pressure")
 MAKE_PSTR(boilTemp, "Max temperature")
-MAKE_PSTR(wwStorageTemp1, "Warm water storage temperature (intern)")
-MAKE_PSTR(wwStorageTemp2, "Warm water storage temperature (extern)")
+MAKE_PSTR(wWStorageTemp1, "Warm water storage temperature (intern)")
+MAKE_PSTR(wWStorageTemp2, "Warm water storage temperature (extern)")
 MAKE_PSTR(exhaustTemp, "Exhaust temperature")
 MAKE_PSTR(wWActivated, "Warm water activated")
 MAKE_PSTR(wWOneTime, "Warm water one time charging")
@@ -191,8 +191,8 @@ MAKE_PSTR(boilHystOn, "Temperature hysteresis on")
 MAKE_PSTR(boilHystOff, "Temperature hysteresis off")
 MAKE_PSTR(setFlowTemp, "Set flow temperature")
 MAKE_PSTR(wWSetPumpPower, "Warm water pump set power")
-MAKE_PSTR(wwMixTemperature, "Warm water mix temperature")
-MAKE_PSTR(wwBufferTemperature, "Warm water buffer temperature")
+MAKE_PSTR(mixerTemp, "Mixer temperature")
+MAKE_PSTR(tankMiddleTemp, "Tank middle temperature (TS3)")
 MAKE_PSTR(wWStarts, "Warm water starts")
 MAKE_PSTR(wWWorkM, "Warm water active time")
 MAKE_PSTR(setBurnPow, "Burner set power")
@@ -227,8 +227,8 @@ MAKE_PSTR(maintenance, "Scheduled maintenance")
 
 // solar
 MAKE_PSTR(collectorTemp, "Collector temperature (TS1)")
-MAKE_PSTR(tankBottomTemp, "Bottom temperature (TS2)")
-MAKE_PSTR(tankBottomTemp2, "Bottom temperature (TS5)")
+MAKE_PSTR(tankBottomTemp, "Tank bottom temperature (TS2)")
+MAKE_PSTR(tankBottomTemp2, "Tank bottom temperature (TS5)")
 MAKE_PSTR(tank1MaxTempCurrent, "Maximum Tank temperature")
 MAKE_PSTR(heatExchangerTemp, "Heat exchanger temperature (TS6)")
 MAKE_PSTR(solarPumpModulation, "Solar pump modulation (PS1)")
