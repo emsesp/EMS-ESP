@@ -241,7 +241,7 @@ void Thermostat::device_info_web(JsonArray & root, uint8_t & part) {
             create_value_json(root, F("minflowtemp"), FPSTR(prefix_str), F_(minflowtemp), F_(degrees), json);
             create_value_json(root, F("maxflowtemp"), FPSTR(prefix_str), F_(maxflowtemp), F_(degrees), json);
             create_value_json(root, F("summertemp"), FPSTR(prefix_str), F_(summertemp), F_(degrees), json);
-            create_value_json(root, F("summermode"), FPSTR(prefix_str), F_(summermode), F_(degrees), json);
+            create_value_json(root, F("summermode"), FPSTR(prefix_str), F_(summermode), nullptr, json);
             create_value_json(root, F("reducemode"), FPSTR(prefix_str), F_(reducemode), nullptr, json);
             create_value_json(root, F("program"), FPSTR(prefix_str), F_(program), nullptr, json);
             create_value_json(root, F("controlmode"), FPSTR(prefix_str), F_(controlmode), nullptr, json);
