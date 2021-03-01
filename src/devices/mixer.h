@@ -1,7 +1,7 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -69,11 +69,11 @@ class Mixer : public EMSdevice {
     }
 
   private:
-    uint16_t hc_          = EMS_VALUE_USHORT_NOTSET;
-    uint16_t flowTemp_    = EMS_VALUE_USHORT_NOTSET;
-    uint8_t  pumpStatus_  = EMS_VALUE_UINT_NOTSET;
-    int8_t   status_      = EMS_VALUE_INT_NOTSET;
-    uint8_t  flowSetTemp_ = EMS_VALUE_UINT_NOTSET;
+    uint16_t hc_              = EMS_VALUE_USHORT_NOTSET;
+    uint8_t  flowTempLowLoss_ = EMS_VALUE_UINT_NOTSET;
+    uint16_t flowTempHc_      = EMS_VALUE_USHORT_NOTSET;
+    uint8_t  pumpStatus_      = EMS_VALUE_UINT_NOTSET;
+    int8_t   status_          = EMS_VALUE_INT_NOTSET;
 
     Type type_ = Type::NONE;
 
