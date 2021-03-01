@@ -12,7 +12,9 @@
 - Thermostat ES72/RC20, device 66 to RC20_2 command-set
 - recognize sending devices which are not in telegram 0x07
 - MQTT payloads not adding to queue when MQTT is re-connecting (fixes #369)
-
+- fix mixerTemp and tankMiddleTemp (PR #714 @joanwa)
+- icon update for pumps
+- add mixer wiring naming from documentation
 
 ### Changed
 - split `show values` in smaller packages and separate heating circuits

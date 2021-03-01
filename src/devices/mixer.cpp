@@ -298,12 +298,12 @@ void Mixer::process_IPMStatusMessage(std::shared_ptr<const Telegram> telegram) {
 
     // do we have a mixed circuit
     if (ismixed == 2) {
-        changed_ |= telegram->read_value(flowTempLowLoss_, 5); // T0
         changed_ |= telegram->read_value(flowTempHc_, 3); // TC1, is * 10
         changed_ |= telegram->read_value(status_, 2); // valve status
     }
 
     changed_ |= telegram->read_bitvalue(pumpStatus_, 1, 0); // pump is also in unmixed circuits
+    changed_ |= telegram->read_value(flowTempLowLoss_, 5);  // T0, flowTempLowLoss_ is also in unmixed circuits, see #711
 }
 
 // Mixer on a MM10 - 0xAB
