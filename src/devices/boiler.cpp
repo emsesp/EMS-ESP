@@ -597,7 +597,7 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
         json["flameCurr"] = (float)(int16_t)flameCurr_ / 10;
     }
 
-    // Warm water charging pump bool
+    // Heating pump bool
     if (Helpers::hasValue(heatingPump_, EMS_VALUE_BOOL)) {
         json["heatingPump"] = Helpers::render_value(s, heatingPump_, EMS_VALUE_BOOL);
     }
