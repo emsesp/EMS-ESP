@@ -85,7 +85,7 @@ void Heatpump::register_mqtt_ha_config() {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
     doc["name"]    = F_(EMSESP);
     doc["uniq_id"] = F_(heatpump);
-    doc["ic"]      = F_(iconheatpump);
+    doc["ic"]      = F_(iconpump);
 
     char stat_t[128];
     snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/heatpump_data"), Mqtt::base().c_str());

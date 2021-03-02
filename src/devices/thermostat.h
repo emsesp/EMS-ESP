@@ -1,7 +1,7 @@
 /*
  * EMS-ESP - https://github.com/proddy/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -181,13 +181,13 @@ class Thermostat : public EMSdevice {
     uint8_t  floordrystatus_     = EMS_VALUE_UINT_NOTSET;
     uint8_t  floordrytemp_       = EMS_VALUE_UINT_NOTSET;
 
-    uint8_t wwExtra1_   = EMS_VALUE_UINT_NOTSET; // wwExtra active for wwSystem 1
-    uint8_t wwExtra2_   = EMS_VALUE_UINT_NOTSET;
-    uint8_t wwMode_     = EMS_VALUE_UINT_NOTSET;
-    uint8_t wwCircPump_ = EMS_VALUE_UINT_NOTSET;
-    uint8_t wwCircMode_ = EMS_VALUE_UINT_NOTSET;
-    uint8_t wwTemp_     = EMS_VALUE_UINT_NOTSET;
-    uint8_t wwTempLow_  = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwExtra1_       = EMS_VALUE_UINT_NOTSET; // wwExtra active for wwSystem 1
+    uint8_t wwExtra2_       = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwMode_         = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwCircPump_     = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwCircMode_     = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwSetTemp_      = EMS_VALUE_UINT_NOTSET;
+    uint8_t wwSetTempLow_   = EMS_VALUE_UINT_NOTSET;
 
     std::vector<std::shared_ptr<HeatingCircuit>> heating_circuits_; // each thermostat can have multiple heating circuits
 
