@@ -118,7 +118,7 @@ void Boiler::register_mqtt_ha_config() {
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(selBurnPow), device_type(), "selBurnPow", F_(percent), F_(iconpercent));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(curBurnPow), device_type(), "curBurnPow", F_(percent), F_(iconfire));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatingPumpMod), device_type(), "heatingPumpMod", F_(percent), F_(iconpercent));
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(pumpMod2), device_type(), "pumpMod2", F_(percent), F_(iconpercent));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatingPump2Mod), device_type(), "heatingPump2Mod", F_(percent), F_(iconpercent));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(outdoorTemp), device_type(), "outdoorTemp", F_(degrees), F_(iconexport));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(curFlowTemp), device_type(), "curFlowTemp", F_(degrees), F_(iconwatertemp));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(retTemp), device_type(), "retTemp", F_(degrees), F_(iconwatertemp));
@@ -237,7 +237,7 @@ void Boiler::device_info_web(JsonArray & root, uint8_t & part) {
         create_value_json(root, F("selBurnPow"), nullptr, F_(selBurnPow), F_(percent), json);
         create_value_json(root, F("curBurnPow"), nullptr, F_(curBurnPow), F_(percent), json);
         create_value_json(root, F("heatingPumpMod"), nullptr, F_(heatingPumpMod), F_(percent), json);
-        create_value_json(root, F("pumpMod2"), nullptr, F_(pumpMod2), F_(percent), json);
+        create_value_json(root, F("heatingPump2Mod"), nullptr, F_(heatingPump2Mod), F_(percent), json);
         create_value_json(root, F("outdoorTemp"), nullptr, F_(outdoorTemp), F_(degrees), json);
         create_value_json(root, F("curFlowTemp"), nullptr, F_(curFlowTemp), F_(degrees), json);
         create_value_json(root, F("retTemp"), nullptr, F_(retTemp), F_(degrees), json);
@@ -537,9 +537,9 @@ bool Boiler::export_values_main(JsonObject & json, const bool textformat) {
         json["heatingPumpMod"] = heatingPumpMod_;
     }
 
-    // Heat Pump modulation %
-    if (Helpers::hasValue(pumpMod2_)) {
-        json["pumpMod2"] = pumpMod2_;
+    // Heating Pump 2 modulation %
+    if (Helpers::hasValue(heatingPump2Mod_)) {
+        json["heatingPump2Mod"] = heatingPump2Mod_;
     }
 
     // Outside temperature
@@ -1148,7 +1148,7 @@ void Boiler::process_UBAMonitorSlow(std::shared_ptr<const Telegram> telegram) {
  * 88 00 E3 00 04 00 00 00 00 01 00 00 00 00 00 02 22 2B 64 46 01 00 00 61
  */
 void Boiler::process_UBAMonitorSlowPlus2(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(pumpMod2_, 13); // Heat Pump Modulation
+    changed_ |= telegram->read_value(heatingPump2Mod_, 13); // Heating Pump 2 Modulation
 }
 
 /*

@@ -150,9 +150,9 @@ class Boiler : public EMSdevice {
     uint8_t wWSetPumpPower_ = EMS_VALUE_UINT_NOTSET; // ww pump speed/power?
 
     // other internal calculated params
-    uint8_t tapwaterActive_ = EMS_VALUE_BOOL_NOTSET; // Hot tap water is on/off
-    uint8_t heatingActive_  = EMS_VALUE_BOOL_NOTSET; // Central heating is on/off
-    uint8_t pumpMod2_       = EMS_VALUE_UINT_NOTSET; // heating pump modulation from 0xE3 (heatpumps)
+    uint8_t tapwaterActive_         = EMS_VALUE_BOOL_NOTSET; // Hot tap water is on/off
+    uint8_t heatingActive_          = EMS_VALUE_BOOL_NOTSET; // Central heating is on/off
+    uint8_t heatingPump2Mod_        = EMS_VALUE_UINT_NOTSET; // heating pump 2 modulation from 0xE3 (heating pumps)
 
     // UBAInformation
     uint32_t upTimeControl_             = EMS_VALUE_ULONG_NOTSET; // Operating time control

@@ -221,12 +221,12 @@ bool Mixer::export_values_format(uint8_t mqtt_format, JsonObject & json) {
         if (Helpers::hasValue(flowTempHc_)) {
             json_hc["flowTempHc"] = (float)flowTempHc_ / 10;
         }
-        // PC1: heating pump in assigned hc -or- tank primary pump in assigned tank primary circuit (code switch 9 or 10)
+        // PC1: heating pump in assigned hc -or- PW1: tank primary pump in assigned tank primary circuit (code switch 9 or 10)
         if (Helpers::hasValue(pumpStatus_)) {
             char s[7];
             json_hc["pumpStatus"] = Helpers::render_value(s, pumpStatus_, EMS_VALUE_BOOL);
         }
-        // VC1: mixing valve actuator in the assigned hc with mixer -or- DHW circulation pump with connection to module (code switch 9 or 10)
+        // VC1: mixing valve actuator in the assigned hc with mixer -or- PW2: DHW circulation pump with connection to module (code switch 9 or 10)
         if (Helpers::hasValue(status_)) {
             json_hc["valveStatus"] = status_;
         }
@@ -264,11 +264,11 @@ bool Mixer::export_values_format(uint8_t mqtt_format, JsonObject & json) {
 //       A0 0B FF 00 01 D7 00 00 00 80 00 00 00 00 03 80
 void Mixer::process_MMPLUSStatusMessage_HC(std::shared_ptr<const Telegram> telegram) {
     type(Type::HC);
-    hc_ = telegram->type_id - 0x02D7 + 1;           // determine which circuit this is
-    changed_ |= telegram->read_value(flowTempLowLoss_, 5); // T0
-    changed_ |= telegram->read_value(flowTempHc_, 3); // TC1, is * 10
+    hc_ = telegram->type_id - 0x02D7 + 1;                   // determine which circuit this is
+    changed_ |= telegram->read_value(flowTempLowLoss_, 5);  // T0
+    changed_ |= telegram->read_value(flowTempHc_, 3);       // TC1, is * 10
     changed_ |= telegram->read_bitvalue(pumpStatus_, 0, 0);
-    changed_ |= telegram->read_value(status_, 2); // valve status
+    changed_ |= telegram->read_value(status_, 2);           // valve status
 }
 
 // Mixer warm water loading/DHW - 0x0331, 0x0332
@@ -276,10 +276,10 @@ void Mixer::process_MMPLUSStatusMessage_HC(std::shared_ptr<const Telegram> teleg
 //      A8 00 FF 00 02 31 02 35 00 3C 00 3C 3C 46 02 03 03 00 3C // in 0x29
 void Mixer::process_MMPLUSStatusMessage_WWC(std::shared_ptr<const Telegram> telegram) {
     type(Type::WWC);
-    hc_ = telegram->type_id - 0x0331 + 1;           // determine which circuit this is. There are max 2.
-    changed_ |= telegram->read_value(flowTempHc_, 0); // TC1, is * 10
+    hc_ = telegram->type_id - 0x0331 + 1;                   // determine which circuit this is. There are max 2.
+    changed_ |= telegram->read_value(flowTempHc_, 0);       // TC1, is * 10
     changed_ |= telegram->read_bitvalue(pumpStatus_, 2, 0);
-    changed_ |= telegram->read_value(status_, 11); // temp status
+    changed_ |= telegram->read_value(status_, 11);          // temp status
 }
 
 // Mixer IMP - 0x010C
@@ -298,8 +298,8 @@ void Mixer::process_IPMStatusMessage(std::shared_ptr<const Telegram> telegram) {
 
     // do we have a mixed circuit
     if (ismixed == 2) {
-        changed_ |= telegram->read_value(flowTempHc_, 3); // TC1, is * 10
-        changed_ |= telegram->read_value(status_, 2); // valve status
+        changed_ |= telegram->read_value(flowTempHc_, 3);   // TC1, is * 10
+        changed_ |= telegram->read_value(status_, 2);       // valve status
     }
 
     changed_ |= telegram->read_bitvalue(pumpStatus_, 1, 0); // pump is also in unmixed circuits
@@ -316,10 +316,10 @@ void Mixer::process_MMStatusMessage(std::shared_ptr<const Telegram> telegram) {
     // 0x21 is position 2. 0x20 is typically reserved for the WM10 switch module
     // see https://github.com/proddy/EMS-ESP/issues/270 and https://github.com/proddy/EMS-ESP/issues/386#issuecomment-629610918
     hc_ = device_id() - 0x20 + 1;
-    changed_ |= telegram->read_value(flowTempLowLoss_, 0); // T0
-    changed_ |= telegram->read_value(flowTempHc_, 1);         // TC1, is * 10
+    changed_ |= telegram->read_value(flowTempLowLoss_, 0);  // T0
+    changed_ |= telegram->read_value(flowTempHc_, 1);       // TC1, is * 10
     changed_ |= telegram->read_bitvalue(pumpStatus_, 3, 2); // is 0 or 0x64 (100%), check only bit 2
-    changed_ |= telegram->read_value(status_, 4); // valve status -100 to 100
+    changed_ |= telegram->read_value(status_, 4);           // valve status -100 to 100
 }
 
 #pragma GCC diagnostic push
