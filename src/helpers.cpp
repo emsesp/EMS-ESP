@@ -164,7 +164,7 @@ void Helpers::json_enum(JsonObject & json, const char * name, const std::vector<
 
 // set json value to time from uint32
 void Helpers::json_time(JsonObject & json, const char * name, const uint32_t value, const bool textformat) {
-    if (!hasValue(value)) {
+    if (value == EMS_VALUE_ULONG_NOTSET || value == EMS_VALUE_ULONG_NOTSET / 60) {
         return;
     }
     if (textformat) {
