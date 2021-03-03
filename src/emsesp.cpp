@@ -393,7 +393,9 @@ void EMSESP::publish_device_values(uint8_t device_type, bool force) {
                 emsdevice->publish_values(json, force);
             }
         }
-        Mqtt::publish("mixer_data", doc.as<JsonObject>());
+        if (json.size()) {
+	        Mqtt::publish("mixer_data", doc.as<JsonObject>());
+        }
         return;
     }
 

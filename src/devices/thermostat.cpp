@@ -42,7 +42,7 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
             && ((actual_master_thermostat == EMSESP_DEFAULT_MASTER_THERMOSTAT) || (device_id < actual_master_thermostat)))) {
         EMSESP::actual_master_thermostat(device_id);
         actual_master_thermostat = device_id;
-        reserve_mem(25); // reserve some space for the telegram registries, to avoid memory fragmentation
+        reserve_mem(15); // reserve some space for the telegram registries, to avoid memory fragmentation
 
         // common telegram handlers
         register_telegram_type(EMS_TYPE_RCOutdoorTemp, F("RCOutdoorTemp"), false, [&](std::shared_ptr<const Telegram> t) { process_RCOutdoorTemp(t); });
@@ -184,6 +184,7 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
     }
     */
     EMSESP::send_read_request(0x12, device_id); // read last error (only published on errors)
+    EMSESP::send_read_request(0xA2, device_id); // actual errorCode (published on errors and very rarely)
 }
 
 // prepare data for Web UI
@@ -374,17 +375,7 @@ bool Thermostat::export_values_main(JsonObject & rootThermostat) {
         }
 
         // Language
-        if (Helpers::hasValue(ibaLanguage_)) {
-            if (ibaLanguage_ == 0) {
-                rootThermostat["language"] = FJSON("German");
-            } else if (ibaLanguage_ == 1) {
-                rootThermostat["language"] = FJSON("Dutch");
-            } else if (ibaLanguage_ == 2) {
-                rootThermostat["language"] = FJSON("French");
-            } else if (ibaLanguage_ == 3) {
-                rootThermostat["language"] = FJSON("Italian");
-            }
-        }
+        Helpers::json_enum(rootThermostat, "language", {F("German"), F("Dutch"), F("French"), F("Italian")}, ibaLanguage_);
 
         // Offset clock
         if (Helpers::hasValue(ibaClockOffset_)) {
@@ -405,9 +396,9 @@ bool Thermostat::export_values_main(JsonObject & rootThermostat) {
     }
 
     // Floordry
-    if (Helpers::hasValue(floordrystatus_) && Helpers::hasValue(floordrytemp_) && (floordrytemp_ > 0)) {
-        char s[10];
-        rootThermostat["floordry"]     = Helpers::render_enum(s, {F("off"), F("start"), F("heat"), F("hold"), F("cool"), F("end")}, floordrystatus_);
+    Helpers::json_enum(rootThermostat, "floordry", {F("off"), F("start"), F("heat"), F("hold"), F("cool"), F("end")}, floordrystatus_);
+
+    if (Helpers::hasValue(floordrytemp_) && (floordrytemp_ > 0)) {
         rootThermostat["floordrytemp"] = floordrytemp_;
     }
 
@@ -432,23 +423,17 @@ bool Thermostat::export_values_main(JsonObject & rootThermostat) {
     }
 
     // Building
-    if (Helpers::hasValue(ibaBuildingType_)) {
-        char s[10];
-        if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
-            rootThermostat["building"] = Helpers::render_enum(s, {F("light"), F("medium"), F("heavy")}, ibaBuildingType_ - 1);
-        } else {
-            rootThermostat["building"] = Helpers::render_enum(s, {F("light"), F("medium"), F("heavy")}, ibaBuildingType_);
-        }
+    if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
+        Helpers::json_enum(rootThermostat, "building", {F("light"), F("medium"), F("heavy")}, ibaBuildingType_ - 1);
+    } else {
+        Helpers::json_enum(rootThermostat, "building", {F("light"), F("medium"), F("heavy")}, ibaBuildingType_);
     }
 
     // Warm water mode, "high" is normal setting
-    if (Helpers::hasValue(wwMode_)) {
-        char s[10];
-        if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
-            rootThermostat["wwmode"] = Helpers::render_enum(s, {F("off"), F("low"), F("high"), F("auto"), F("own_prog")}, wwMode_);
-        } else {
-            rootThermostat["wwmode"] = Helpers::render_enum(s, {F("off"), F("on"), F("auto")}, wwMode_);
-        }
+    if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
+        Helpers::json_enum(rootThermostat, "wwmode", {F("off"), F("low"), F("high"), F("auto"), F("own_prog")}, wwMode_);
+    } else {
+        Helpers::json_enum(rootThermostat, "wwmode", {F("off"), F("on"), F("auto")}, wwMode_);
     }
 
     // Warm water set temp
@@ -472,13 +457,10 @@ bool Thermostat::export_values_main(JsonObject & rootThermostat) {
     }
 
     // Warm Water circulation mode
-    if (Helpers::hasValue(wwCircMode_)) {
-        char s[10];
-        if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
-            rootThermostat["wwcircmode"] = Helpers::render_enum(s, {F("off"), F("on"), F("auto"), F("own_prog")}, wwCircMode_);
-        } else {
-            rootThermostat["wwcircmode"] = Helpers::render_enum(s, {F("off"), F("on"), F("auto")}, wwCircMode_);
-        }
+    if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
+        Helpers::json_enum(rootThermostat, "wwcircmode", {F("off"), F("on"), F("auto"), F("own_prog")}, wwCircMode_);
+    } else {
+        Helpers::json_enum(rootThermostat, "wwcircmode", {F("off"), F("on"), F("auto")}, wwCircMode_);
     }
 
     return (rootThermostat.size());
@@ -569,10 +551,7 @@ bool Thermostat::export_values_hc(std::shared_ptr<Thermostat::HeatingCircuit> hc
     }
 
     // Heating Type
-    if (Helpers::hasValue(hc->heatingtype)) {
-        char s[10];
-        dataThermostat["heatingtype"] = Helpers::render_enum(s, {F("off"), F("radiator"), F("convector"), F("floor")}, hc->heatingtype);
-    }
+    Helpers::json_enum(dataThermostat, "heatingtype", {F("off"), F("radiator"), F("convector"), F("floor")}, hc->heatingtype);
 
     // Target flow temperature
     if (Helpers::hasValue(hc->targetflowtemp)) {
@@ -619,26 +598,16 @@ bool Thermostat::export_values_hc(std::shared_ptr<Thermostat::HeatingCircuit> hc
     }
 
     // Summer mode
-    if (Helpers::hasValue(hc->summer_setmode)) {
-        char s[7];
-        dataThermostat["summermode"] = Helpers::render_enum(s, {F("summer"), F("auto"), F("winter")}, hc->summer_setmode);
-    }
+    Helpers::json_enum(dataThermostat, "summermode", {F("summer"), F("auto"), F("winter")}, hc->summer_setmode);
 
     // Reduce mode
-    if (Helpers::hasValue(hc->reducemode)) {
-        char s[10];
-        dataThermostat["reducemode"] = Helpers::render_enum(s, {F("nofrost"), F("reduce"), F("room"), F("outdoor")}, hc->reducemode);
-    }
+    Helpers::json_enum(dataThermostat, "reducemode", {F("nofrost"), F("reduce"), F("room"), F("outdoor")}, hc->reducemode);
 
     // Control mode room or outdoor
-    if (Helpers::hasValue(hc->controlmode)) {
-        char s[10];
-        if (model == EMS_DEVICE_FLAG_RC35 || model == EMS_DEVICE_FLAG_RC30_1) {
-            dataThermostat["controlmode"] = Helpers::render_enum(s, {F("outdoor"), F("room")}, hc->controlmode);
-        } else if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
-            dataThermostat["controlmode"] =
-                Helpers::render_enum(s, {F("off"), F("outdoor"), F("simple"), F("MPC"), F("room"), F("power"), F("const.")}, hc->controlmode);
-        }
+    if (model == EMS_DEVICE_FLAG_RC35 || model == EMS_DEVICE_FLAG_RC30_1) {
+        Helpers::json_enum(dataThermostat, "controlmode", {F("outdoor"), F("room")}, hc->controlmode);
+    } else if (model == EMS_DEVICE_FLAG_RC300 || model == EMS_DEVICE_FLAG_RC100) {
+        Helpers::json_enum(dataThermostat, "controlmode", {F("off"), F("outdoor"), F("simple"), F("MPC"), F("room"), F("power"), F("const.")}, hc->controlmode);
     }
 
     // program no.

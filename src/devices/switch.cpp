@@ -64,16 +64,13 @@ void Switch::publish_values(JsonObject & json, bool force) {
 
 // export values to JSON
 bool Switch::export_values(JsonObject & json, int8_t id) {
-    if (Helpers::hasValue(flowTempHc_)) {
-        char s[7];
-        json["activated"] = Helpers::render_value(s, activated_, EMS_VALUE_BOOL);
-    }
+    Helpers::json_boolean(json, "activated", activated_);
 
     if (Helpers::hasValue(flowTempHc_)) {
         json["flowTemp"] = (float)flowTempHc_ / 10;
     }
 
-    if (Helpers::hasValue(flowTempHc_)) {
+    if (Helpers::hasValue(status_)) {
         json["status"] = status_;
     }
 

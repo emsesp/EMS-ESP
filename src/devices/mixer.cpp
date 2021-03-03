@@ -44,9 +44,9 @@ Mixer::Mixer(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
 
     // EMS 1.0
     if (flags == EMSdevice::EMS_DEVICE_FLAG_MM10) {
-        register_telegram_type(0x00AA, F("MMConfigMessage"), false, [&](std::shared_ptr<const Telegram> t) { process_MMConfigMessage(t); });
+        // register_telegram_type(0x00AA, F("MMConfigMessage"), false, [&](std::shared_ptr<const Telegram> t) { process_MMConfigMessage(t); });
         register_telegram_type(0x00AB, F("MMStatusMessage"), true, [&](std::shared_ptr<const Telegram> t) { process_MMStatusMessage(t); });
-        register_telegram_type(0x00AC, F("MMSetMessage"), false, [&](std::shared_ptr<const Telegram> t) { process_MMSetMessage(t); });
+        // register_telegram_type(0x00AC, F("MMSetMessage"), false, [&](std::shared_ptr<const Telegram> t) { process_MMSetMessage(t); });
     }
 
     // HT3
@@ -222,10 +222,7 @@ bool Mixer::export_values_format(uint8_t mqtt_format, JsonObject & json) {
             json_hc["flowTempHc"] = (float)flowTempHc_ / 10;
         }
         // PC1: heating pump in assigned hc -or- PW1: tank primary pump in assigned tank primary circuit (code switch 9 or 10)
-        if (Helpers::hasValue(pumpStatus_)) {
-            char s[7];
-            json_hc["pumpStatus"] = Helpers::render_value(s, pumpStatus_, EMS_VALUE_BOOL);
-        }
+        Helpers::json_boolean(json_hc, "pumpStatus", pumpStatus_);
         // VC1: mixing valve actuator in the assigned hc with mixer -or- PW2: DHW circulation pump with connection to module (code switch 9 or 10)
         if (Helpers::hasValue(status_)) {
             json_hc["valveStatus"] = status_;
@@ -248,10 +245,7 @@ bool Mixer::export_values_format(uint8_t mqtt_format, JsonObject & json) {
     if (Helpers::hasValue(flowTempHc_)) {
         json_hc["wWTemp"] = (float)flowTempHc_ / 10;
     }
-    if (Helpers::hasValue(pumpStatus_)) {
-        char s[7];
-        json_hc["pumpStatus"] = Helpers::render_value(s, pumpStatus_, EMS_VALUE_BOOL);
-    }
+    Helpers::json_boolean(json_hc, "pumpStatus", pumpStatus_);
     if (Helpers::hasValue(status_)) {
         json_hc["tempStatus"] = status_;
     }
