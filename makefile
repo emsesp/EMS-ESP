@@ -17,8 +17,8 @@ MAKEFLAGS+="j "
 #TARGET    := $(notdir $(CURDIR))
 TARGET    := emsesp
 BUILD     := build
-SOURCES   := src lib_standalone lib/uuid-common/src lib/uuid-console/src lib/uuid-log/src src/devices lib/ArduinoJson/src src/test 
-INCLUDES  := lib/ArduinoJson/src lib_standalone lib/uuid-common/src lib/uuid-console/src lib/uuid-log/src lib/uuid-telnet/src lib/uuid-syslog/src src/devices src
+SOURCES   := src lib_standalone lib/uuid-common/src lib/uuid-console/src lib/uuid-log/src src/devices lib/ArduinoJson/src src/test lib/PButton
+INCLUDES  := lib/ArduinoJson/src lib_standalone lib/uuid-common/src lib/uuid-console/src lib/uuid-log/src lib/uuid-telnet/src lib/uuid-syslog/src src/devices src lib/PButton
 LIBRARIES := 
 
 CPPCHECK = cppcheck

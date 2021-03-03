@@ -32,6 +32,7 @@
 #endif
 
 #include <uuid/log.h>
+#include <PButton.h>
 
 using uuid::console::Shell;
 
@@ -68,6 +69,7 @@ class System {
     static void led_init();
     static void syslog_init();
     static void other_init();
+    static void button_init();
 
     bool check_upgrade();
     void send_heartbeat();
@@ -78,6 +80,17 @@ class System {
 #ifndef EMSESP_STANDALONE
     static uuid::syslog::SyslogService syslog_;
 #endif
+
+    // button
+    static PButton            myPButton_; // PButton instance
+    // static void               button_OnClick(PButton & b);
+    // static void               button_OnDblClick(PButton & b);
+    // static void               button_OnLongPress(PButton & b);
+    static void               button_OnVLongPress(PButton & b);
+    // static constexpr uint32_t BUTTON_Debounce        = 40;   // Debounce period to prevent flickering when pressing or releasing the button (in ms)
+    // static constexpr uint32_t BUTTON_DblClickDelay   = 250;  // Max period between clicks for a double click event (in ms)
+    // static constexpr uint32_t BUTTON_LongPressDelay  = 750;  // Hold period for a long press event (in ms)
+    static constexpr uint32_t BUTTON_VLongPressDelay = 9000; // Hold period for a very long press event (in ms)
 
     static constexpr uint32_t SYSTEM_CHECK_FREQUENCY         = 5000;  // check every 5 seconds
     static constexpr uint32_t LED_WARNING_BLINK              = 1000;  // pulse to show no connection, 1 sec
