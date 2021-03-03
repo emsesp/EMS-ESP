@@ -3,6 +3,7 @@
 ### Added
 - Boiler WB Greenstar 8000
 - optional id to info command to output heatingcircuits separated
+- Reset to factory setting with PButton (io0 to GND for >9 sec)
 
 ### Fixed
 - telegrams matched to masterthermostat 0x18
