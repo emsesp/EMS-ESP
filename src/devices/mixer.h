@@ -70,7 +70,8 @@ class Mixer : public EMSdevice {
 
   private:
     uint16_t hc_              = EMS_VALUE_USHORT_NOTSET;
-    uint8_t  flowTempLowLoss_ = EMS_VALUE_UINT_NOTSET;
+    // uint8_t  flowTempLowLoss_ = EMS_VALUE_UINT_NOTSET; // T0 on MM100 unknown position/telegram
+    uint8_t  flowSetTemp_     = EMS_VALUE_UINT_NOTSET;
     uint16_t flowTempHc_      = EMS_VALUE_USHORT_NOTSET;
     uint8_t  pumpStatus_      = EMS_VALUE_UINT_NOTSET;
     int8_t   status_          = EMS_VALUE_INT_NOTSET;
