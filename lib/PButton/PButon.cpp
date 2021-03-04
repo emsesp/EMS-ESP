@@ -52,7 +52,11 @@ bool PButton::init(uint8_t pin, bool pullMode) {
     pin_      = pin;
     pullMode_ = pullMode; // 1=HIGH (pullup) 0=LOW (pulldown)
 
+#if defined(ESP32)
+    pinMode(pin_, pullMode ? INPUT_PULLUP : INPUT_PULLDOWN);
+#else // esp8266 and standalone
     pinMode(pin_, pullMode ? INPUT_PULLUP : INPUT);
+#endif
     enabled_ = (digitalRead(pin_) == pullMode); // see if a button is connected
 
     return enabled_;
