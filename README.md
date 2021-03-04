@@ -13,7 +13,7 @@ This is the firmware for the ESP8266.
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Percentage of issues still open")
 <br/>
-[![chat](https://img.shields.io/discord/816637840644505620.svg?style=flat-square&color=blueviolet)](https://discord.gg/rqegzSrK)
+[![chat](https://img.shields.io/discord/816637840644505620.svg?style=flat-square&color=blueviolet)](https://discord.gg/3J3GgnzpyT)
 
 If you like **EMS-ESP**, please give it a star, or fork it and contribute!
 
@@ -72,7 +72,7 @@ If you're looking for support on **EMS-ESP** there are some options available:
 
 ### Support Community
 
-* [Discord Server](https://discord.gg/rqegzSrK): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
+* [Discord Server](https://discord.gg/3J3GgnzpyT): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
 * [Search in Issues](https://github.com/proddy/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
 
 ### Developer's Community
