@@ -16,6 +16,7 @@
 - fix mixerTemp and tankMiddleTemp (PR #714 @joanwa)
 - icon update for pumps
 - add mixer wiring naming from documentation
+- wwtemp feedback and ems+ command
 
 ### Changed
 - split `show values` in smaller packages and separate heating circuits
