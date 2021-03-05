@@ -161,7 +161,7 @@ void Shower::send_MQTT_discovery_config() {
         StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
         doc["name"]    = FJSON("Shower Data");
         doc["uniq_id"] = FJSON("shower_data");
-        doc["~"]       = FJSON("ems-esp");
+        doc["~"]       = Mqtt::base();
         doc["json_attr_t"] = FJSON("~/shower_data");
         doc["stat_t"]      = FJSON("~/shower_data");
         doc["val_tpl"]     = FJSON("{{value_json['shower_timer']}}");
