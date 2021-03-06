@@ -254,8 +254,10 @@ void System::button_init() {
     } else {
         LOG_INFO(F("External multi-functional button enabled"));
     }
+#if defined(ESP8266)
     pinMode(4, OUTPUT);
     digitalWrite(4, 0); // set D2 to low for easy connecting D2/D3
+#endif
 
     // myPButton_.onClick(BUTTON_Debounce, button_OnClick);
     // myPButton_.onDblClick(BUTTON_DblClickDelay, button_OnDblClick);
