@@ -147,27 +147,27 @@ void Mqtt::loop() {
         EMSESP::publish_device_values(EMSdevice::DeviceType::BOILER);
     } else
 
-    if (publish_time_thermostat_ && (currentMillis - last_publish_thermostat_ > publish_time_thermostat_)) {
+        if (publish_time_thermostat_ && (currentMillis - last_publish_thermostat_ > publish_time_thermostat_)) {
         last_publish_thermostat_ = (currentMillis / publish_time_thermostat_) * publish_time_thermostat_;
         EMSESP::publish_device_values(EMSdevice::DeviceType::THERMOSTAT);
     } else
 
-    if (publish_time_solar_ && (currentMillis - last_publish_solar_ > publish_time_solar_)) {
+        if (publish_time_solar_ && (currentMillis - last_publish_solar_ > publish_time_solar_)) {
         last_publish_solar_ = (currentMillis / publish_time_solar_) * publish_time_solar_;
         EMSESP::publish_device_values(EMSdevice::DeviceType::SOLAR);
     } else
 
-    if (publish_time_mixer_ && (currentMillis - last_publish_mixer_ > publish_time_mixer_)) {
+        if (publish_time_mixer_ && (currentMillis - last_publish_mixer_ > publish_time_mixer_)) {
         last_publish_mixer_ = (currentMillis / publish_time_mixer_) * publish_time_mixer_;
         EMSESP::publish_device_values(EMSdevice::DeviceType::MIXER);
     } else
 
-    if (publish_time_other_ && (currentMillis - last_publish_other_ > publish_time_other_)) {
+        if (publish_time_other_ && (currentMillis - last_publish_other_ > publish_time_other_)) {
         last_publish_other_ = (currentMillis / publish_time_other_) * publish_time_other_;
         EMSESP::publish_other_values();
     } else
 
-    if (publish_time_sensor_ && (currentMillis - last_publish_sensor_ > publish_time_sensor_)) {
+        if (publish_time_sensor_ && (currentMillis - last_publish_sensor_ > publish_time_sensor_)) {
         last_publish_sensor_ = (currentMillis / publish_time_sensor_) * publish_time_sensor_;
         EMSESP::publish_sensor_values(true);
     }
@@ -252,11 +252,13 @@ void Mqtt::on_message(const char * fulltopic, const char * payload, size_t len) 
     // see if we have this topic in our subscription list, then call its callback handler
     for (const auto & mf : mqtt_subfunctions_) {
         if (strcmp(topic, mf.topic_.c_str()) == 0) {
+            // if we have call back function then call it
+            // otherwise proceed as process as a command
             if (mf.mqtt_subfunction_) {
-                // matching function, call it. If it returns true keep quit
-                if ((mf.mqtt_subfunction_)(message)) {
-                    return; // function executed successfully
+                if (!(mf.mqtt_subfunction_)(message)) {
+                    LOG_ERROR(F("MQTT error: invalid payload %s for this topic %s"), message, topic);
                 }
+                return;
             }
 
             // empty function. It's a command then. Find the command from the json and call it directly.
