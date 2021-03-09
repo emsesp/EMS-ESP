@@ -1068,8 +1068,8 @@ void Boiler::process_UBAMonitorSlowPlus(std::shared_ptr<const Telegram> telegram
 void Boiler::process_UBAParametersPlus(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(heatingActivated_, 0);
     changed_ |= telegram->read_value(heatingTemp_, 1);
-    changed_ |= telegram->read_value(burnMaxPower_, 6);
-    changed_ |= telegram->read_value(burnMinPower_, 7);
+    changed_ |= telegram->read_value(burnMaxPower_, 4);
+    changed_ |= telegram->read_value(burnMinPower_, 5);
     changed_ |= telegram->read_value(boilHystOff_, 8);
     changed_ |= telegram->read_value(boilHystOn_, 9);
     changed_ |= telegram->read_value(burnMinPeriod_, 10);
@@ -1093,8 +1093,8 @@ void Boiler::process_UBADHWStatus(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(wWCurTemp_, 1);
     changed_ |= telegram->read_value(wWCurTemp2_, 3);
 
-    changed_ |= telegram->read_value(wWWorkM_, 17, 3);  // force to 3 bytes
-    changed_ |= telegram->read_value(wWStarts_, 14, 3); // force to 3 bytes
+    changed_ |= telegram->read_value(wWWorkM_, 14, 3);  // force to 3 bytes
+    changed_ |= telegram->read_value(wWStarts_, 17, 3); // force to 3 bytes
 
     changed_ |= telegram->read_bitvalue(wWOneTime_, 12, 2);
     changed_ |= telegram->read_bitvalue(wWDisinfecting_, 12, 3);
@@ -1321,7 +1321,7 @@ bool Boiler::set_min_power(const char * value, const int8_t id) {
 
     LOG_INFO(F("Setting boiler min power to %d %%"), v);
     if (get_toggle_fetch(EMS_TYPE_UBAParametersPlus)) {
-        write_command(EMS_TYPE_UBAParametersPlus, 7, v, EMS_TYPE_UBAParametersPlus);
+        write_command(EMS_TYPE_UBAParametersPlus, 5, v, EMS_TYPE_UBAParametersPlus);
     } else {
         write_command(EMS_TYPE_UBAParameters, 3, v, EMS_TYPE_UBAParameters);
     }
@@ -1339,7 +1339,7 @@ bool Boiler::set_max_power(const char * value, const int8_t id) {
 
     LOG_INFO(F("Setting boiler max power to %d %%"), v);
     if (get_toggle_fetch(EMS_TYPE_UBAParametersPlus)) {
-        write_command(EMS_TYPE_UBAParametersPlus, 6, v, EMS_TYPE_UBAParametersPlus);
+        write_command(EMS_TYPE_UBAParametersPlus, 4, v, EMS_TYPE_UBAParametersPlus);
     } else {
         write_command(EMS_TYPE_UBAParameters, 2, v, EMS_TYPE_UBAParameters);
     }
