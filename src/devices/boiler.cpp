@@ -1265,10 +1265,12 @@ bool Boiler::set_flow_temp(const char * value, const int8_t id) {
     }
 
     LOG_INFO(F("Setting boiler flow temperature to %d C"), v);
-    // some boiler have it in 0x1A, some in 0x35, but both telegrams are sometimes writeonly
-    write_command(0x35, 3, v);
-    write_command(EMS_TYPE_UBASetPoints, 0, v, EMS_TYPE_UBASetPoints);
-    // write_command(0x35, 3, v, 0x35);
+    if (get_toggle_fetch(EMS_TYPE_UBAParametersPlus)) {
+        write_command(EMS_TYPE_UBAParameterWWPlus, 6, v, EMS_TYPE_UBAParameterWWPlus);
+    } else {
+        write_command(EMS_TYPE_UBAFlags, 3, v, 0x34);                          // for i9000, see #397
+        write_command(EMS_TYPE_UBAParameterWW, 2, v, EMS_TYPE_UBAParameterWW); // read seltemp back
+    }
 
     return true;
 }
