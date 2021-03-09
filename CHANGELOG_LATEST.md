@@ -1,7 +1,7 @@
 # Changelog
 
 ### Added
-- Boiler WB Greenstar 8000
+- Boiler WB Greenstar 8000 (195) and GB172i (210) 
 - optional id to info command to output heatingcircuits separated
 - Reset to factory setting with PButton (io0 to GND for >9 sec)
 
@@ -18,6 +18,7 @@
 - add mixer wiring naming from documentation
 - wwtemp feedback and ems+ command
 - fix for HA topics with invalid command formats - #728
+- fix ems+ values #723, #732
 
 ### Changed
 - split `show values` in smaller packages and separate heating circuits
