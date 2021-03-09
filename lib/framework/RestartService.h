@@ -21,7 +21,11 @@ class RestartService {
     static void restartNow() {
         WiFi.disconnect(true);
         delay(500);
+#if defined(ESP8266)
+        ESP.reset();
+#elif defined(ESP32)
         ESP.restart();
+#endif
     }
 
   private:
