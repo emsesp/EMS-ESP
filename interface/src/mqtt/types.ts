@@ -35,8 +35,10 @@ export interface MqttSettings {
   publish_time_other: number;
   publish_time_sensor: number;
   dallas_format: number;
+  bool_format: number;
   mqtt_qos: number;
   mqtt_retain: boolean;
   ha_enabled: boolean;
   ha_climate_format: number;
+  nested_format: boolean;
 }

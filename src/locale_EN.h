@@ -19,6 +19,7 @@
 #pragma once
 
 // common words
+MAKE_PSTR_WORD(debug)
 MAKE_PSTR_WORD(exit)
 MAKE_PSTR_WORD(help)
 MAKE_PSTR_WORD(log)
@@ -29,6 +30,8 @@ MAKE_PSTR_WORD(set)
 MAKE_PSTR_WORD(show)
 MAKE_PSTR_WORD(on)
 MAKE_PSTR_WORD(off)
+MAKE_PSTR_WORD(ON)
+MAKE_PSTR_WORD(OFF)
 MAKE_PSTR_WORD(su)
 MAKE_PSTR_WORD(name)
 MAKE_PSTR_WORD(auto)
@@ -65,6 +68,7 @@ MAKE_PSTR_WORD(master)
 MAKE_PSTR_WORD(pin)
 MAKE_PSTR_WORD(publish)
 MAKE_PSTR_WORD(timeout)
+MAKE_PSTR_WORD(ethernet)
 
 // for commands
 MAKE_PSTR_WORD(call)
@@ -75,7 +79,6 @@ MAKE_PSTR_WORD(data)
 MAKE_PSTR_WORD(command)
 MAKE_PSTR_WORD(commands)
 MAKE_PSTR_WORD(info)
-MAKE_PSTR_WORD(test)
 MAKE_PSTR_WORD(settings)
 
 // devices
@@ -100,7 +103,7 @@ MAKE_PSTR(hostname_fmt, "Hostname = %s")
 MAKE_PSTR(mark_interval_fmt, "Mark interval = %lus")
 MAKE_PSTR(wifi_ssid_fmt, "WiFi SSID = %s")
 MAKE_PSTR(wifi_password_fmt, "WiFi Password = %S")
-MAKE_PSTR(mqtt_heartbeat_fmt, "MQTT Heartbeat is %s")
+MAKE_PSTR(ethernet_option_fmt, "Ethernet option = %d")
 MAKE_PSTR(cmd_optional, "[cmd]")
 MAKE_PSTR(ha_optional, "[ha]")
 MAKE_PSTR(deep_optional, "[deep]")
@@ -210,16 +213,7 @@ MAKE_PSTR_WORD(holiday)
 MAKE_PSTR_WORD(reduce)
 
 // thermostat lists
-MAKE_PSTR_LIST(enum_ibaMainDisplay,
-               F_(internal_temperature),
-               F_(internal_setpoint),
-               F_(external_temperature),
-               F_(burner_temperature),
-               F_(WW_temperature),
-               F_(functioning_mode),
-               F_(time),
-               F_(date),
-               F_(smoke_temperature))
+MAKE_PSTR_LIST(enum_ibaMainDisplay, F_(internal_temperature), F_(internal_setpoint), F_(external_temperature), F_(burner_temperature), F_(WW_temperature), F_(functioning_mode), F_(time), F_(date), F_(smoke_temperature))
 MAKE_PSTR_LIST(enum_ibaLanguage, F_(German), F_(Dutch), F_(French), F_(Italian))
 MAKE_PSTR_LIST(enum_floordrystatus, F_(off), F_(start), F_(heat), F_(hold), F_(cool), F_(end))
 MAKE_PSTR_LIST(enum_ibaBuildingType, F_(blank), F_(light), F_(medium), F_(heavy))

@@ -6,6 +6,7 @@
 #include <FSPersistence.h>
 #include <AsyncMqttClient.h>
 #include <ESPUtils.h>
+
 #include <uuid/common.h>
 
 #define MQTT_RECONNECTION_DELAY 1000
@@ -60,16 +61,14 @@ static String generateClientId() {
 #define FACTORY_MQTT_MAX_TOPIC_LENGTH 128
 #endif
 
+#define EMSESP_DEFAULT_BOOL_FORMAT 1       // on/off
 #define EMSESP_DEFAULT_DALLAS_FORMAT 1     // sensorid
 #define EMSESP_DEFAULT_HA_CLIMATE_FORMAT 1 // current temp
 #define EMSESP_DEFAULT_MQTT_QOS 0
 #define EMSESP_DEFAULT_MQTT_RETAIN false
 #define EMSESP_DEFAULT_HA_ENABLED false
 #define EMSESP_DEFAULT_PUBLISH_TIME 10
-
-#include "../../src/system.h"
-#include "../../src/mqtt.h"
-#include "../../src/dallassensor.h"
+#define EMSESP_DEFAULT_NESTED_FORMAT true
 
 class MqttSettings {
   public:
@@ -101,8 +100,10 @@ class MqttSettings {
     uint8_t  mqtt_qos;
     bool     mqtt_retain;
     uint8_t  dallas_format;
+    uint8_t  bool_format;
     uint8_t  ha_climate_format;
     bool     ha_enabled;
+    bool     nested_format;
 
     static void              read(MqttSettings & settings, JsonObject & root);
     static StateUpdateResult update(JsonObject & root, MqttSettings & settings);

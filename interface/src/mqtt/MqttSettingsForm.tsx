@@ -113,7 +113,7 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           variant="outlined"
           onChange={handleValueChange('mqtt_qos')}
           margin="normal">
-          <MenuItem value={0}>0</MenuItem>
+          <MenuItem value={0}>0 (default)</MenuItem>
           <MenuItem value={1}>1</MenuItem>
           <MenuItem value={2}>2</MenuItem>
         </SelectValidator>
@@ -141,6 +141,16 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
         <Typography variant="h6" color="primary" >
           Formatting
         </Typography>
+        <BlockFormControlLabel
+          control={
+            <Checkbox
+              checked={data.nested_format}
+              onChange={handleValueChange('nested_format')}
+              value="nested_format"
+            />
+          }
+          label="Nested format (Thermostat & Mixer only)"
+        />
         <SelectValidator name="dallas_format"
           label="Dallas Sensor Payload Grouping"
           value={data.dallas_format}
@@ -150,6 +160,18 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           margin="normal">
           <MenuItem value={1}>by Sensor ID</MenuItem>
           <MenuItem value={2}>by Number</MenuItem>
+        </SelectValidator>
+        <SelectValidator name="bool_format"
+          label="Boolean Format"
+          value={data.bool_format}
+          fullWidth
+          variant="outlined"
+          onChange={handleValueChange('bool_format')}
+          margin="normal">
+          <MenuItem value={1}>"on"/"off"</MenuItem>
+          <MenuItem value={2}>true/false</MenuItem>
+          <MenuItem value={3}>1/0</MenuItem>
+          <MenuItem value={4}>"ON"/"OFF"</MenuItem>
         </SelectValidator>
         <BlockFormControlLabel
           control={

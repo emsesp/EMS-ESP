@@ -19,8 +19,6 @@
 #include "system.h"
 #include "emsesp.h" // for send_raw_telegram() command
 
-#include "version.h" // firmware version of EMS-ESP
-
 #if defined(EMSESP_TEST)
 #include "test/test.h"
 #endif
@@ -34,15 +32,8 @@ uuid::syslog::SyslogService System::syslog_;
 #endif
 
 // init statics
-uint32_t    System::heap_start_     = 1; // avoid using 0 to divide-by-zero later
-bool        System::upload_status_  = false;
-bool        System::hide_led_       = false;
-uint8_t     System::led_gpio_       = 0;
-uint16_t    System::analog_         = 0;
-bool        System::analog_enabled_ = false;
-bool        System::syslog_enabled_ = false;
-std::string System::hostname_;
-bool        System::ethernet_connected_ = false;
+uint32_t System::heap_start_ = 1; // avoid using 0 to divide-by-zero later
+PButton  System::myPButton_;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
@@ -97,9 +88,7 @@ void System::restart() {
     LOG_INFO(F("Restarting system..."));
     Shell::loop_all();
     delay(1000); // wait a second
-#if defined(ESP8266)
-    ESP.reset();
-#elif defined(ESP32)
+#ifndef EMSESP_STANDALONE
     ESP.restart();
 #endif
 }
@@ -108,6 +97,7 @@ void System::restart() {
 void System::wifi_reconnect() {
     LOG_INFO(F("Wifi reconnecting..."));
     Shell::loop_all();
+    EMSESP::console_.loop();
     delay(1000);                                                                   // wait a second
     EMSESP::webSettingsService.save();                                             // local settings
     EMSESP::esp8266React.getNetworkSettingsService()->callUpdateHandlers("local"); // in case we've changed ssid or password
@@ -122,30 +112,19 @@ void System::format(uuid::console::Shell & shell) {
 
     EMSuart::stop();
 
-#if defined(ESP8266)
-    LittleFS.format();
-#elif defined(ESP32)
-    SPIFFS.format();
+#ifndef EMSESP_STANDALONE
+    LITTLEFS.format();
 #endif
 
     System::restart();
 }
 
-void System::syslog_init() {
-    int8_t   syslog_level_;
-    uint32_t syslog_mark_interval_;
-    String   syslog_host_;
-
-    // fetch settings
-    EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        syslog_enabled_       = settings.syslog_enabled;
-        syslog_level_         = settings.syslog_level;
-        syslog_mark_interval_ = settings.syslog_mark_interval;
-        syslog_host_          = settings.syslog_host;
-    });
+void System::syslog_init(bool refresh) {
+    if (refresh) {
+        get_settings();
+    }
 
 #ifndef EMSESP_STANDALONE
-
     // check for empty hostname
     IPAddress addr;
     if (!addr.fromString(syslog_host_.c_str())) {
@@ -165,140 +144,169 @@ void System::syslog_init() {
     syslog_.log_level((uuid::log::Level)syslog_level_);
     syslog_.mark_interval(syslog_mark_interval_);
     syslog_.destination(addr);
-    EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & networkSettings) { syslog_.hostname(networkSettings.hostname.c_str()); });
+    syslog_.hostname(hostname_.c_str());
 
     EMSESP::logger().info(F("Syslog started"));
 #endif
 }
 
+// read all the settings from the config files and store locally
+void System::get_settings() {
+    EMSESP::webSettingsService.read([&](WebSettings & settings) {
+        // BUTTON
+        pbutton_gpio_ = settings.pbutton_gpio;
+
+        // ADC
+        analog_enabled_ = settings.analog_enabled;
+
+        // SYSLOG
+        syslog_enabled_       = settings.syslog_enabled;
+        syslog_level_         = settings.syslog_level;
+        syslog_mark_interval_ = settings.syslog_mark_interval;
+        syslog_host_          = settings.syslog_host;
+
+        // LED
+        hide_led_ = settings.hide_led;
+        led_gpio_ = settings.led_gpio;
+    });
+
+    EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & networkSettings) {
+        hostname(networkSettings.hostname.c_str());
+        LOG_INFO(F("System %s booted (EMS-ESP version %s)"), networkSettings.hostname.c_str(), EMSESP_APP_VERSION); // print boot message
+        ethernet_profile_ = networkSettings.ethernet_profile;
+    });
+}
+
+// adjust WiFi settings
+// this for problem solving mesh and connection issues, and also get EMS bus-powered more stable by lowering power
+void System::wifi_tweak() {
+#if defined(EMSESP_WIFI_TWEAK)
+    // Default Tx Power is 80 = 20dBm <-- default
+    // WIFI_POWER_19_5dBm = 78,// 19.5dBm
+    // WIFI_POWER_19dBm = 76,// 19dBm
+    // WIFI_POWER_18_5dBm = 74,// 18.5dBm
+    // WIFI_POWER_17dBm = 68,// 17dBm
+    // WIFI_POWER_15dBm = 60,// 15dBm
+    // WIFI_POWER_13dBm = 52,// 13dBm
+    // WIFI_POWER_11dBm = 44,// 11dBm
+    // WIFI_POWER_8_5dBm = 34,// 8.5dBm
+    // WIFI_POWER_7dBm = 28,// 7dBm
+    // WIFI_POWER_5dBm = 20,// 5dBm
+    // WIFI_POWER_2dBm = 8,// 2dBm
+    // WIFI_POWER_MINUS_1dBm = -4// -1dBm
+    wifi_power_t p1  = WiFi.getTxPower();
+    (void) WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    wifi_power_t p2  = WiFi.getTxPower();
+    bool         s1  = WiFi.getSleep();
+    WiFi.setSleep(false); // turn off sleep - WIFI_PS_NONE
+    bool s2 = WiFi.getSleep();
+    LOG_INFO(F("Adjusting Wifi - Tx power %d->%d, Sleep %d->%d"), p1, p2, s1, s2);
+#endif
+}
+
 // first call. Sets memory and starts up the UART Serial bridge
 void System::start(uint32_t heap_start) {
+#if defined(EMSESP_DEBUG)
+    show_mem("Startup");
+#endif
+
     // set the inital free mem, only on first boot
     if (heap_start_ < 2) {
         heap_start_ = heap_start;
     }
 
-#if defined(EMSESP_DEBUG)
-    show_mem("Startup");
-#endif
+    // load in all the settings first
+    get_settings();
 
-    uint8_t ethernet_profile;
-    EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & networkSettings) {
-        LOG_INFO(F("System %s booted (EMS-ESP version %s)"), networkSettings.hostname.c_str(), EMSESP_APP_VERSION); // print boot message
-        ethernet_profile = networkSettings.ethernet_profile;
-    });
+    commands_init();     // console & api commands
+    led_init(false);     // init LED
+    adc_init(false);     // analog ADC
+    syslog_init(false);  // init SysLog
+    button_init(false);  // the special button
+    network_init(false); // network
 
-    // these commands respond to the topic "system" and take a payload like {cmd:"", data:"", id:""}
-    EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        Command::add(EMSdevice::DeviceType::SYSTEM, F_(pin), System::command_pin);
-        Command::add(EMSdevice::DeviceType::SYSTEM, F_(send), System::command_send);
-        Command::add(EMSdevice::DeviceType::SYSTEM, F_(publish), System::command_publish);
-        Command::add(EMSdevice::DeviceType::SYSTEM, F_(fetch), System::command_fetch);
-        Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(info), System::command_info);
-        Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(settings), System::command_settings);
-
-#if defined(EMSESP_TEST)
-        Command::add(EMSdevice::DeviceType::SYSTEM, F_(test), System::command_test);
-#endif
-    });
-
-    // start other services first
-    init();
-
-    // check ethernet profile, if we're using exclusive Ethernet then disabled wifi and AP/captive portal
-    if (ethernet_profile == 0) {
-        return;
-    }
-
-    uint8_t          phy_addr;   // I²C-address of Ethernet PHY (0 or 1 for LAN8720, 31 for TLK110)
-    int              power;      // Pin# of the enable signal for the external crystal oscillator (-1 to disable for internal APLL source)
-    int              mdc;        // Pin# of the I²C clock signal for the Ethernet PHY
-    int              mdio;       // Pin# of the I²C IO signal for the Ethernet PHY
-    eth_phy_type_t   type;       // Type of the Ethernet PHY (LAN8720 or TLK110)
-    eth_clock_mode_t clock_mode; // ETH_CLOCK_GPIO0_IN or ETH_CLOCK_GPIO0_OUT, ETH_CLOCK_GPIO16_OUT, ETH_CLOCK_GPIO17_OUT for 50Hz inverted clock
-
-    if (ethernet_profile == 1) {
-        // LAN8720
-        phy_addr   = 0;
-        power      = -1;
-        mdc        = 23;
-        mdio       = 18;
-        type       = ETH_PHY_LAN8720;
-        clock_mode = ETH_CLOCK_GPIO0_IN;
-    } else if (ethernet_profile == 2) {
-        // TLK110
-        phy_addr   = 31;
-        power      = -1;
-        mdc        = 23;
-        mdio       = 18;
-        type       = ETH_PHY_TLK110;
-        clock_mode = ETH_CLOCK_GPIO0_IN;
-    }
-
-#ifndef EMSESP_STANDALONE
-    if (ETH.begin(phy_addr, power, mdc, mdio, type, clock_mode)) {
-        // disable ssid and AP
-        EMSESP::esp8266React.getNetworkSettingsService()->update(
-            [&](NetworkSettings & settings) {
-                settings.ssid == ""; // remove SSID
-                return StateUpdateResult::CHANGED;
-            },
-            "local");
-
-        EMSESP::esp8266React.getAPSettingsService()->update(
-            [&](APSettings & settings) {
-                settings.provisionMode = AP_MODE_NEVER;
-                return StateUpdateResult::CHANGED;
-            },
-            "local");
-    }
-#endif
+    EMSESP::init_tx(); // start UART
 }
 
-void System::other_init() {
-    // set the boolean format used for rendering booleans
-    EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        Helpers::bool_format(settings.bool_format);
-        analog_enabled_ = settings.analog_enabled;
-    });
-}
-
-// init stuff. This is called when settings are changed in the web
-void System::init() {
-    led_init(); // init LED
-
-    other_init(); // boolean format and analog setting
-
-    syslog_init(); // init SysLog
-
-    EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & settings) { hostname(settings.hostname.c_str()); });
-
+// adc and bluetooth
+void System::adc_init(bool refresh) {
+    if (refresh) {
+        get_settings();
+    }
 #ifndef EMSESP_STANDALONE
     // setCpuFrequencyMhz(160); // default is 240
 
     // disable bluetooth
     btStop();
     esp_bt_controller_disable();
-
-    // turn off ADC to save power if not needed
     if (!analog_enabled_) {
-        adc_power_off();
+        adc_power_off(); // turn off ADC to save power if not needed
     }
 #endif
+}
 
-    EMSESP::init_tx(); // start UART
+// button single click
+void System::button_OnClick(PButton & b) {
+    LOG_DEBUG(F("Button pressed - single click"));
+}
+
+// button double click
+void System::button_OnDblClick(PButton & b) {
+    LOG_DEBUG(F("Button pressed - double click - reconnect"));
+    EMSESP::system_.wifi_reconnect();
+}
+
+// button long press
+void System::button_OnLongPress(PButton & b) {
+    LOG_DEBUG(F("Button pressed - long press"));
+}
+
+// button indefinite press
+void System::button_OnVLongPress(PButton & b) {
+    LOG_DEBUG(F("Button pressed - very long press"));
+#ifndef EMSESP_STANDALONE
+    LOG_WARNING(F("Performing factory reset..."));
+    EMSESP::console_.loop();
+
+#ifdef EMSESP_TEST
+    Test::listDir(LITTLEFS, FS_CONFIG_DIRECTORY, 3);
+#endif
+
+    EMSESP::esp8266React.factoryReset();
+#endif
+}
+
+// push button
+void System::button_init(bool refresh) {
+    if (refresh) {
+        get_settings();
+    }
+
+    // Allow 0 for Boot-button on NodeMCU-32s?
+    // if (pbutton_gpio_) {
+    if (!myPButton_.init(pbutton_gpio_, HIGH)) {
+        LOG_INFO(F("External multi-functional button not detected"));
+    } else {
+        LOG_INFO(F("External multi-functional button enabled"));
+    }
+
+    myPButton_.onClick(BUTTON_Debounce, button_OnClick);
+    myPButton_.onDblClick(BUTTON_DblClickDelay, button_OnDblClick);
+    myPButton_.onLongPress(BUTTON_LongPressDelay, button_OnLongPress);
+    myPButton_.onVLongPress(BUTTON_VLongPressDelay, button_OnVLongPress);
+    // }
 }
 
 // set the LED to on or off when in normal operating mode
-void System::led_init() {
-    EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        hide_led_ = settings.hide_led;
-        led_gpio_ = settings.led_gpio;
-        if (led_gpio_) {
-            pinMode(led_gpio_, OUTPUT);                            // 0 means disabled
-            digitalWrite(led_gpio_, hide_led_ ? !LED_ON : LED_ON); // LED on, for ever
-        }
-    });
+void System::led_init(bool refresh) {
+    if (refresh) {
+        get_settings();
+    }
+
+    if (led_gpio_) {
+        pinMode(led_gpio_, OUTPUT);                            // 0 means disabled
+        digitalWrite(led_gpio_, hide_led_ ? !LED_ON : LED_ON); // LED on, for ever
+    }
 }
 
 // returns true if OTA is uploading
@@ -321,6 +329,7 @@ void System::upload_status(bool in_progress) {
 // checks system health and handles LED flashing wizardry
 void System::loop() {
 #ifndef EMSESP_STANDALONE
+    myPButton_.check(); // check button press
 
     if (syslog_enabled_) {
         syslog_.loop();
@@ -339,6 +348,7 @@ void System::loop() {
         send_heartbeat();
     }
 
+    /*
 #ifndef EMSESP_STANDALONE
 #if defined(EMSESP_DEBUG)
     static uint32_t last_memcheck_ = 0;
@@ -348,20 +358,13 @@ void System::loop() {
     }
 #endif
 #endif
+*/
 
 #endif
 }
 
 void System::show_mem(const char * note) {
-#if defined(ESP8266)
-    static uint32_t old_free_heap = 0;
-    static uint8_t  old_heap_frag = 0;
-    uint32_t        free_heap     = ESP.getFreeHeap();
-    uint8_t         heap_frag     = ESP.getHeapFragmentation();
-    LOG_INFO(F("(%s) Free heap: %lu (~%lu), frag:%d%% (~%d)"), note, free_heap, (uint32_t)Helpers::abs(free_heap - old_free_heap), heap_frag, (uint8_t)Helpers::abs(heap_frag - old_heap_frag));
-    old_free_heap = free_heap;
-    old_heap_frag = heap_frag;
-#elif defined(ESP32)
+#ifndef EMSESP_STANDALONE
     static uint32_t old_free_heap = 0;
     uint32_t        free_heap     = ESP.getFreeHeap();
     LOG_INFO(F("(%s) Free heap: %lu (~%lu)"), note, free_heap, (uint32_t)Helpers::abs(free_heap - old_free_heap));
@@ -371,15 +374,15 @@ void System::show_mem(const char * note) {
 
 // send periodic MQTT message with system information
 void System::send_heartbeat() {
-    // don't send heartbeat if WiFi is not connected
+    // don't send heartbeat if WiFi or MQTT is not connected
+    if (!Mqtt::connected()) {
+        return;
+    }
+
     int8_t rssi = wifi_quality();
     if (rssi == -1) {
         return;
     }
-
-#if defined(ESP8266)
-    uint8_t frag_memory = ESP.getHeapFragmentation();
-#endif
 
     StaticJsonDocument<EMSESP_JSON_SIZE_SMALL> doc;
 
@@ -405,9 +408,7 @@ void System::send_heartbeat() {
 #ifndef EMSESP_STANDALONE
     doc["freemem"] = ESP.getFreeHeap();
 #endif
-#if defined(ESP8266)
-    doc["fragmem"] = frag_memory;
-#endif
+
     if (analog_enabled_) {
         doc["adc"] = analog_;
     }
@@ -421,9 +422,7 @@ void System::measure_analog() {
 
     if (!measure_last_ || (uint32_t)(uuid::get_uptime() - measure_last_) >= SYSTEM_MEASURE_ANALOG_INTERVAL) {
         measure_last_ = uuid::get_uptime();
-#if defined(ESP8266)
-        uint16_t a = analogRead(A0);
-#elif defined(ESP32)
+#if defined(ESP32)
         uint16_t a = analogRead(36);
 #else
         uint16_t a = 0; // standalone
@@ -446,7 +445,62 @@ void System::set_led_speed(uint32_t speed) {
     led_monitor();
 }
 
-void System::init_network() {
+// initializes network
+void System::network_init(bool refresh) {
+    if (refresh) {
+        get_settings();
+    }
+
+    // check ethernet profile
+    // ethernet uses lots of additional memory so we only start it when it's explicitly set in the config
+    if (ethernet_profile_ == 0) {
+        return;
+    }
+
+    uint8_t          phy_addr;   // I²C-address of Ethernet PHY (0 or 1 for LAN8720, 31 for TLK110)
+    int              power;      // Pin# of the enable signal for the external crystal oscillator (-1 to disable for internal APLL source)
+    int              mdc;        // Pin# of the I²C clock signal for the Ethernet PHY
+    int              mdio;       // Pin# of the I²C IO signal for the Ethernet PHY
+    eth_phy_type_t   type;       // Type of the Ethernet PHY (LAN8720 or TLK110)
+    eth_clock_mode_t clock_mode; // ETH_CLOCK_GPIO0_IN or ETH_CLOCK_GPIO0_OUT, ETH_CLOCK_GPIO16_OUT, ETH_CLOCK_GPIO17_OUT for 50Hz inverted clock
+
+    if (ethernet_profile_ == 1) {
+        // LAN8720
+        phy_addr   = 0;
+        power      = -1;
+        mdc        = 23;
+        mdio       = 18;
+        type       = ETH_PHY_LAN8720;
+        clock_mode = ETH_CLOCK_GPIO0_IN;
+    } else if (ethernet_profile_ == 2) {
+        // TLK110
+        phy_addr   = 31;
+        power      = -1;
+        mdc        = 23;
+        mdio       = 18;
+        type       = ETH_PHY_TLK110;
+        clock_mode = ETH_CLOCK_GPIO0_IN;
+    }
+
+#ifndef EMSESP_STANDALONE
+    if (ETH.begin(phy_addr, power, mdc, mdio, type, clock_mode)) {
+        // disable ssid and AP when using Ethernet
+        EMSESP::esp8266React.getNetworkSettingsService()->update(
+            [&](NetworkSettings & settings) {
+                settings.ssid == ""; // remove SSID
+                return StateUpdateResult::CHANGED;
+            },
+            "local");
+
+        EMSESP::esp8266React.getAPSettingsService()->update(
+            [&](APSettings & settings) {
+                settings.provisionMode = AP_MODE_NEVER;
+                return StateUpdateResult::CHANGED;
+            },
+            "local");
+    }
+#endif
+
     last_system_check_ = 0; // force the LED to go from fast flash to pulse
     send_heartbeat();
 }
@@ -475,12 +529,27 @@ void System::system_check() {
             // if it was unhealthy but now we're better, make sure the LED is solid again cos we've been healed
             if (!system_healthy_) {
                 system_healthy_ = true;
+                send_heartbeat();
                 if (led_gpio_) {
                     digitalWrite(led_gpio_, hide_led_ ? !LED_ON : LED_ON); // LED on, for ever
                 }
             }
         }
     }
+}
+
+// commands - takes static function pointers
+// these commands respond to the topic "system" and take a payload like {cmd:"", data:"", id:""}
+void System::commands_init() {
+    Command::add(EMSdevice::DeviceType::SYSTEM, F_(pin), System::command_pin);
+    Command::add(EMSdevice::DeviceType::SYSTEM, F_(send), System::command_send);
+    Command::add(EMSdevice::DeviceType::SYSTEM, F_(publish), System::command_publish);
+    Command::add(EMSdevice::DeviceType::SYSTEM, F_(fetch), System::command_fetch);
+    Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(info), System::command_info);
+    Command::add_with_json(EMSdevice::DeviceType::SYSTEM, F_(settings), System::command_settings);
+#if defined(EMSESP_TEST)
+    Command::add(EMSdevice::DeviceType::SYSTEM, F("test"), System::command_test);
+#endif
 }
 
 // flashes the LED
@@ -546,7 +615,7 @@ void System::show_system(uuid::console::Shell & shell) {
 #ifndef EMSESP_STANDALONE
     shell.printfln(F("SDK version:   %s"), ESP.getSdkVersion());
     shell.printfln(F("CPU frequency: %u MHz"), ESP.getCpuFreqMHz());
-    shell.printfln(F("Free heap:                %lu bytes"), (uint32_t)ESP.getFreeHeap());
+    shell.printfln(F("Free heap:     %lu bytes"), (uint32_t)ESP.getFreeHeap());
     shell.println();
 
     switch (WiFi.status()) {
@@ -595,7 +664,7 @@ void System::show_system(uuid::console::Shell & shell) {
     shell.println();
 
     // show Ethernet
-    if (ethernet_connected()) {
+    if (ethernet_connected_) {
         shell.printfln(F("Ethernet: Connected"));
         shell.printfln(F("MAC address: %s"), ETH.macAddress().c_str());
         shell.printfln(F("Hostname: %s"), ETH.getHostname());
@@ -606,21 +675,18 @@ void System::show_system(uuid::console::Shell & shell) {
         shell.printfln(F("Ethernet: disconnected"));
     }
 
-    EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        shell.println();
-
-        if (!settings.syslog_enabled) {
-            shell.printfln(F("Syslog: disabled"));
-        } else {
-            shell.printfln(F("Syslog:"));
-            shell.print(F(" "));
-            shell.printfln(F_(host_fmt), !settings.syslog_host.isEmpty() ? settings.syslog_host.c_str() : uuid::read_flash_string(F_(unset)).c_str());
-            shell.print(F(" "));
-            shell.printfln(F_(log_level_fmt), uuid::log::format_level_lowercase(static_cast<uuid::log::Level>(settings.syslog_level)));
-            shell.print(F(" "));
-            shell.printfln(F_(mark_interval_fmt), settings.syslog_mark_interval);
-        }
-    });
+    shell.println();
+    if (!syslog_enabled_) {
+        shell.printfln(F("Syslog: disabled"));
+    } else {
+        shell.printfln(F("Syslog:"));
+        shell.print(F(" "));
+        shell.printfln(F_(host_fmt), !syslog_host_.isEmpty() ? syslog_host_.c_str() : uuid::read_flash_string(F_(unset)).c_str());
+        shell.print(F(" "));
+        shell.printfln(F_(log_level_fmt), uuid::log::format_level_lowercase(static_cast<uuid::log::Level>(syslog_level_)));
+        shell.print(F(" "));
+        shell.printfln(F_(mark_interval_fmt), syslog_mark_interval_);
+    }
 
 #endif
 }
@@ -630,19 +696,19 @@ void System::console_commands(Shell & shell, unsigned int context) {
     EMSESPShell::commands->add_command(ShellContext::SYSTEM,
                                        CommandFlags::ADMIN,
                                        flash_string_vector{F_(restart)},
-                                       [](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments __attribute__((unused))) { restart(); });
+                                       [](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments __attribute__((unused))) { EMSESP::system_.restart(); });
 
     EMSESPShell::commands->add_command(ShellContext::SYSTEM,
                                        CommandFlags::ADMIN,
                                        flash_string_vector{F_(wifi), F_(reconnect)},
-                                       [](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments __attribute__((unused))) { wifi_reconnect(); });
+                                       [](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments __attribute__((unused))) { EMSESP::system_.wifi_reconnect(); });
 
     EMSESPShell::commands->add_command(ShellContext::SYSTEM, CommandFlags::ADMIN, flash_string_vector{F_(format)}, [](Shell & shell, const std::vector<std::string> & arguments __attribute__((unused))) {
         shell.enter_password(F_(password_prompt), [=](Shell & shell, bool completed, const std::string & password) {
             if (completed) {
                 EMSESP::esp8266React.getSecuritySettingsService()->read([&](SecuritySettings & securitySettings) {
                     if (securitySettings.jwtSecret.equals(password.c_str())) {
-                        format(shell);
+                        EMSESP::system_.format(shell);
                     } else {
                         shell.println(F("incorrect password"));
                     }
@@ -674,7 +740,7 @@ void System::console_commands(Shell & shell, unsigned int context) {
     });
 
     EMSESPShell::commands->add_command(ShellContext::SYSTEM, CommandFlags::USER, flash_string_vector{F_(show)}, [=](Shell & shell, const std::vector<std::string> & arguments __attribute__((unused))) {
-        show_system(shell);
+        EMSESP::system_.show_system(shell);
         shell.println();
     });
 
@@ -703,7 +769,7 @@ void System::console_commands(Shell & shell, unsigned int context) {
                                                networkSettings.ssid = arguments.front().c_str();
                                                return StateUpdateResult::CHANGED;
                                            });
-                                           shell.println("Use `wifi reconnect` to apply the new settings");
+                                           shell.println("Use `wifi reconnect` to save and apply the new settings");
                                        });
 
     EMSESPShell::commands->add_command(ShellContext::SYSTEM, CommandFlags::ADMIN, flash_string_vector{F_(set), F_(wifi), F_(password)}, [](Shell & shell, const std::vector<std::string> & arguments __attribute__((unused))) {
@@ -716,7 +782,7 @@ void System::console_commands(Shell & shell, unsigned int context) {
                                 networkSettings.password = password2.c_str();
                                 return StateUpdateResult::CHANGED;
                             });
-                            shell.println("Use `wifi reconnect` to apply the new settings");
+                            shell.println("Use `wifi reconnect` to save and apply the new settings");
                         } else {
                             shell.println(F("Passwords do not match"));
                         }
@@ -726,22 +792,45 @@ void System::console_commands(Shell & shell, unsigned int context) {
         });
     });
 
+    EMSESPShell::commands->add_command(
+        ShellContext::SYSTEM,
+        CommandFlags::ADMIN,
+        flash_string_vector{F_(set), F_(ethernet)},
+        flash_string_vector{F_(n_mandatory)},
+        [](Shell & shell, const std::vector<std::string> & arguments) {
+            uint8_t n = Helpers::hextoint(arguments.front().c_str());
+            if (n <= 2) {
+                EMSESP::esp8266React.getNetworkSettingsService()->update(
+                    [&](NetworkSettings & networkSettings) {
+                        networkSettings.ethernet_profile = n;
+                        shell.printfln(F_(ethernet_option_fmt), networkSettings.ethernet_profile);
+                        return StateUpdateResult::CHANGED;
+                    },
+                    "local");
+                EMSESP::system_.network_init(true);
+            } else {
+                shell.println(F("Must be 0, 1 or 2"));
+            }
+        },
+        [](Shell & shell __attribute__((unused)), const std::vector<std::string> & arguments __attribute__((unused))) -> const std::vector<std::string> {
+            return std::vector<std::string>{read_flash_string(F("0")), read_flash_string(F("1")), read_flash_string(F("2"))};
+        });
+
     EMSESPShell::commands->add_command(ShellContext::SYSTEM, CommandFlags::USER, flash_string_vector{F_(set)}, [](Shell & shell, const std::vector<std::string> & arguments __attribute__((unused))) {
         EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & networkSettings) {
             shell.print(F(" "));
             shell.printfln(F_(hostname_fmt), networkSettings.hostname.isEmpty() ? uuid::read_flash_string(F_(unset)).c_str() : networkSettings.hostname.c_str());
-        });
-
-        EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & networkSettings) {
             shell.print(F(" "));
             shell.printfln(F_(wifi_ssid_fmt), networkSettings.ssid.isEmpty() ? uuid::read_flash_string(F_(unset)).c_str() : networkSettings.ssid.c_str());
             shell.print(F(" "));
             shell.printfln(F_(wifi_password_fmt), networkSettings.ssid.isEmpty() ? F_(unset) : F_(asterisks));
+            shell.print(F(" "));
+            shell.printfln(F_(ethernet_option_fmt), networkSettings.ethernet_profile);
         });
     });
 
     EMSESPShell::commands->add_command(ShellContext::SYSTEM, CommandFlags::ADMIN, flash_string_vector{F_(show), F_(users)}, [](Shell & shell, const std::vector<std::string> & arguments __attribute__((unused))) {
-        System::show_users(shell);
+        EMSESP::system_.show_users(shell);
     });
 
     // enter the context
@@ -751,192 +840,6 @@ void System::console_commands(Shell & shell, unsigned int context) {
 // upgrade from previous versions of EMS-ESP
 // returns true if an upgrade was done
 bool System::check_upgrade() {
-    /*
-#if defined(ESP8266)
-    LittleFSConfig l_cfg;
-    l_cfg.setAutoFormat(false);
-    LittleFS.setConfig(l_cfg); // do not auto format if it can't find LittleFS
-    if (LittleFS.begin()) {
-#if defined(EMSESP_FORCE_SERIAL)
-        Serial.begin(115200);
-        Serial.println(F("FS is already LittleFS"));
-        Serial.end();
-#endif
-        return false;
-    }
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
-    SPIFFSConfig cfg;
-    cfg.setAutoFormat(false); // prevent formatting when opening SPIFFS filesystem
-    SPIFFS.setConfig(cfg);
-    if (!SPIFFS.begin()) {
-#if defined(EMSESP_FORCE_SERIAL)
-        Serial.begin(115200);
-        Serial.println(F("No old SPIFFS found!"));
-        Serial.end();
-#endif
-        // if there is neither SPIFFS or LittleFS we can assume the ESP8266 has been erased
-        l_cfg.setAutoFormat(true); // reset to normal behaviour
-        LittleFS.setConfig(l_cfg);
-        return false;
-    }
-
-    Serial.begin(115200);
-
-    bool                                       failed = false;
-    File                                       file;
-    JsonObject                                 network, general, mqtt, custom_settings;
-    StaticJsonDocument<EMSESP_JSON_SIZE_LARGE> doc;
-
-    // open the system settings:
-    // {
-    // "command":"configfile",
-    // "network":{"ssid":"xxxx","password":"yyyy","wmode":1,"staticip":null,"gatewayip":null,"nmask":null,"dnsip":null},
-    // "general":{"password":"admin","serial":false,"hostname":"ems-esp","log_events":false,"log_ip":null,"version":"1.9.5"},
-    // "mqtt":{"enabled":false,"heartbeat":false,"ip":null,"user":null,"port":1883,"qos":0,"keepalive":60,"retain":false,"password":null,"base":null,"nestedjson":false},
-    // "ntp":{"server":"pool.ntp.org","interval":720,"enabled":false,"timezone":2}
-    // }
-    file = SPIFFS.open("/myesp.json", "r");
-    if (!file) {
-        Serial.println(F("Unable to read the system config file"));
-        failed = true;
-    } else {
-        DeserializationError error = deserializeJson(doc, file);
-        if (error) {
-            Serial.printf(PSTR("Error. Failed to deserialize system json, error %s\n"), error.c_str());
-            failed = true;
-        } else {
-            Serial.println(F("Migrating settings from EMS-ESP v1.9..."));
-#if defined(EMSESP_DEBUG)
-            serializeJson(doc, Serial);
-            Serial.println();
-#endif
-            network = doc["network"];
-            general = doc["general"];
-            mqtt    = doc["mqtt"];
-
-            // start up LittleFS. If it doesn't exist it will format it
-            l_cfg.setAutoFormat(true);
-            LittleFS.setConfig(l_cfg);
-            LittleFS.begin();
-            EMSESP::esp8266React.begin();
-            EMSESP::webSettingsService.begin();
-
-            EMSESP::esp8266React.getNetworkSettingsService()->update(
-                [&](NetworkSettings & networkSettings) {
-                    networkSettings.hostname = general["hostname"] | FACTORY_WIFI_HOSTNAME;
-                    networkSettings.ssid     = network["ssid"] | FACTORY_WIFI_SSID;
-                    networkSettings.password = network["password"] | FACTORY_WIFI_PASSWORD;
-
-                    networkSettings.staticIPConfig = false;
-                    JsonUtils::readIP(network, "staticip", networkSettings.localIP);
-                    JsonUtils::readIP(network, "dnsip", networkSettings.dnsIP1);
-                    JsonUtils::readIP(network, "gatewayip", networkSettings.gatewayIP);
-                    JsonUtils::readIP(network, "nmask", networkSettings.subnetMask);
-
-                    return StateUpdateResult::CHANGED;
-                },
-                "local");
-
-            EMSESP::esp8266React.getSecuritySettingsService()->update(
-                [&](SecuritySettings & securitySettings) {
-                    securitySettings.jwtSecret = general["password"] | FACTORY_JWT_SECRET;
-
-                    return StateUpdateResult::CHANGED;
-                },
-                "local");
-
-            EMSESP::esp8266React.getMqttSettingsService()->update(
-                [&](MqttSettings & mqttSettings) {
-                    mqttSettings.host           = mqtt["ip"] | FACTORY_MQTT_HOST;
-                    mqttSettings.mqtt_qos       = mqtt["qos"] | 0;
-                    mqttSettings.mqtt_retain    = mqtt["retain"];
-                    mqttSettings.username       = mqtt["user"] | "";
-                    mqttSettings.password       = mqtt["password"] | "";
-                    mqttSettings.port           = mqtt["port"] | FACTORY_MQTT_PORT;
-                    mqttSettings.clientId       = FACTORY_MQTT_CLIENT_ID;
-                    mqttSettings.enabled        = mqtt["enabled"];
-                    mqttSettings.keepAlive      = FACTORY_MQTT_KEEP_ALIVE;
-                    mqttSettings.cleanSession   = FACTORY_MQTT_CLEAN_SESSION;
-
-                    return StateUpdateResult::CHANGED;
-                },
-                "local");
-        }
-    }
-    file.close();
-
-    if (failed) {
-        Serial.println(F("Failed to read system config. Quitting."));
-        SPIFFS.end();
-        Serial.end();
-        return false;
-    }
-
-    // open the custom settings file next:
-    // {
-    // "command":"custom_configfile",
-    // "settings":{"led":true,"led_gpio":2,"dallas_gpio":14,"dallas_parasite":false,"listen_mode":false,"shower_timer":false,"shower_alert":false,"publish_time":0,"tx_mode":1,"bus_id":11,"master_thermostat":0,"known_devices":""}
-    // }
-    doc.clear();
-    failed = false;
-    file   = SPIFFS.open("/customconfig.json", "r");
-    if (!file) {
-        Serial.println(F("Unable to read custom config file"));
-        failed = true;
-    } else {
-        DeserializationError error = deserializeJson(doc, file);
-        if (error) {
-            Serial.printf(PSTR("Error. Failed to deserialize custom json, error %s\n"), error.c_str());
-            failed = true;
-        } else {
-            custom_settings = doc["settings"];
-            EMSESP::webSettingsService.update(
-                [&](WebSettings & settings) {
-                    settings.tx_mode              = custom_settings["tx_mode"] | EMSESP_DEFAULT_TX_MODE;
-                    settings.shower_alert         = custom_settings["shower_alert"] | EMSESP_DEFAULT_SHOWER_ALERT;
-                    settings.shower_timer         = custom_settings["shower_timer"] | EMSESP_DEFAULT_SHOWER_TIMER;
-                    settings.master_thermostat    = custom_settings["master_thermostat"] | EMSESP_DEFAULT_MASTER_THERMOSTAT;
-                    settings.ems_bus_id           = custom_settings["bus_id"] | EMSESP_DEFAULT_EMS_BUS_ID;
-                    settings.syslog_enabled       = false;
-                    settings.syslog_host          = EMSESP_DEFAULT_SYSLOG_HOST;
-                    settings.syslog_level         = EMSESP_DEFAULT_SYSLOG_LEVEL;
-                    settings.syslog_mark_interval = EMSESP_DEFAULT_SYSLOG_MARK_INTERVAL;
-                    settings.dallas_gpio          = custom_settings["dallas_gpio"] | EMSESP_DEFAULT_DALLAS_GPIO;
-                    settings.dallas_parasite      = custom_settings["dallas_parasite"] | EMSESP_DEFAULT_DALLAS_PARASITE;
-                    settings.led_gpio             = custom_settings["led_gpio"] | EMSESP_DEFAULT_LED_GPIO;
-                    settings.analog_enabled       = EMSESP_DEFAULT_ANALOG_ENABLED;
-
-                    return StateUpdateResult::CHANGED;
-                },
-                "local");
-        }
-    }
-    file.close();
-
-    SPIFFS.end();
-
-    if (failed) {
-        Serial.println(F("Failed to read custom config. Quitting."));
-        Serial.end();
-        return false;
-    }
-
-#pragma GCC diagnostic pop
-
-    Serial.println(F("Restarting..."));
-    Serial.flush();
-    delay(1000);
-    Serial.end();
-    delay(1000);
-    restart();
-    return true; // will never get here
-#else
-    return false;
-#endif
-*/
     return false;
 }
 
@@ -945,9 +848,8 @@ bool System::check_upgrade() {
 // value and id are ignored
 bool System::command_settings(const char * value, const int8_t id, JsonObject & json) {
     EMSESP::esp8266React.getNetworkSettingsService()->read([&](NetworkSettings & settings) {
-        JsonObject node = json.createNestedObject("WIFI");
-        node["ssid"]    = settings.ssid;
-        // node["password"]         = settings.password;
+        JsonObject node          = json.createNestedObject("WIFI");
+        node["ssid"]             = settings.ssid;
         node["hostname"]         = settings.hostname;
         node["static_ip_config"] = settings.staticIPConfig;
         JsonUtils::writeIP(node, "local_ip", settings.localIP);
@@ -962,25 +864,22 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
         JsonObject node        = json.createNestedObject("AP");
         node["provision_mode"] = settings.provisionMode;
         node["ssid"]           = settings.ssid;
-        // node["password"]       = settings.password;
-        node["local_ip"]    = settings.localIP.toString();
-        node["gateway_ip"]  = settings.gatewayIP.toString();
-        node["subnet_mask"] = settings.subnetMask.toString();
+        node["local_ip"]       = settings.localIP.toString();
+        node["gateway_ip"]     = settings.gatewayIP.toString();
+        node["subnet_mask"]    = settings.subnetMask.toString();
     });
 #endif
 
     EMSESP::esp8266React.getMqttSettingsService()->read([&](MqttSettings & settings) {
-        char       s[7];
         JsonObject node = json.createNestedObject("MQTT");
-        node["enabled"] = Helpers::render_boolean(s, settings.enabled);
-        // node["password"]                = settings.password;
+        node["enabled"] = settings.enabled;
 #ifndef EMSESP_STANDALONE
         node["host"]          = settings.host;
         node["port"]          = settings.port;
         node["username"]      = settings.username;
         node["client_id"]     = settings.clientId;
         node["keep_alive"]    = settings.keepAlive;
-        node["clean_session"] = Helpers::render_boolean(s, settings.cleanSession);
+        node["clean_session"] = settings.cleanSession;
 #endif
         node["publish_time_boiler"]     = settings.publish_time_boiler;
         node["publish_time_thermostat"] = settings.publish_time_thermostat;
@@ -989,52 +888,49 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
         node["publish_time_other"]      = settings.publish_time_other;
         node["publish_time_sensor"]     = settings.publish_time_sensor;
         node["dallas_format"]           = settings.dallas_format;
+        node["bool_format"]             = settings.bool_format;
         node["ha_climate_format"]       = settings.ha_climate_format;
         node["ha_enabled"]              = settings.ha_enabled;
         node["mqtt_qos"]                = settings.mqtt_qos;
-        node["mqtt_retain"]             = Helpers::render_boolean(s, settings.mqtt_retain);
+        node["mqtt_retain"]             = settings.mqtt_retain;
     });
 
 #ifndef EMSESP_STANDALONE
     EMSESP::esp8266React.getNTPSettingsService()->read([&](NTPSettings & settings) {
-        char       s[7];
         JsonObject node   = json.createNestedObject("NTP");
-        node["enabled"]   = Helpers::render_boolean(s, settings.enabled);
+        node["enabled"]   = settings.enabled;
         node["server"]    = settings.server;
         node["tz_label"]  = settings.tzLabel;
         node["tz_format"] = settings.tzFormat;
     });
 
     EMSESP::esp8266React.getOTASettingsService()->read([&](OTASettings & settings) {
-        char       s[7];
         JsonObject node = json.createNestedObject("OTA");
-        node["enabled"] = Helpers::render_boolean(s, settings.enabled);
+        node["enabled"] = settings.enabled;
         node["port"]    = settings.port;
-        // node["password"] = settings.password;
     });
 #endif
 
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        char       s[7];
         JsonObject node              = json.createNestedObject("Settings");
         node["tx_mode"]              = settings.tx_mode;
         node["ems_bus_id"]           = settings.ems_bus_id;
-        node["syslog_enabled"]       = Helpers::render_boolean(s, settings.syslog_enabled);
+        node["syslog_enabled"]       = settings.syslog_enabled;
         node["syslog_level"]         = settings.syslog_level;
         node["syslog_mark_interval"] = settings.syslog_mark_interval;
         node["syslog_host"]          = settings.syslog_host;
         node["master_thermostat"]    = settings.master_thermostat;
-        node["shower_timer"]         = Helpers::render_boolean(s, settings.shower_timer);
-        node["shower_alert"]         = Helpers::render_boolean(s, settings.shower_alert);
+        node["shower_timer"]         = settings.shower_timer;
+        node["shower_alert"]         = settings.shower_alert;
         node["rx_gpio"]              = settings.rx_gpio;
         node["tx_gpio"]              = settings.tx_gpio;
         node["dallas_gpio"]          = settings.dallas_gpio;
-        node["dallas_parasite"]      = Helpers::render_boolean(s, settings.dallas_parasite);
+        node["dallas_parasite"]      = settings.dallas_parasite;
         node["led_gpio"]             = settings.led_gpio;
-        node["hide_led"]             = Helpers::render_boolean(s, settings.hide_led);
-        node["api_enabled"]          = Helpers::render_boolean(s, settings.api_enabled);
-        node["bool_format"]          = settings.bool_format;
-        node["analog_enabled"]       = Helpers::render_boolean(s, settings.analog_enabled);
+        node["hide_led"]             = settings.hide_led;
+        node["api_enabled"]          = settings.api_enabled;
+        node["analog_enabled"]       = settings.analog_enabled;
+        node["pbutton_gpio"]         = settings.pbutton_gpio;
     });
 
     return true;
@@ -1049,10 +945,6 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
 
     node["version"] = EMSESP_APP_VERSION;
     node["uptime"]  = uuid::log::format_timestamp_ms(uuid::get_uptime_ms(), 3);
-#if defined(ESP8266)
-    node["freemem"] = ESP.getFreeHeap();
-    node["fragmem"] = ESP.getHeapFragmentation();
-#endif
 
     node = json.createNestedObject("Status");
 
@@ -1107,5 +999,6 @@ bool System::command_test(const char * value, const int8_t id) {
     return true;
 }
 #endif
+
 
 } // namespace emsesp

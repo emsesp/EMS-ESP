@@ -64,7 +64,9 @@ void DallasSensor::loop() {
 
     if (state_ == State::IDLE) {
         if (time_now - last_activity_ >= READ_INTERVAL_MS) {
-            // LOG_DEBUG(F("Read sensor temperature")); // uncomment for debug
+#ifdef EMSESP_DEBUG_SENSOR
+            LOG_DEBUG(F("Read sensor temperature"));
+#endif
             if (bus_.reset() || parasite_) {
                 YIELD;
                 bus_.skip();
@@ -88,7 +90,9 @@ void DallasSensor::loop() {
         }
     } else if (state_ == State::READING) {
         if (temperature_convert_complete() && (time_now - last_activity_ > CONVERSION_MS)) {
-            // LOG_DEBUG(F("Scanning for sensors")); // uncomment for debug
+#ifdef EMSESP_DEBUG_SENSOR
+            LOG_DEBUG(F("Scanning for sensors"));
+#endif
             bus_.reset_search();
             state_ = State::SCANNING;
         } else if (time_now - last_activity_ > READ_TIMEOUT_MS) {
@@ -322,7 +326,8 @@ void DallasSensor::publish_values(const bool force) {
     uint8_t             sensor_no = 1;
 
     // dallas format is overriden when using Home Assistant
-    uint8_t dallas_format = Mqtt::ha_enabled() ? Mqtt::Dallas_Format::NUMBER : Mqtt::dallas_format();
+    // uint8_t dallas_format = Mqtt::ha_enabled() ? Mqtt::Dallas_Format::NUMBER : Mqtt::dallas_format();
+    uint8_t dallas_format = Mqtt::dallas_format();
 
     for (const auto & sensor : sensors_) {
         char sensorID[10]; // sensor{1-n}
@@ -355,11 +360,19 @@ void DallasSensor::publish_values(const bool force) {
                 config["unit_of_meas"] = FJSON("°C");
 
                 char str[50];
-                snprintf_P(str, sizeof(str), PSTR("{{value_json.sensor%d.temp}}"), sensor_no);
+                if (dallas_format == Mqtt::Dallas_Format::SENSORID) {
+                    snprintf_P(str, sizeof(str), PSTR("{{value_json['%s']}}"), sensor.to_string().c_str());
+                } else {
+                    snprintf_P(str, sizeof(str), PSTR("{{value_json.sensor%d.temp}}"), sensor_no);
+                }
                 config["val_tpl"] = str;
 
                 // name as sensor number not the long unique ID
-                snprintf_P(str, sizeof(str), PSTR("Dallas Sensor %d"), sensor_no);
+                if (dallas_format == Mqtt::Dallas_Format::SENSORID) {
+                    snprintf_P(str, sizeof(str), PSTR("Dallas Sensor %s"), sensor.to_string().c_str());
+                } else {
+                    snprintf_P(str, sizeof(str), PSTR("Dallas Sensor %d"), sensor_no);
+                }
                 config["name"] = str;
 
                 snprintf_P(str, sizeof(str), PSTR("dallas_%s"), sensor.to_string().c_str());
@@ -370,7 +383,8 @@ void DallasSensor::publish_values(const bool force) {
                 ids.add("ems-esp");
 
                 char topic[100];
-                snprintf_P(topic, sizeof(topic), PSTR("homeassistant/sensor/%s/dallas_%s/config"), Mqtt::base().c_str(), sensor.to_string().c_str());
+                // use sensor number as HA doesn't like '-' in the topic name
+                snprintf_P(topic, sizeof(topic), PSTR("homeassistant/sensor/%s/dallas_sensor%d/config"), Mqtt::base().c_str(), sensor_no);
                 Mqtt::publish_ha(topic, config.as<JsonObject>());
 
                 registered_ha_[sensor_no - 1] = true;

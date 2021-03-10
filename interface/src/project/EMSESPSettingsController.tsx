@@ -8,7 +8,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import { ENDPOINT_ROOT } from '../api';
 import { restController, RestControllerProps, RestFormLoader, RestFormProps, FormActions, FormButton, BlockFormControlLabel, SectionContent } from '../components';
 
-import { isIP, isHostname, or, optional } from '../validators';
+import { isIP, optional } from '../validators';
 
 import { EMSESPSettings } from './EMSESPtypes';
 
@@ -19,7 +19,7 @@ type EMSESPSettingsControllerProps = RestControllerProps<EMSESPSettings>;
 class EMSESPSettingsController extends Component<EMSESPSettingsControllerProps> {
 
     componentDidMount() {
-        ValidatorForm.addValidationRule('isIPOrHostname', optional(or(isIP, isHostname)));
+        ValidatorForm.addValidationRule('isOptionalIP', optional(isIP));
         this.props.loadData();
     }
 
@@ -55,18 +55,19 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
             <Typography variant="h6" color="primary" >
                 EMS Bus
             </Typography>
-            <TextValidator
-                validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:255']}
-                errorMessages={['TX mode is required', "Must be a number", "Must be 0 or higher", "Max value is 255"]}
-                name="tx_mode"
-                label="Tx Mode (0=off)"
+            <SelectValidator name="tx_mode"
+                label="Tx Mode"
+                value={data.tx_mode}
                 fullWidth
                 variant="outlined"
-                value={data.tx_mode}
-                type="number"
                 onChange={handleValueChange('tx_mode')}
-                margin="normal"
-            />
+                margin="normal">
+                <MenuItem value={0}>0 - Off</MenuItem>
+                <MenuItem value={1}>1 - Default</MenuItem>
+                <MenuItem value={2}>2 - EMS+</MenuItem>
+                <MenuItem value={3}>3 - HT3</MenuItem>
+                <MenuItem value={4}>4 - Hardware</MenuItem>
+            </SelectValidator>
             <SelectValidator name="ems_bus_id"
                 label="Bus ID"
                 value={data.ems_bus_id}
@@ -114,6 +115,22 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 value={data.tx_delay}
                 type="number"
                 onChange={handleValueChange('tx_delay')}
+                margin="normal"
+            />
+            <br></br>
+            <Typography variant="h6" color="primary" >
+                External Button
+            </Typography>
+            <TextValidator
+                validators={['required', 'isNumber', 'minNumber:0', 'maxNumber:40']}
+                errorMessages={['Button GPIO is required', "Must be a number", "Must be 0 or higher", "Max value is 40"]}
+                name="pbutton_gpio"
+                label="Button GPIO pin"
+                fullWidth
+                variant="outlined"
+                value={data.pbutton_gpio}
+                type="number"
+                onChange={handleValueChange('pbutton_gpio')}
                 margin="normal"
             />
             <br></br>
@@ -221,10 +238,10 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 label="Enable Syslog"
             />
             <TextValidator
-                validators={['isIPOrHostname']}
-                errorMessages={["Not a valid IP address or hostname"]}
+                validators={['isOptionalIP']}
+                errorMessages={["Not a valid IP address"]}
                 name="syslog_host"
-                label="Syslog IP/Host"
+                label="Syslog IP"
                 fullWidth
                 variant="outlined"
                 value={data.syslog_host}
@@ -281,21 +298,6 @@ function EMSESPSettingsControllerForm(props: EMSESPSettingsControllerFormProps) 
                 }
                 label="Enable ADC"
             />
-            <br></br>
-            <Typography variant="h6" color="primary" >
-                Other
-            </Typography>
-            <SelectValidator name="bool_format"
-                label="Boolean Format"
-                value={data.bool_format}
-                fullWidth
-                variant="outlined"
-                onChange={handleValueChange('bool_format')}
-                margin="normal">
-                <MenuItem value={1}>on/off</MenuItem>
-                <MenuItem value={2}>true/false</MenuItem>
-                <MenuItem value={3}>1/0</MenuItem>
-            </SelectValidator>
             <br></br>
             <FormActions>
                 <FormButton startIcon={<SaveIcon />} variant="contained" color="primary" type="submit">

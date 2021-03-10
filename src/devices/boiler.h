@@ -61,30 +61,32 @@ class Boiler : public EMSdevice {
     uint16_t wWCurTemp_;          // Warm Water current temperature
     uint16_t wWCurTemp2_;         // Warm Water current temperature storage
     uint8_t  wWCurFlow_;          // Warm Water current flow temp in l/min
-    uint16_t wwStorageTemp1_;     // warm water storage temp 1
-    uint16_t wwStorageTemp2_;     // warm water storage temp 2
+    uint16_t wWStorageTemp1_;     // warm water storage temp 1
+    uint16_t wWStorageTemp2_;     // warm water storage temp 2
     uint8_t  wWActivated_;        // Warm Water activated
     uint8_t  wWOneTime_;          // Warm Water one time function on/off
     uint8_t  wWDisinfecting_;     // Warm Water disinfection on/off
     uint8_t  wWCharging_;         // Warm Water charging on/off
     uint8_t  wWRecharging_;       // Warm Water recharge on/off
     uint8_t  wWTempOK_;           // Warm Water temperature ok on/off
-    uint8_t  wWActive_;
-    uint8_t  wWHeat_;              // 3-way valve on WW
-    uint8_t  wWSetPumpPower_;      // ww pump speed/power?
-    uint16_t wwMixTemperature_;    // mixing temperature
-    uint16_t wwBufferTemperature_; // buffertemperature
-    uint32_t wWStarts_;            // Warm Water # starts
-    uint32_t wWStarts2_;           // Warm water starts (control)
-    uint32_t wWWorkM_;             // Warm Water # minutes
+    uint8_t  wWActive_;           //
+    uint8_t  wWHeat_;             // 3-way valve on WW
+    uint8_t  wWSetPumpPower_;     // ww pump speed/power?
+    uint32_t wWStarts_;           // Warm Water # starts
+    uint32_t wWStarts2_;          // Warm water starts (control)
+    uint32_t wWWorkM_;            // Warm Water # minutes
+
+    uint16_t mixerTemp_;      // mixing temperature
+    uint16_t tankMiddleTemp_; // Tank middle temperature (TS3)
 
     // main
+    uint8_t  id_;               // product id
     uint8_t  heatingActive_;    // Central heating is on/off
     uint8_t  tapwaterActive_;   // Hot tap water is on/off
     uint8_t  selFlowTemp_;      // Selected flow temperature
     uint8_t  selBurnPow_;       // Burner max power %
-    uint8_t  pumpMod2_;         // heatpump modulation from 0xE3 (heatpumps)
-    uint8_t  pumpMod_;          // Pump modulation %
+    uint8_t  heatingPump2Mod_;  // heatpump modulation from 0xE3 (heatpumps)
+    uint8_t  heatingPumpMod_;   // Pump modulation %
     int16_t  outdoorTemp_;      // Outside temperature
     uint16_t curFlowTemp_;      // Current flow temperature
     uint16_t retTemp_;          // Return temperature
@@ -94,7 +96,7 @@ class Boiler : public EMSdevice {
     uint16_t exhaustTemp_;      // Exhaust temperature
     uint8_t  burnGas_;          // Gas on/off
     uint16_t flameCurr_;        // Flame current in micro amps
-    uint8_t  heatPump_;         // Boiler pump on/off
+    uint8_t  heatingPump_;      // Boiler heating pump on/off
     uint8_t  fanWork_;          // Fan on/off
     uint8_t  ignWork_;          // Ignition on/off
     uint8_t  heatingActivated_; // Heating activated on the boiler

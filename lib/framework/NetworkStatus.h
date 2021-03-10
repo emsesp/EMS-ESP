@@ -4,12 +4,13 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 
-#include "../../src/system.h" // proddy added
+#include <ETH.h>
 
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
 #include <ESPAsyncWebServer.h>
 #include <IPAddress.h>
+#include <IPUtils.h>
 #include <SecurityManager.h>
 
 #define MAX_NETWORK_STATUS_SIZE 1024

@@ -1,8 +1,15 @@
-name: Release Main
+name: Build ESP32 Dev Firmware
 
 on:
+  push:
+    branches:
+      - esp32_dev
+    tags:
+    #   - '*.*.*'
+    paths:
+    - 'CHANGELOG_LATEST.md'
   workflow_dispatch:
-    branches: [ main ]
+    branches: [ esp32_dev ]
 
 jobs:
         
@@ -36,19 +43,28 @@ jobs:
 
       - name: Build images
         run: |
-          platformio run -e esp8266-ci
           platformio run -e esp32-ci
           
+      - name: Delete
+        uses: dev-drprasad/delete-tag-and-release@v0.1.2
+        # if: startsWith(github.ref, 'refs/tags/')
+        with:
+          delete_release: true 
+          tag_name: esp32_dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Changelog
-        run: cat RELEASENOTES.md CHANGELOG_LATEST.md > BODY.txt 
+        run: cat RELEASENOTES_DEV.md CHANGELOG_LATEST.md > BODY.txt 
 
       - name: Release
         uses: softprops/action-gh-release@v1
+        # if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: BODY.txt
-          name: EMS-ESP v${{steps.fetch_version.outputs.s}}
-          tag_name: v${{steps.fetch_version.outputs.s}}
-          prerelease: false
+          name: ESP32 Development Build v${{steps.fetch_version.outputs.s}}
+          tag_name: esp32_dev
+          prerelease: true
           files: |
             ./build/firmware/*.*
         env:

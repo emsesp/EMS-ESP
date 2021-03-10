@@ -16,8 +16,8 @@ export interface EMSESPSettings {
   led_gpio: number;
   hide_led: boolean;
   api_enabled: boolean;
-  bool_format: number;
   analog_enabled: boolean;
+  pbutton_gpio: number;
   trace_raw: boolean;
 }
 

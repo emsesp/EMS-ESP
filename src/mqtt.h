@@ -42,13 +42,9 @@ using uuid::console::Shell;
 #define MQTT_HA_PUBLISH_DELAY 50
 
 // size of queue
-#if defined(EMSESP_STANDALONE)
-#define MAX_MQTT_MESSAGES 70
-#elif defined(ESP32)
-#define MAX_MQTT_MESSAGES 100
-#else
-#define MAX_MQTT_MESSAGES 20
-#endif
+#define MAX_MQTT_MESSAGES 200
+
+enum { BOOL_FORMAT_ONOFF = 1, BOOL_FORMAT_TRUEFALSE, BOOL_FORMAT_10, BOOL_FORMAT_ONOFF_CAP }; // matches Web UI settings
 
 namespace emsesp {
 
@@ -108,7 +104,7 @@ class Mqtt {
     static void publish_ha(const std::string & topic, const JsonObject & payload);
     static void publish_ha(const __FlashStringHelper * topic, const JsonObject & payload);
 
-    static void publish_mqtt_ha_sensor(uint8_t type, uint8_t tag, const __FlashStringHelper * name, const uint8_t device_type, const __FlashStringHelper * entity, const uint8_t uom);
+    static void publish_mqtt_ha_sensor(uint8_t type, uint8_t tag, const __FlashStringHelper * name, const uint8_t device_type, const __FlashStringHelper * entity, const uint8_t uom = 0);
     static void register_command(const uint8_t device_type, const __FlashStringHelper * cmd, cmdfunction_p cb);
 
     static void show_topic_handlers(uuid::console::Shell & shell, const uint8_t device_type);
@@ -156,6 +152,14 @@ class Mqtt {
         return dallas_format_;
     }
 
+    static uint8_t bool_format() {
+        return bool_format_;
+    }
+
+    static bool nested_format() {
+        return nested_format_;
+    }
+
     static bool ha_enabled() {
         return ha_enabled_;
     }
@@ -180,14 +184,9 @@ class Mqtt {
         mqtt_retain_ = mqtt_retain;
     }
 
-    /*
-    struct QueuedMqttMessage {
-        uint16_t                           id_;
-        std::shared_ptr<const MqttMessage> content_;
-        uint8_t                            retry_count_;
-        uint16_t                           packet_id_;
-    };
-    */
+    static bool is_empty() {
+        return mqtt_messages_.empty();
+    }
 
     struct QueuedMqttMessage {
         const uint16_t                           id_;
@@ -211,7 +210,7 @@ class Mqtt {
     static AsyncMqttClient * mqttClient_;
     static uint16_t          mqtt_message_id_;
 
-    static constexpr uint32_t MQTT_PUBLISH_WAIT      = 200; // delay between sending publishes, to account for large payloads
+    static constexpr uint32_t MQTT_PUBLISH_WAIT      = 100; // delay between sending publishes, to account for large payloads
     static constexpr uint8_t  MQTT_PUBLISH_MAX_RETRY = 3;   // max retries for giving up on publishing
 
     static std::shared_ptr<const MqttMessage> queue_message(const uint8_t operation, const std::string & topic, const std::string & payload, bool retain);
@@ -226,13 +225,11 @@ class Mqtt {
     struct MQTTSubFunction {
         uint8_t            device_type_;      // which device type, from DeviceType::
         const std::string  topic_;            // short topic name
-        const std::string  full_topic_;       // the fully qualified topic name, usually with the hostname prefixed
         mqtt_subfunction_p mqtt_subfunction_; // can be empty
 
-        MQTTSubFunction(uint8_t device_type, const std::string && topic, const std::string && full_topic, mqtt_subfunction_p mqtt_subfunction)
+        MQTTSubFunction(uint8_t device_type, const std::string && topic, mqtt_subfunction_p mqtt_subfunction)
             : device_type_(device_type)
             , topic_(topic)
-            , full_topic_(full_topic)
             , mqtt_subfunction_(mqtt_subfunction) {
         }
     };
@@ -265,8 +262,10 @@ class Mqtt {
     static uint32_t    publish_time_sensor_;
     static bool        mqtt_enabled_;
     static uint8_t     dallas_format_;
+    static uint8_t     bool_format_;
     static uint8_t     ha_climate_format_;
     static bool        ha_enabled_;
+    static bool        nested_format_;
 };
 
 } // namespace emsesp

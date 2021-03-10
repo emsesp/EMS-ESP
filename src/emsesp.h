@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #ifndef EMSESP_EMSESP_H
 #define EMSESP_EMSESP_H
 
@@ -35,6 +34,7 @@
 #endif
 
 #include <ESP8266React.h>
+
 #include "WebStatusService.h"
 #include "WebDevicesService.h"
 #include "WebSettingsService.h"
@@ -50,24 +50,18 @@
 #include "shower.h"
 #include "roomcontrol.h"
 #include "command.h"
-
-#include "devices/boiler.h"
+#include "version.h"
 
 #define WATCH_ID_NONE 0 // no watch id set
 
-#define EMSESP_JSON_SIZE_HA_CONFIG 768   // for HA config payloads, using StaticJsonDocument
-#define EMSESP_JSON_SIZE_SMALL 256       // for smaller json docs, using StaticJsonDocument
-#define EMSESP_JSON_SIZE_MEDIUM 768      // for medium json docs from ems devices, using StaticJsonDocument
-#define EMSESP_JSON_SIZE_LARGE 1024      // for large json docs from ems devices, like boiler or thermostat data, using StaticJsonDocument
-#define EMSESP_JSON_SIZE_MEDIUM_DYN 1024 // for large json docs, using DynamicJsonDocument
-#define EMSESP_JSON_SIZE_LARGE_DYN 2048  // for very large json docs, using DynamicJsonDocument
-
-#if defined(EMSESP_STANDALONE)
-#define EMSESP_JSON_SIZE_XLARGE_DYN 7000 // for very very large json docs, using DynamicJsonDocument
-#else
-#define EMSESP_JSON_SIZE_XLARGE_DYN 4096 // for very very large json docs, using DynamicJsonDocument
-#endif
-#define EMSESP_JSON_SIZE_XXLARGE_DYN 5120 // for very very large json docs, using DynamicJsonDocument
+#define EMSESP_JSON_SIZE_HA_CONFIG 768    // for HA config payloads, using StaticJsonDocument
+#define EMSESP_JSON_SIZE_SMALL 256        // for smaller json docs, using StaticJsonDocument
+#define EMSESP_JSON_SIZE_MEDIUM 768       // for medium json docs from ems devices, using StaticJsonDocument
+#define EMSESP_JSON_SIZE_LARGE 1024       // for large json docs from ems devices, like boiler or thermostat data, using StaticJsonDocument
+#define EMSESP_JSON_SIZE_MEDIUM_DYN 1024  // for large json docs, using DynamicJsonDocument
+#define EMSESP_JSON_SIZE_LARGE_DYN 2048   // for very large json docs, using DynamicJsonDocument
+#define EMSESP_JSON_SIZE_XLARGE_DYN 4096  // for very very large json docs, using DynamicJsonDocument
+#define EMSESP_JSON_SIZE_XXLARGE_DYN 5120 // for extra very very large json docs, using DynamicJsonDocument
 
 namespace emsesp {
 

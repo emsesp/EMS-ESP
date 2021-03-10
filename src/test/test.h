@@ -30,7 +30,9 @@ namespace emsesp {
 // #define EMSESP_TEST_DEFAULT "mixer"
 // #define EMSESP_TEST_DEFAULT "web"
 // #define EMSESP_TEST_DEFAULT "general"
-#define EMSESP_TEST_DEFAULT "boiler"
+// #define EMSESP_TEST_DEFAULT "boiler"
+// #define EMSESP_TEST_DEFAULT "mqtt2"
+#define EMSESP_TEST_DEFAULT "mqtt_nested"
 
 class Test {
   public:
@@ -42,6 +44,10 @@ class Test {
     static void uart_telegram(const char * rx_data);
     static void uart_telegram_withCRC(const char * rx_data);
     static void add_device(uint8_t device_id, uint8_t product_id);
+    static void debug(uuid::console::Shell & shell, const std::string & command);
+#ifndef EMSESP_STANDALONE
+    static void listDir(fs::FS & fs, const char * dirname, uint8_t levels);
+#endif
 };
 
 } // namespace emsesp

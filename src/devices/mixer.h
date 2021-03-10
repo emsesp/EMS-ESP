@@ -46,13 +46,14 @@ class Mixer : public EMSdevice {
     };
 
   private:
-    uint16_t flowTemp_;
+    uint16_t flowTempHc_;
     uint8_t  pumpStatus_;
     int8_t   status_;
     uint8_t  flowSetTemp_;
 
     Type     type_ = Type::NONE;
     uint16_t hc_   = EMS_VALUE_USHORT_NOTSET;
+    uint8_t  id_;
 };
 
 } // namespace emsesp

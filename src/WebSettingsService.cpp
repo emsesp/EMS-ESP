@@ -47,8 +47,8 @@ void WebSettings::read(WebSettings & settings, JsonObject & root) {
     root["led_gpio"]             = settings.led_gpio;
     root["hide_led"]             = settings.hide_led;
     root["api_enabled"]          = settings.api_enabled;
-    root["bool_format"]          = settings.bool_format;
     root["analog_enabled"]       = settings.analog_enabled;
+    root["pbutton_gpio"]         = settings.pbutton_gpio;
 }
 
 StateUpdateResult WebSettings::update(JsonObject & root, WebSettings & settings) {
@@ -68,37 +68,32 @@ StateUpdateResult WebSettings::update(JsonObject & root, WebSettings & settings)
     }
 
     // syslog
-    snprintf_P(&crc_before[0],
-               crc_before.capacity() + 1,
-               PSTR("%d%d%d%s"),
-               settings.syslog_enabled,
-               settings.syslog_level,
-               settings.syslog_mark_interval,
-               settings.syslog_host.c_str());
+    snprintf_P(&crc_before[0], crc_before.capacity() + 1, PSTR("%d%d%d%s"), settings.syslog_enabled, settings.syslog_level, settings.syslog_mark_interval, settings.syslog_host.c_str());
     settings.syslog_enabled       = root["syslog_enabled"] | EMSESP_DEFAULT_SYSLOG_ENABLED;
     settings.syslog_level         = root["syslog_level"] | EMSESP_DEFAULT_SYSLOG_LEVEL;
     settings.syslog_mark_interval = root["syslog_mark_interval"] | EMSESP_DEFAULT_SYSLOG_MARK_INTERVAL;
     settings.syslog_host          = root["syslog_host"] | EMSESP_DEFAULT_SYSLOG_HOST;
     settings.trace_raw            = root["trace_raw"] | EMSESP_DEFAULT_TRACELOG_RAW;
     EMSESP::trace_raw(settings.trace_raw);
-    snprintf_P(&crc_after[0],
-               crc_after.capacity() + 1,
-               PSTR("%d%d%d%s"),
-               settings.syslog_enabled,
-               settings.syslog_level,
-               settings.syslog_mark_interval,
-               settings.syslog_host.c_str());
+    snprintf_P(&crc_after[0], crc_after.capacity() + 1, PSTR("%d%d%d%s"), settings.syslog_enabled, settings.syslog_level, settings.syslog_mark_interval, settings.syslog_host.c_str());
     if (crc_before != crc_after) {
         add_flags(ChangeFlags::SYSLOG);
     }
 
-    // other
-    snprintf_P(&crc_before[0], crc_before.capacity() + 1, PSTR("%d%d"), settings.bool_format, settings.analog_enabled);
-    settings.bool_format    = root["bool_format"] | EMSESP_DEFAULT_BOOL_FORMAT;
+    // adc
+    snprintf_P(&crc_before[0], crc_before.capacity() + 1, PSTR("%d"), settings.analog_enabled);
     settings.analog_enabled = root["analog_enabled"] | EMSESP_DEFAULT_ANALOG_ENABLED;
-    snprintf_P(&crc_after[0], crc_after.capacity() + 1, PSTR("%d%d"), settings.bool_format, settings.analog_enabled);
+    snprintf_P(&crc_after[0], crc_after.capacity() + 1, PSTR("%d"), settings.analog_enabled);
     if (crc_before != crc_after) {
-        add_flags(ChangeFlags::OTHER);
+        add_flags(ChangeFlags::ADC);
+    }
+
+    // button
+    snprintf_P(&crc_before[0], crc_before.capacity() + 1, PSTR("%d"), settings.pbutton_gpio);
+    settings.pbutton_gpio = root["pbutton_gpio"] | EMSESP_DEFAULT_PBUTTON_GPIO;
+    snprintf_P(&crc_after[0], crc_after.capacity() + 1, PSTR("%d"), settings.pbutton_gpio);
+    if (crc_before != crc_after) {
+        add_flags(ChangeFlags::BUTTON);
     }
 
     // dallas
@@ -154,15 +149,19 @@ void WebSettingsService::onUpdate() {
     }
 
     if (WebSettings::has_flags(WebSettings::ChangeFlags::SYSLOG)) {
-        System::syslog_init();
+        EMSESP::system_.syslog_init(true); // reload settings
     }
 
-    if (WebSettings::has_flags(WebSettings::ChangeFlags::OTHER)) {
-        System::other_init();
+    if (WebSettings::has_flags(WebSettings::ChangeFlags::ADC)) {
+        EMSESP::system_.adc_init(true); // reload settings
+    }
+
+    if (WebSettings::has_flags(WebSettings::ChangeFlags::BUTTON)) {
+        EMSESP::system_.button_init(true); // reload settings
     }
 
     if (WebSettings::has_flags(WebSettings::ChangeFlags::LED)) {
-        System::led_init();
+        EMSESP::system_.led_init(true); // reload settings
     }
 }
 

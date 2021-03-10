@@ -2,18 +2,12 @@
 
 **EMS-ESP** is an open-source firmware for the Espressif microcontroller that communicates with **EMS** (Energy Management System) based equipment from manufacturers like Bosch, Buderus, Nefit, Junkers, Worcester and Sieger.
 
-This is the EMS32 version.
+This is the ESP32 version.
 
-[![version](https://img.shields.io/github/release/proddy/EMS-ESP.svg?label=Latest%20Release)](https://github.com/proddy/EMS-ESP/blob/esp32_dev/CHANGELOG.md)
-[![release-date](https://img.shields.io/github/release-date/proddy/EMS-ESP.svg?label=Released)](https://github.com/proddy/EMS-ESP/commits/master)
+
 [![license](https://img.shields.io/github/license/proddy/EMS-ESP.svg)](LICENSE)
-![Build Firmware](https://github.com/proddy/EMS-ESP/workflows/Build%20Firmware/badge.svg?branch=dev)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a37be4d45e5f47749b6e356c8e738a80)](https://www.codacy.com/gh/proddy/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proddy/EMS-ESP&amp;utm_campaign=Badge_Grade)
-[![downloads](https://img.shields.io/github/downloads/proddy/EMS-ESP/total.svg)](https://github.com/proddy/EMS-ESP/releases)
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Percentage of issues still open")
-<br/>
-[![gitter](https://img.shields.io/gitter/room/EMS-ESP/EMS-ESP.svg)](https://gitter.im/EMS-ESP/community)
+[![chat](https://img.shields.io/discord/816637840644505620.svg?style=flat-square&color=blueviolet)](https://discord.gg/rqegzSrK)
+
 
 If you like **EMS-ESP**, please give it a star, or fork it and contribute!
 
@@ -71,7 +65,7 @@ If you're looking for support on **EMS-ESP** there are some options available:
 
 ### Support Community
 
-* [EMS-ESP Support Chat](https://gitter.im/EMS-ESP/community#): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
+* [Discord Server](https://discord.gg/3J3GgnzpyT): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
 * [Search in Issues](https://github.com/proddy/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
 
 ### Developer's Community

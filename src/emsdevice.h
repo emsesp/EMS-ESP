@@ -23,7 +23,6 @@
 #include <vector>
 #include <functional>
 
-// #include "containers.h"
 #include "emsfactory.h"
 #include "telegram.h"
 #include "mqtt.h"
@@ -32,12 +31,15 @@
 namespace emsesp {
 
 // Home Assistant icons (https://materialdesignicons.com/)
-MAKE_PSTR(icontemperature, "mdi:temperature-celsius")
+// MAKE_PSTR(icontemperature, "mdi:temperature-celsius")
+MAKE_PSTR(icontemperature, "mdi:coolant-temperature")
 MAKE_PSTR(iconpercent, "mdi:percent-outline")
 MAKE_PSTR(iconfire, "mdi:fire")
 MAKE_PSTR(iconfan, "mdi:fan")
 MAKE_PSTR(iconflame, "mdi:flash")
 MAKE_PSTR(iconvalve, "mdi:valve")
+MAKE_PSTR(iconpump, "mdi:pump")
+MAKE_PSTR(iconheatpump, "mdi:water-pump")
 
 enum DeviceValueType : uint8_t {
     BOOL,
@@ -53,6 +55,7 @@ enum DeviceValueType : uint8_t {
 };
 
 // Unit Of Measurement mapping - maps to DeviceValueUOM_s in emsdevice.cpp
+// sequence is important!
 // uom - also used with HA
 MAKE_PSTR(percent, "%")
 MAKE_PSTR(degrees, "°C")
@@ -63,24 +66,12 @@ MAKE_PSTR(minutes, "minutes")
 MAKE_PSTR(hours, "hours")
 MAKE_PSTR(ua, "uA")
 MAKE_PSTR(lmin, "l/min")
-enum DeviceValueUOM : uint8_t {
-    DEGREES,
-    PERCENT,
-    LMIN,
-    KWH,
-    WH,
-    HOURS,
-    MINUTES,
-    UA,
-    BAR,
-    NONE
-
-};
+enum DeviceValueUOM : uint8_t { NONE = 0, DEGREES, PERCENT, LMIN, KWH, WH, HOURS, MINUTES, UA, BAR, PUMP };
 
 // TAG mapping - maps to DeviceValueTAG_s in emsdevice.cpp
-MAKE_PSTR(tag_boiler_data, "boiler_data")
-MAKE_PSTR(tag_boiler_data_ww, "boiler_data_ww")
-MAKE_PSTR(tag_boiler_data_info, "boiler_data_info")
+MAKE_PSTR(tag_boiler_data, "boiler")
+MAKE_PSTR(tag_boiler_data_ww, "warm water")
+MAKE_PSTR(tag_boiler_data_info, "info")
 MAKE_PSTR(tag_hc1, "hc1")
 MAKE_PSTR(tag_hc2, "hc2")
 MAKE_PSTR(tag_hc3, "hc3")
@@ -213,21 +204,26 @@ class EMSdevice {
     std::string to_string_short() const;
 
     void   show_telegram_handlers(uuid::console::Shell & shell);
-    void   show_device_values(uuid::console::Shell & shell);
+    void   show_device_values_debug(uuid::console::Shell & shell);
     char * show_telegram_handlers(char * result);
     void   show_mqtt_handlers(uuid::console::Shell & shell);
 
     using process_function_p = std::function<void(std::shared_ptr<const Telegram>)>;
-    // using process_function_p = void (*)(std::shared_ptr<const Telegram>);
 
     void register_telegram_type(const uint16_t telegram_type_id, const __FlashStringHelper * telegram_type_name, bool fetch, process_function_p cb);
     bool handle_telegram(std::shared_ptr<const Telegram> telegram);
 
     std::string get_value_uom(const char * key);
-    bool        generate_values_json(JsonObject & json, const uint8_t tag_filter, const bool verbose = false);
+    bool        generate_values_json(JsonObject & json, const uint8_t tag_filter, const bool nested, const bool console = false);
     bool        generate_values_json_web(JsonObject & json);
 
-    void register_device_value(uint8_t tag, void * value_p, uint8_t type, const __FlashStringHelper * const * options, const __FlashStringHelper * short_name, const __FlashStringHelper * full_name, uint8_t uom);
+    void register_device_value(uint8_t                             tag,
+                               void *                              value_p,
+                               uint8_t                             type,
+                               const __FlashStringHelper * const * options,
+                               const __FlashStringHelper *         short_name,
+                               const __FlashStringHelper *         full_name,
+                               uint8_t                             uom = DeviceValueUOM::NONE);
 
     void write_command(const uint16_t type_id, const uint8_t offset, uint8_t * message_data, const uint8_t message_length, const uint16_t validate_typeid);
     void write_command(const uint16_t type_id, const uint8_t offset, const uint8_t value, const uint16_t validate_typeid);
@@ -315,14 +311,10 @@ class EMSdevice {
 
     void reserve_device_values(uint8_t elements) {
         devicevalues_.reserve(elements);
-        // static auto dv_ = emsesp::array<DeviceValue>(elements, 255, 16);
-        // devicevalues_   = &dv_;
     }
 
     void reserve_telgram_functions(uint8_t elements) {
         telegram_functions_.reserve(elements);
-        // static auto tf_     = emsesp::array<TelegramFunction>(elements, 255, 16);
-        // telegram_functions_ = &tf_;
     }
 
   private:
@@ -351,7 +343,6 @@ class EMSdevice {
             , process_function_(process_function) {
         }
     };
-    // emsesp::array<TelegramFunction> * telegram_functions_; // each EMS device has its own set of registered telegram types
 
     struct DeviceValue {
         uint8_t                             device_type;  // EMSdevice::DeviceType
@@ -392,7 +383,6 @@ class EMSdevice {
 
     std::vector<TelegramFunction> telegram_functions_; // each EMS device has its own set of registered telegram types
 
-    // emsesp::array<DeviceValue> * devicevalues_;
     std::vector<DeviceValue> devicevalues_;
 };
 
