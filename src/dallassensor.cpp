@@ -64,7 +64,6 @@ void DallasSensor::loop() {
 
     if (state_ == State::IDLE) {
         if (time_now - last_activity_ >= READ_INTERVAL_MS) {
-            // LOG_DEBUG(F("Read sensor temperature")); // uncomment for debug
 #ifdef EMSESP_DEBUG_SENSOR
             LOG_DEBUG(F("Read sensor temperature"));
 #endif
@@ -91,7 +90,6 @@ void DallasSensor::loop() {
         }
     } else if (state_ == State::READING) {
         if (temperature_convert_complete() && (time_now - last_activity_ > CONVERSION_MS)) {
-            // LOG_DEBUG(F("Scanning for sensors")); // uncomment for debug
 #ifdef EMSESP_DEBUG_SENSOR
             LOG_DEBUG(F("Scanning for sensors"));
 #endif
