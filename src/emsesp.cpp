@@ -806,8 +806,10 @@ bool EMSESP::add_device(const uint8_t device_id, const uint8_t product_id, std::
         if (device.product_id == product_id) {
             // sometimes boilers share the same product id as controllers
             // so only add boilers if the device_id is 0x08, which is fixed for EMS
+            // also add cascaded boilers, but without values
             if (device.device_type == DeviceType::BOILER) {
-                if (device_id == EMSdevice::EMS_DEVICE_ID_BOILER) {
+                if (device_id == EMSdevice::EMS_DEVICE_ID_BOILER ||
+                    (device_id >= EMSdevice::EMS_DEVICE_ID_BOILER_1 && device_id <= EMSdevice::EMS_DEVICE_ID_BOILER_F)) {
                     device_p = &device;
                     break;
                 }
