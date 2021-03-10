@@ -1,7 +1,7 @@
 # Changelog
 
 ### Added
-- Boiler WB Greenstar 8000 (195) and GB172i (210) 
+- Boiler WB Greenstar 8000 (195) and Cascade Modul MC400 (210) 
 - optional id to info command to output heatingcircuits separated
 - Reset to factory setting with PButton (io0 to GND for >9 sec)
 
