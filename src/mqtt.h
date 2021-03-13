@@ -81,7 +81,7 @@ class Mqtt {
 
     enum Operation { PUBLISH, SUBSCRIBE };
 
-    enum Dallas_Format : uint8_t { SENSORID = 1, NUMBER, HA_UNIQUE };
+    enum Dallas_Format : uint8_t { SENSORID = 1, NUMBER };
     enum HA_Climate_Format : uint8_t { CURRENT = 1, SETPOINT, ZERO };
 
     static constexpr uint8_t MQTT_TOPIC_MAX_SIZE = 128; // note this should really match the user setting in mqttSettings.maxTopicLength
