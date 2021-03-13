@@ -16,7 +16,6 @@ pio_local.ini
 # OS specific
 .DS_Store
 *Thumbs.db
-.directory
 
 # project specfic
 /scripts/stackdmp.txt

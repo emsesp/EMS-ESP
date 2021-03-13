@@ -314,23 +314,6 @@ bool DallasSensor::command_info(const char * value, const int8_t id, JsonObject 
     return true;
 }
 
-/* Notes:
-    For the Home Assistant format we ensure the sensors stay unique even when 
-    new ones get added. The NUMBER format looses their order in such cases!
-    To ensure there are no such mixups, we use the sensor ID as the name of the sensor.
-    
-    We cannot use the "sensor.to_string()" format since it 
-    contains hyphens and does not start with an alpha character.
-    There for we use the sensor id as a hex number (and add a 'D').
-
-    Now it is save to customize the name in HA:
-    customize:
-      sensor.dallas_28FF3601C01702:
-        friendly_name: Boiler
-
-    Dieter Fauth, 2021.03.06
-*/
-
 // send all dallas sensor values as a JSON package to MQTT
 void DallasSensor::publish_values(const bool force) {
     uint8_t num_sensors = sensors_.size();
@@ -343,7 +326,8 @@ void DallasSensor::publish_values(const bool force) {
     uint8_t             sensor_no = 1;
 
     // dallas format is overriden when using Home Assistant
-    uint8_t dallas_format = Mqtt::ha_enabled() ? Mqtt::Dallas_Format::HA_UNIQUE : Mqtt::dallas_format();
+    // uint8_t dallas_format = Mqtt::ha_enabled() ? Mqtt::Dallas_Format::NUMBER : Mqtt::dallas_format();
+    uint8_t dallas_format = Mqtt::dallas_format();
 
     for (const auto & sensor : sensors_) {
         char sensorID[10]; // sensor{1-n}
@@ -352,13 +336,6 @@ void DallasSensor::publish_values(const bool force) {
             // e.g. dallassensor_data = {"28-EA41-9497-0E03":23.3,"28-233D-9497-0C03":24.0}
             if (Helpers::hasValue(sensor.temperature_c)) {
                 doc[sensor.to_string()] = (float)(sensor.temperature_c) / 10;
-            }
-        } else if (dallas_format == Mqtt::Dallas_Format::HA_UNIQUE) {
-            // e.g. dallassensor_data = {"D28a81378060000":34.6,"D28f84277060000":50.8}
-            char str[20];
-            snprintf_P(str, sizeof(str), PSTR("D%" PRIx64), sensor.id());
-            if (Helpers::hasValue(sensor.temperature_c)) {
-                doc[str] = (float)(sensor.temperature_c) / 10;
             }
         } else if (dallas_format == Mqtt::Dallas_Format::NUMBER) {
             // e.g. dallassensor_data = {"sensor1":{"id":"28-EA41-9497-0E03","temp":23.3},"sensor2":{"id":"28-233D-9497-0C03","temp":24.0}}
@@ -383,25 +360,31 @@ void DallasSensor::publish_values(const bool force) {
                 config["unit_of_meas"] = FJSON("°C");
 
                 char str[50];
-                snprintf_P(str, sizeof(str), PSTR("{{value_json.D%" PRIx64 "}}"), sensor.id());
+                if (dallas_format == Mqtt::Dallas_Format::SENSORID) {
+                    snprintf_P(str, sizeof(str), PSTR("{{value_json['%s']}}"), sensor.to_string().c_str());
+                } else {
+                    snprintf_P(str, sizeof(str), PSTR("{{value_json.sensor%d.temp}}"), sensor_no);
+                }
                 config["val_tpl"] = str;
 
-                // Name as unique ID to guaranty a constant order even when sensors are added or removed
-                snprintf_P(str, sizeof(str), PSTR("Dallas %" PRIx64), sensor.id());
-                config["name"] = str;   // this is the name of the individual sensor
+                // name as sensor number not the long unique ID
+                if (dallas_format == Mqtt::Dallas_Format::SENSORID) {
+                    snprintf_P(str, sizeof(str), PSTR("Dallas Sensor %s"), sensor.to_string().c_str());
+                } else {
+                    snprintf_P(str, sizeof(str), PSTR("Dallas Sensor %d"), sensor_no);
+                }
+                config["name"] = str;
 
                 snprintf_P(str, sizeof(str), PSTR("dallas_%s"), sensor.to_string().c_str());
                 config["uniq_id"] = str;
 
                 JsonObject dev = config.createNestedObject("dev");
-                dev["name"]    = FJSON("EMS-ESP Dallas");               // Global name for device (all Dallas sensors, avoids using the very first name for the group)
-                dev["mf"]      = FJSON("Dallas");                       // Manufacturer (avoids the <unknown>)
-                dev["mdl"]     = FJSON("1Wire");                        // Model (avoids the <unknown>)
                 JsonArray  ids = dev.createNestedArray("ids");
-                ids.add("ems-esp-dallas");
+                ids.add("ems-esp");
 
                 char topic[100];
-                snprintf_P(topic, sizeof(topic), PSTR("homeassistant/sensor/%s/dallas_%s/config"), Mqtt::base().c_str(), sensor.to_string().c_str());
+                // use sensor number as HA doesn't like '-' in the topic name
+                snprintf_P(topic, sizeof(topic), PSTR("homeassistant/sensor/%s/dallas_sensor%d/config"), Mqtt::base().c_str(), sensor_no);
                 Mqtt::publish_ha(topic, config.as<JsonObject>());
 
                 registered_ha_[sensor_no - 1] = true;
