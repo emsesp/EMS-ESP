@@ -7,7 +7,7 @@ This is the firmware for the ESP8266.
 [![version](https://img.shields.io/github/release/emsesp/EMS-ESP.svg?label=Latest%20Release)](https://github.com/emsesp/EMS-ESP/blob/main/CHANGELOG.md)
 [![release-date](https://img.shields.io/github/release-date/emsesp/EMS-ESP.svg?label=Released)](https://github.com/emsesp/EMS-ESP/commits/main)
 [![license](https://img.shields.io/github/license/emsesp/EMS-ESP.svg)](LICENSE)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/76ce919e25494cdeab827a6525666be0)](https://www.codacy.com/gh/emsesp/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=emsesp/EMS-ESP&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/5540f03fb3824699ad64ca8d9631c123)](https://www.codacy.com/gh/emsesp/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=emsesp/EMS-ESP&amp;utm_campaign=Badge_Grade)
 [![downloads](https://img.shields.io/github/downloads/emsesp/EMS-ESP/total.svg)](https://github.com/emsesp/EMS-ESP/releases)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Percentage of issues still open")
