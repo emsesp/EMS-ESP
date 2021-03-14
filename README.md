@@ -2,21 +2,22 @@
 
 **EMS-ESP** is an open-source firmware for the Espressif ESP8266 and ESP32 microcontroller that communicates with **EMS** (Energy Management System) based equipment from manufacturers like Bosch, Buderus, Nefit, Junkers, Worcester and Sieger.
 
-[![version](https://img.shields.io/github/release/proddy/EMS-ESP.svg?label=Latest%20Release)](https://github.com/proddy/EMS-ESP/blob/main/CHANGELOG.md)
-[![release-date](https://img.shields.io/github/release-date/proddy/EMS-ESP.svg?label=Released)](https://github.com/proddy/EMS-ESP/commits/master)
-[![license](https://img.shields.io/github/license/proddy/EMS-ESP.svg)](LICENSE)
-![Build Firmware](https://github.com/proddy/EMS-ESP/workflows/Build%20Firmware/badge.svg?branch=dev)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a37be4d45e5f47749b6e356c8e738a80)](https://www.codacy.com/gh/proddy/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proddy/EMS-ESP&amp;utm_campaign=Badge_Grade)
-[![downloads](https://img.shields.io/github/downloads/proddy/EMS-ESP/total.svg)](https://github.com/proddy/EMS-ESP/releases)
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Percentage of issues still open")
+This is the firmware for the ESP8266.
+
+[![version](https://img.shields.io/github/release/emsesp/EMS-ESP.svg?label=Latest%20Release)](https://github.com/emsesp/EMS-ESP/blob/main/CHANGELOG.md)
+[![release-date](https://img.shields.io/github/release-date/emsesp/EMS-ESP.svg?label=Released)](https://github.com/emsesp/EMS-ESP/commits/main)
+[![license](https://img.shields.io/github/license/emsesp/EMS-ESP.svg)](LICENSE)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/76ce919e25494cdeab827a6525666be0)](https://www.codacy.com/gh/emsesp/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=emsesp/EMS-ESP&amp;utm_campaign=Badge_Grade)
+[![downloads](https://img.shields.io/github/downloads/emsesp/EMS-ESP/total.svg)](https://github.com/emsesp/EMS-ESP/releases)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Average time to resolve an issue")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Percentage of issues still open")
 <br/>
-[![gitter](https://img.shields.io/gitter/room/EMS-ESP/EMS-ESP.svg)](https://gitter.im/EMS-ESP/community)
+[![chat](https://img.shields.io/discord/816637840644505620.svg?style=flat-square&color=blueviolet)](https://discord.gg/3J3GgnzpyT)
 
 If you like **EMS-ESP**, please give it a star, or fork it and contribute!
 
-[![GitHub stars](https://img.shields.io/github/stars/proddy/EMS-ESP.svg?style=social&label=Star)](https://github.com/proddy/EMS-ESP/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/proddy/EMS-ESP.svg?style=social&label=Fork)](https://github.com/proddy/EMS-ESP/network)
+[![GitHub stars](https://img.shields.io/github/stars/emsesp/EMS-ESP.svg?style=social&label=Star)](https://github.com/emsesp/EMS-ESP/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/emsesp/EMS-ESP.svg?style=social&label=Fork)](https://github.com/emsesp/EMS-ESP/network)
 [![donate](https://img.shields.io/badge/donate-PayPal-blue.svg)](https://www.paypal.com/paypalme/prderbyshire/2)
 
 Note, EMS-ESP requires a small hardware circuit that can convert the EMS bus data to be read by the microcontroller. These can be ordered at https://bbqkees-electronics.nl.
@@ -70,14 +71,14 @@ If you're looking for support on **EMS-ESP** there are some options available:
 
 ### Support Community
 
-* [EMS-ESP Support Chat](https://gitter.im/EMS-ESP/community#): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
-* [Search in Issues](https://github.com/proddy/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
+* [Discord Server](https://discord.gg/3J3GgnzpyT): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
+* [Search in Issues](https://github.com/emsesp/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
 
 ### Developer's Community
 
-* [Bug Report](https://github.com/proddy/EMS-ESP/issues/new?template=bug_report.md): For reporting Bugs
-* [Feature Request](https://github.com/proddy/EMS-ESP/issues/new?template=feature_request.md): For requesting features/functions
-* [Troubleshooting](https://github.com/proddy/EMS-ESP/issues/new?template=questions---troubleshooting.md): As a last resort, you can open new *Troubleshooting & Question* issue on GitHub if the solution could not be found using the other channels. Just remember: the more info you provide the more chances you'll have to get an accurate answer
+* [Bug Report](https://github.com/emsesp/EMS-ESP/issues/new?template=bug_report.md): For reporting Bugs
+* [Feature Request](https://github.com/emsesp/EMS-ESP/issues/new?template=feature_request.md): For requesting features/functions
+* [Troubleshooting](https://github.com/emsesp/EMS-ESP/issues/new?template=questions---troubleshooting.md): As a last resort, you can open new *Troubleshooting & Question* issue on GitHub if the solution could not be found using the other channels. Just remember: the more info you provide the more chances you'll have to get an accurate answer
 
 ## **Contributing**
 
