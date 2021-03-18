@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -82,11 +82,11 @@ class System {
 #endif
 
     // button
-    static PButton            myPButton_; // PButton instance
+    static PButton myPButton_; // PButton instance
     // static void               button_OnClick(PButton & b);
     // static void               button_OnDblClick(PButton & b);
     // static void               button_OnLongPress(PButton & b);
-    static void               button_OnVLongPress(PButton & b);
+    static void button_OnVLongPress(PButton & b);
     // static constexpr uint32_t BUTTON_Debounce        = 40;   // Debounce period to prevent flickering when pressing or releasing the button (in ms)
     // static constexpr uint32_t BUTTON_DblClickDelay   = 250;  // Max period between clicks for a double click event (in ms)
     // static constexpr uint32_t BUTTON_LongPressDelay  = 750;  // Hold period for a long press event (in ms)

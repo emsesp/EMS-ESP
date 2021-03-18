@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
@@ -160,9 +160,7 @@ void Solar::register_mqtt_ha_config() {
 
 // creates JSON doc from values
 // returns false if empty
-// TODO cylinder pump status (PS5)
 bool Solar::export_values(JsonObject & json, int8_t id) {
-
     // collector array temperature (TS1)
     if (Helpers::hasValue(collectorTemp_)) {
         json["collectorTemp"] = (float)collectorTemp_ / 10;
@@ -173,7 +171,7 @@ bool Solar::export_values(JsonObject & json, int8_t id) {
     }
     // tank middle temperature (TS3)
     // if (Helpers::hasValue(tankMiddleTemp_)) {
-        // json["tankMiddleTemp"] = (float)tankMiddleTemp_ / 10;
+    // json["tankMiddleTemp"] = (float)tankMiddleTemp_ / 10;
     // }
     // second tank bottom temperature or swimming pool (TS5)
     if (Helpers::hasValue(tank2BottomTemp_)) {

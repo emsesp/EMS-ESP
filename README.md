@@ -4,20 +4,20 @@
 
 This is the firmware for the ESP8266.
 
-[![version](https://img.shields.io/github/release/proddy/EMS-ESP.svg?label=Latest%20Release)](https://github.com/proddy/EMS-ESP/blob/esp8266_stable/CHANGELOG.md)
-[![release-date](https://img.shields.io/github/release-date/proddy/EMS-ESP.svg?label=Released)](https://github.com/proddy/EMS-ESP/commits/master)
-[![license](https://img.shields.io/github/license/proddy/EMS-ESP.svg)](LICENSE)
-[![Build ESP8266 Dev Firmware](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml/badge.svg?branch=esp8266_dev)](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml)
-[![downloads](https://img.shields.io/github/downloads/proddy/EMS-ESP/total.svg)](https://github.com/proddy/EMS-ESP/releases)
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Percentage of issues still open")
+[![version](https://img.shields.io/github/release/emsesp/EMS-ESP.svg?label=Latest%20Release)](https://github.com/emsesp/EMS-ESP/blob/main/CHANGELOG.md)
+[![release-date](https://img.shields.io/github/release-date/emsesp/EMS-ESP.svg?label=Released)](https://github.com/emsesp/EMS-ESP/commits/main)
+[![license](https://img.shields.io/github/license/emsesp/EMS-ESP.svg)](LICENSE)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/9441142f49424ef891e8f5251866ee6b)](https://www.codacy.com/gh/emsesp/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=emsesp/EMS-ESP&amp;utm_campaign=Badge_Grade)
+[![downloads](https://img.shields.io/github/downloads/emsesp/EMS-ESP/total.svg)](https://github.com/emsesp/EMS-ESP/releases)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Average time to resolve an issue")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/emsesp/EMS-ESP.svg)](http://isitmaintained.com/project/emsesp/EMS-ESP "Percentage of issues still open")
 <br/>
 [![chat](https://img.shields.io/discord/816637840644505620.svg?style=flat-square&color=blueviolet)](https://discord.gg/3J3GgnzpyT)
 
 If you like **EMS-ESP**, please give it a star, or fork it and contribute!
 
-[![GitHub stars](https://img.shields.io/github/stars/proddy/EMS-ESP.svg?style=social&label=Star)](https://github.com/proddy/EMS-ESP/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/proddy/EMS-ESP.svg?style=social&label=Fork)](https://github.com/proddy/EMS-ESP/network)
+[![GitHub stars](https://img.shields.io/github/stars/emsesp/EMS-ESP.svg?style=social&label=Star)](https://github.com/emsesp/EMS-ESP/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/emsesp/EMS-ESP.svg?style=social&label=Fork)](https://github.com/emsesp/EMS-ES32P/network)
 [![donate](https://img.shields.io/badge/donate-PayPal-blue.svg)](https://www.paypal.com/paypalme/prderbyshire/2)
 
 Note, EMS-ESP requires a small hardware circuit that can convert the EMS bus data to be read by the microcontroller. These can be ordered at https://bbqkees-electronics.nl.
@@ -72,13 +72,13 @@ If you're looking for support on **EMS-ESP** there are some options available:
 ### Support Community
 
 * [Discord Server](https://discord.gg/3J3GgnzpyT): For support, troubleshooting and general questions. You have better chances to get fast answers from members of the community
-* [Search in Issues](https://github.com/proddy/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
+* [Search in Issues](https://github.com/emsesp/EMS-ESP/issues): You might find an answer to your question by searching current or closed issues
 
 ### Developer's Community
 
-* [Bug Report](https://github.com/proddy/EMS-ESP/issues/new?template=bug_report.md): For reporting Bugs
-* [Feature Request](https://github.com/proddy/EMS-ESP/issues/new?template=feature_request.md): For requesting features/functions
-* [Troubleshooting](https://github.com/proddy/EMS-ESP/issues/new?template=questions---troubleshooting.md): As a last resort, you can open new *Troubleshooting & Question* issue on GitHub if the solution could not be found using the other channels. Just remember: the more info you provide the more chances you'll have to get an accurate answer
+* [Bug Report](https://github.com/emsesp/EMS-ESP/issues/new?template=bug_report.md): For reporting Bugs
+* [Feature Request](https://github.com/emsesp/EMS-ESP/issues/new?template=feature_request.md): For requesting features/functions
+* [Troubleshooting](https://github.com/emsesp/EMS-ESP/issues/new?template=questions---troubleshooting.md): As a last resort, you can open new *Troubleshooting & Question* issue on GitHub if the solution could not be found using the other channels. Just remember: the more info you provide the more chances you'll have to get an accurate answer
 
 ## **Contributing**
 

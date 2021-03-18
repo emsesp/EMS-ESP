@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -132,7 +132,7 @@ void Shower::shower_alert_start() {
 // returns true if added to MQTT queue went ok
 void Shower::publish_values() {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
-    char s[40];
+    char                                           s[40];
 
     //first sent out the HA MQTT Discovery config topic
     send_MQTT_discovery_config();
@@ -150,7 +150,6 @@ void Shower::publish_values() {
 }
 
 void Shower::send_MQTT_discovery_config() {
-    
     if (mqtt_discovery_config_send_) {
         //nothing to do
         return;
@@ -159,23 +158,22 @@ void Shower::send_MQTT_discovery_config() {
     //send the config depending on the MQTT format used
     if (Mqtt::mqtt_format() == Mqtt::Format::HA) {
         StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
-        doc["name"]    = FJSON("Shower Data");
-        doc["uniq_id"] = FJSON("shower_data");
-        doc["~"]       = Mqtt::base();
+        doc["name"]        = FJSON("Shower Data");
+        doc["uniq_id"]     = FJSON("shower_data");
+        doc["~"]           = Mqtt::base();
         doc["json_attr_t"] = FJSON("~/shower_data");
         doc["stat_t"]      = FJSON("~/shower_data");
         doc["val_tpl"]     = FJSON("{{value_json['shower_timer']}}");
         doc["ic"]          = FJSON("mdi:shower");
-        JsonObject dev = doc.createNestedObject("dev");
-        JsonArray ids  = dev.createNestedArray("ids");
+        JsonObject dev     = doc.createNestedObject("dev");
+        JsonArray  ids     = dev.createNestedArray("ids");
         ids.add("ems-esp-boiler");
         Mqtt::publish_ha(F("homeassistant/sensor/ems-esp/shower_data/config"), doc.as<JsonObject>());
 
         Mqtt::register_mqtt_ha_binary_sensor(F("Shower Active"), EMSdevice::DeviceType::BOILER, "shower_active");
 
         mqtt_discovery_config_send_ = true;
-    }
-    else {
+    } else {
         //no valiid config defined
         mqtt_discovery_config_send_ = true;
     }

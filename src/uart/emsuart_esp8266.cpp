@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -176,7 +176,7 @@ uint16_t ICACHE_FLASH_ATTR EMSuart::transmit(uint8_t * buf, uint8_t len) {
         return EMS_TX_STATUS_OK;
     }
 
-    // See https://github.com/proddy/EMS-ESP/issues/380
+    // See https://github.com/emsesp/EMS-ESP/issues/380
     if (tx_mode_ == EMS_TXMODE_HW) { // tx_mode 4
         for (uint8_t i = 0; i < len; i++) {
             USF(EMSUART_UART) = buf[i];
@@ -185,7 +185,7 @@ uint16_t ICACHE_FLASH_ATTR EMSuart::transmit(uint8_t * buf, uint8_t len) {
         return EMS_TX_STATUS_OK;
     }
 
-    // EMS+ https://github.com/proddy/EMS-ESP/issues/23#
+    // EMS+ https://github.com/emsesp/EMS-ESP/issues/23#
     if (tx_mode_ == EMS_TXMODE_EMSPLUS) { // tx_mode 2, With extra tx delay for EMS+
         for (uint8_t i = 0; i < len; i++) {
             USF(EMSUART_UART) = buf[i];
@@ -215,7 +215,7 @@ uint16_t ICACHE_FLASH_ATTR EMSuart::transmit(uint8_t * buf, uint8_t len) {
 
     /*
      * Logic for tx_mode of 1
-     * based on code from https://github.com/proddy/EMS-ESP/issues/103 by @susisstrolch
+     * based on code from https://github.com/emsesp/EMS-ESP/issues/103 by @susisstrolch
      * 
      * Logic (modified by @MichaelDvP):
      * wait after each byte for the master echo

@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45,22 +45,22 @@ class Solar : public EMSdevice {
     static uuid::log::Logger logger_;
     void                     register_mqtt_ha_config();
 
-    int16_t  collectorTemp_               = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
-    int16_t  tankBottomTemp_              = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1st cylinder, bottom (solar thermal system)
+    int16_t collectorTemp_  = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
+    int16_t tankBottomTemp_ = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1st cylinder, bottom (solar thermal system)
     // int16_t  tankMiddleTemp_              = EMS_VALUE_SHORT_NOTSET; // TS3: Temperature sensor 1st cylinder, middle (solar thermal system)
-    int16_t  tank2BottomTemp_             = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2nd cylinder, bottom, or swimming pool (solar thermal system)
-    int16_t  heatExchangerTemp_           = EMS_VALUE_SHORT_NOTSET; // TS6: Heat exchanger temperature sensor
-    uint8_t  solarPumpModulation_         = EMS_VALUE_UINT_NOTSET;  // PS1: modulation solar circuit pump for collector array 1
-    uint8_t  cylinderPumpModulation_      = EMS_VALUE_UINT_NOTSET;  // PS5: modulation cylinder primary pump when using external heat exchanger
-    uint8_t  solarPump_                   = EMS_VALUE_BOOL_NOTSET;  // PS1: solar circuit pump active
-    uint8_t  valveStatus_                 = EMS_VALUE_BOOL_NOTSET;  // VS2: status 3-way valve for cylinder 2 (solar thermal system) with valve
-    int16_t  setpoint_tankBottomMaxTemp_  = EMS_VALUE_SHORT_NOTSET; // setpoint for tankBottomMaxTemp
-    uint32_t energyLastHour_              = EMS_VALUE_ULONG_NOTSET;
-    uint32_t energyToday_                 = EMS_VALUE_ULONG_NOTSET;
-    uint32_t energyTotal_                 = EMS_VALUE_ULONG_NOTSET;
-    uint32_t pumpWorkTime_                = EMS_VALUE_ULONG_NOTSET; // Total solar pump operating time
-    uint8_t  tankHeated_                  = EMS_VALUE_BOOL_NOTSET;
-    uint8_t  collectorShutdown_           = EMS_VALUE_BOOL_NOTSET; // Collector shutdown on/off
+    int16_t  tank2BottomTemp_            = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2nd cylinder, bottom, or swimming pool (solar thermal system)
+    int16_t  heatExchangerTemp_          = EMS_VALUE_SHORT_NOTSET; // TS6: Heat exchanger temperature sensor
+    uint8_t  solarPumpModulation_        = EMS_VALUE_UINT_NOTSET;  // PS1: modulation solar circuit pump for collector array 1
+    uint8_t  cylinderPumpModulation_     = EMS_VALUE_UINT_NOTSET;  // PS5: modulation cylinder primary pump when using external heat exchanger
+    uint8_t  solarPump_                  = EMS_VALUE_BOOL_NOTSET;  // PS1: solar circuit pump active
+    uint8_t  valveStatus_                = EMS_VALUE_BOOL_NOTSET;  // VS2: status 3-way valve for cylinder 2 (solar thermal system) with valve
+    int16_t  setpoint_tankBottomMaxTemp_ = EMS_VALUE_SHORT_NOTSET; // setpoint for tankBottomMaxTemp
+    uint32_t energyLastHour_             = EMS_VALUE_ULONG_NOTSET;
+    uint32_t energyToday_                = EMS_VALUE_ULONG_NOTSET;
+    uint32_t energyTotal_                = EMS_VALUE_ULONG_NOTSET;
+    uint32_t pumpWorkTime_               = EMS_VALUE_ULONG_NOTSET; // Total solar pump operating time
+    uint8_t  tankHeated_                 = EMS_VALUE_BOOL_NOTSET;
+    uint8_t  collectorShutdown_          = EMS_VALUE_BOOL_NOTSET; // Collector shutdown on/off
 
     uint8_t availabilityFlag_ = EMS_VALUE_BOOL_NOTSET;
     uint8_t configFlag_       = EMS_VALUE_BOOL_NOTSET;

@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ class Switch : public EMSdevice {
     void process_WM10TempMessage(std::shared_ptr<const Telegram> telegram);
     void register_mqtt_ha_config();
 
-    uint16_t flowTempHc_       = EMS_VALUE_USHORT_NOTSET;
+    uint16_t flowTempHc_     = EMS_VALUE_USHORT_NOTSET;
     uint8_t  status_         = EMS_VALUE_UINT_NOTSET;
     uint8_t  activated_      = EMS_VALUE_BOOL_NOTSET;
     bool     changed_        = false;

@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,7 @@
 
 // EMS 1.0
 #define EMSUART_TX_BUSY_WAIT (EMSUART_TX_BIT_TIME / 8) // 13
-// #define EMSUART_TX_TIMEOUT (32 * 8) // 256 for tx_mode 1 - see https://github.com/proddy/EMS-ESP/issues/398#issuecomment-645886277
+// #define EMSUART_TX_TIMEOUT (32 * 8) // 256 for tx_mode 1 - see https://github.com/emsesp/EMS-ESP/issues/398#issuecomment-645886277
 #define EMSUART_TX_TIMEOUT (220 * 8) // 1760 as in v1.9 (180 ms)
 #define EMSUART_TX_BRK_EMS (EMSUART_TX_BIT_TIME * 10)
 

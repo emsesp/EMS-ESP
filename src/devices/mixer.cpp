@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
@@ -264,11 +264,11 @@ bool Mixer::export_values_format(uint8_t mqtt_format, JsonObject & json) {
 //       A0 0B FF 00 01 D7 00 00 00 80 00 00 00 00 03 80
 void Mixer::process_MMPLUSStatusMessage_HC(std::shared_ptr<const Telegram> telegram) {
     type(Type::HC);
-    hc_ = telegram->type_id - 0x02D7 + 1;                   // determine which circuit this is
-    changed_ |= telegram->read_value(flowSetTemp_, 5);      // Requested Flow temperature (see Norberts list)
-    changed_ |= telegram->read_value(flowTempHc_, 3);       // TC1, is * 10
+    hc_ = telegram->type_id - 0x02D7 + 1;              // determine which circuit this is
+    changed_ |= telegram->read_value(flowSetTemp_, 5); // Requested Flow temperature (see Norberts list)
+    changed_ |= telegram->read_value(flowTempHc_, 3);  // TC1, is * 10
     changed_ |= telegram->read_bitvalue(pumpStatus_, 0, 0);
-    changed_ |= telegram->read_value(status_, 2);           // valve status
+    changed_ |= telegram->read_value(status_, 2); // valve status
 }
 
 // Mixer warm water loading/DHW - 0x0331, 0x0332
@@ -276,10 +276,10 @@ void Mixer::process_MMPLUSStatusMessage_HC(std::shared_ptr<const Telegram> teleg
 //      A8 00 FF 00 02 31 02 35 00 3C 00 3C 3C 46 02 03 03 00 3C // in 0x29
 void Mixer::process_MMPLUSStatusMessage_WWC(std::shared_ptr<const Telegram> telegram) {
     type(Type::WWC);
-    hc_ = telegram->type_id - 0x0331 + 1;                   // determine which circuit this is. There are max 2.
-    changed_ |= telegram->read_value(flowTempHc_, 0);       // TC1, is * 10
+    hc_ = telegram->type_id - 0x0331 + 1;             // determine which circuit this is. There are max 2.
+    changed_ |= telegram->read_value(flowTempHc_, 0); // TC1, is * 10
     changed_ |= telegram->read_bitvalue(pumpStatus_, 2, 0);
-    changed_ |= telegram->read_value(status_, 11);          // temp status
+    changed_ |= telegram->read_value(status_, 11); // temp status
 }
 
 // Mixer IMP - 0x010C
@@ -298,8 +298,8 @@ void Mixer::process_IPMStatusMessage(std::shared_ptr<const Telegram> telegram) {
 
     // do we have a mixed circuit
     if (ismixed == 2) {
-        changed_ |= telegram->read_value(flowTempHc_, 3);   // TC1, is * 10
-        changed_ |= telegram->read_value(status_, 2);       // valve status
+        changed_ |= telegram->read_value(flowTempHc_, 3); // TC1, is * 10
+        changed_ |= telegram->read_value(status_, 2);     // valve status
     }
 
     changed_ |= telegram->read_bitvalue(pumpStatus_, 1, 0); // pump is also in unmixed circuits
@@ -308,13 +308,13 @@ void Mixer::process_IPMStatusMessage(std::shared_ptr<const Telegram> telegram) {
 
 // Mixer on a MM10 - 0xAB
 // e.g. Mixer Module -> All, type 0xAB, telegram: 21 00 AB 00 2D 01 BE 64 04 01 00 (CRC=15) #data=7
-// see also https://github.com/proddy/EMS-ESP/issues/386
+// see also https://github.com/emsesp/EMS-ESP/issues/386
 void Mixer::process_MMStatusMessage(std::shared_ptr<const Telegram> telegram) {
     type(Type::HC);
 
     // the heating circuit is determine by which device_id it is, 0x20 - 0x23
     // 0x21 is position 2. 0x20 is typically reserved for the WM10 switch module
-    // see https://github.com/proddy/EMS-ESP/issues/270 and https://github.com/proddy/EMS-ESP/issues/386#issuecomment-629610918
+    // see https://github.com/emsesp/EMS-ESP/issues/270 and https://github.com/emsesp/EMS-ESP/issues/386#issuecomment-629610918
     hc_ = device_id() - 0x20 + 1;
     changed_ |= telegram->read_value(flowSetTemp_, 0);      // Setpoint from MMSetMessage
     changed_ |= telegram->read_value(flowTempHc_, 1);       // FV, is * 10
