@@ -16,7 +16,7 @@ This is the firmware for the ESP8266.
 If you like **EMS-ESP**, please give it a star, or fork it and contribute!
 
 [![GitHub stars](https://img.shields.io/github/stars/emsesp/EMS-ESP.svg?style=social&label=Star)](https://github.com/emsesp/EMS-ESP/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/emsesp/EMS-ESP.svg?style=social&label=Fork)](https://github.com/emsesp/EMS-ESP/network)
+[![GitHub forks](https://img.shields.io/github/forks/emsesp/EMS-ESP.svg?style=social&label=Fork)](https://github.com/emsesp/EMS-ES32P/network)
 [![donate](https://img.shields.io/badge/donate-PayPal-blue.svg)](https://www.paypal.com/paypalme/prderbyshire/2)
 
 Note, EMS-ESP requires a small hardware circuit that can convert the EMS bus data to be read by the microcontroller. These can be ordered at https://bbqkees-electronics.nl.

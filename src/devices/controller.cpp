@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ Controller::Controller(uint8_t device_type, uint8_t device_id, uint8_t product_i
     : EMSdevice(device_type, device_id, product_id, version, name, flags, brand) {
 }
 
-void Controller::device_info_web(JsonArray & root) {
+void Controller::device_info_web(JsonArray & root, uint8_t & part) {
 }
 
 // publish values via MQTT
@@ -36,7 +36,7 @@ void Controller::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Controller::export_values(JsonObject & json) {
+bool Controller::export_values(JsonObject & json, int8_t id) {
     return true;
 }
 

@@ -6,7 +6,7 @@ import SaveIcon from '@material-ui/icons/Save';
 import MenuItem from '@material-ui/core/MenuItem';
 
 import { RestFormProps, FormActions, FormButton, BlockFormControlLabel, PasswordValidator } from '../components';
-import { isIP, isHostname, or } from '../validators';
+import { isIP, isHostname, or, isPath } from '../validators';
 
 import { MqttSettings } from './types';
 
@@ -16,6 +16,7 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
 
   componentDidMount() {
     ValidatorForm.addValidationRule('isIPOrHostname', or(isIP, isHostname));
+    ValidatorForm.addValidationRule('isPath', isPath);
   }
 
   render() {
@@ -41,6 +42,17 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           variant="outlined"
           value={data.host}
           onChange={handleValueChange('host')}
+          margin="normal"
+        />
+        <TextValidator
+          validators={['required', 'isPath']}
+          errorMessages={['Base is required', 'Not a valid path']}
+          name="base"
+          label="Base"
+          fullWidth
+          variant="outlined"
+          value={data.base}
+          onChange={handleValueChange('base')}
           margin="normal"
         />
         <TextValidator
@@ -92,18 +104,6 @@ class MqttSettingsForm extends React.Component<MqttSettingsFormProps> {
           value={data.keep_alive}
           type="number"
           onChange={handleValueChange('keep_alive')}
-          margin="normal"
-        />
-        <TextValidator
-          validators={['required', 'isNumber', 'minNumber:1', 'maxNumber:65535']}
-          errorMessages={['Max topic length is required', "Must be a number", "Must be greater than 0", "Max value is 65535"]}
-          name="max_topic_length"
-          label="Max Topic Length"
-          fullWidth
-          variant="outlined"
-          value={data.max_topic_length}
-          type="number"
-          onChange={handleValueChange('max_topic_length')}
           margin="normal"
         />
         <SelectValidator name="mqtt_format"

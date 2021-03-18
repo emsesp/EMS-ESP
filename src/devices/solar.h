@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,29 +37,30 @@ class Solar : public EMSdevice {
     Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
     virtual void publish_values(JsonObject & json, bool force);
-    virtual bool export_values(JsonObject & json);
-    virtual void device_info_web(JsonArray & root);
+    virtual bool export_values(JsonObject & json, int8_t id = -1);
+    virtual void device_info_web(JsonArray & root, uint8_t & part);
     virtual bool updated_values();
 
   private:
     static uuid::log::Logger logger_;
     void                     register_mqtt_ha_config();
 
-    int16_t  collectorTemp_          = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
-    int16_t  tankBottomTemp_         = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1 cylinder, bottom (solar thermal system)
-    int16_t  tankBottomTemp2_        = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2 cylinder, bottom, or swimming pool (solar thermal system)
-    int16_t  heatExchangerTemp_      = EMS_VALUE_SHORT_NOTSET; // TS6: Heat exchanger temperature sensor
-    uint8_t  solarPumpModulation_    = EMS_VALUE_UINT_NOTSET;  // PS1: modulation solar pump
-    uint8_t  cylinderPumpModulation_ = EMS_VALUE_UINT_NOTSET;  // PS5: modulation cylinder pump
-    uint8_t  solarPump_              = EMS_VALUE_BOOL_NOTSET;  // PS1: solar pump active
-    uint8_t  valveStatus_            = EMS_VALUE_BOOL_NOTSET;  // VS2: status 3-way valve for cylinder 2 (solar thermal system) with valve
-    int16_t  setpoint_maxBottomTemp_ = EMS_VALUE_SHORT_NOTSET; // setpoint for maximum collector temp
-    uint32_t energyLastHour_         = EMS_VALUE_ULONG_NOTSET;
-    uint32_t energyToday_            = EMS_VALUE_ULONG_NOTSET;
-    uint32_t energyTotal_            = EMS_VALUE_ULONG_NOTSET;
-    uint32_t pumpWorkMin_            = EMS_VALUE_ULONG_NOTSET; // Total solar pump operating time
-    uint8_t  tankHeated_             = EMS_VALUE_BOOL_NOTSET;
-    uint8_t  collectorShutdown_      = EMS_VALUE_BOOL_NOTSET; // Collector shutdown on/off
+    int16_t collectorTemp_  = EMS_VALUE_SHORT_NOTSET; // TS1: Temperature sensor for collector array 1
+    int16_t tankBottomTemp_ = EMS_VALUE_SHORT_NOTSET; // TS2: Temperature sensor 1st cylinder, bottom (solar thermal system)
+    // int16_t  tankMiddleTemp_              = EMS_VALUE_SHORT_NOTSET; // TS3: Temperature sensor 1st cylinder, middle (solar thermal system)
+    int16_t  tank2BottomTemp_            = EMS_VALUE_SHORT_NOTSET; // TS5: Temperature sensor 2nd cylinder, bottom, or swimming pool (solar thermal system)
+    int16_t  heatExchangerTemp_          = EMS_VALUE_SHORT_NOTSET; // TS6: Heat exchanger temperature sensor
+    uint8_t  solarPumpModulation_        = EMS_VALUE_UINT_NOTSET;  // PS1: modulation solar circuit pump for collector array 1
+    uint8_t  cylinderPumpModulation_     = EMS_VALUE_UINT_NOTSET;  // PS5: modulation cylinder primary pump when using external heat exchanger
+    uint8_t  solarPump_                  = EMS_VALUE_BOOL_NOTSET;  // PS1: solar circuit pump active
+    uint8_t  valveStatus_                = EMS_VALUE_BOOL_NOTSET;  // VS2: status 3-way valve for cylinder 2 (solar thermal system) with valve
+    int16_t  setpoint_tankBottomMaxTemp_ = EMS_VALUE_SHORT_NOTSET; // setpoint for tankBottomMaxTemp
+    uint32_t energyLastHour_             = EMS_VALUE_ULONG_NOTSET;
+    uint32_t energyToday_                = EMS_VALUE_ULONG_NOTSET;
+    uint32_t energyTotal_                = EMS_VALUE_ULONG_NOTSET;
+    uint32_t pumpWorkTime_               = EMS_VALUE_ULONG_NOTSET; // Total solar pump operating time
+    uint8_t  tankHeated_                 = EMS_VALUE_BOOL_NOTSET;
+    uint8_t  collectorShutdown_          = EMS_VALUE_BOOL_NOTSET; // Collector shutdown on/off
 
     uint8_t availabilityFlag_ = EMS_VALUE_BOOL_NOTSET;
     uint8_t configFlag_       = EMS_VALUE_BOOL_NOTSET;
@@ -73,9 +74,9 @@ class Solar : public EMSdevice {
     uint8_t solarIsEnabled_     = EMS_VALUE_UINT_NOTSET; // System enable, 00=no
 
     // telegram 0x035A
-    uint8_t collectorTempMax_     = EMS_VALUE_UINT_NOTSET; // maximum allowable temperature for collector
-    uint8_t tank1MaxTempCurrent_  = EMS_VALUE_UINT_NOTSET; // Current value for max tank temp
-    uint8_t collectorTempMin_     = EMS_VALUE_UINT_NOTSET; // minimum allowable temperature for collector
+    uint8_t collectorMaxTemp_     = EMS_VALUE_UINT_NOTSET; // maximum allowed collectorTemp array 1
+    uint8_t tankBottomMaxTemp_    = EMS_VALUE_UINT_NOTSET; // maximum allowed tankBottomTemp
+    uint8_t collectorMinTemp_     = EMS_VALUE_UINT_NOTSET; // minimum allowed collectorTemp array 1
     uint8_t solarPumpMode_        = EMS_VALUE_UINT_NOTSET; // 00=off, 01=PWM, 02=10V
     uint8_t solarPumpMinRPM_      = EMS_VALUE_UINT_NOTSET; // minimum RPM setting, *5 %
     uint8_t solarPumpTurnoffDiff_ = EMS_VALUE_UINT_NOTSET; // solar pump turnoff collector/tank diff
@@ -115,7 +116,7 @@ class Solar : public EMSdevice {
     void process_ISM1Set(std::shared_ptr<const Telegram> telegram);
 
 
-    bool set_SM100Tank1MaxTemp(const char * value, const int8_t id);
+    bool set_SM100TankBottomMaxTemp(const char * value, const int8_t id);
 };
 
 } // namespace emsesp

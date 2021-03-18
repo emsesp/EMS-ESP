@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -66,10 +66,11 @@ class Shower {
     void shower_alert_start();
     void shower_alert_stop();
     void send_mqtt_stat(bool state);
+    void send_MQTT_discovery_config();
 
-    bool     shower_timer_;      // true if we want to report back on shower times
-    bool     shower_alert_;      // true if we want the alert of cold water
-    bool     ha_config_ = false; // for HA MQTT Discovery
+    bool     shower_timer_;                       // true if we want to report back on shower times
+    bool     shower_alert_;                       // true if we want the alert of cold water
+    bool     mqtt_discovery_config_send_ = false; // for HA MQTT Discovery
     bool     shower_on_;
     uint32_t timer_start_;     // ms
     uint32_t timer_pause_;     // ms

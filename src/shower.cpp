@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -100,11 +100,8 @@ void Shower::send_mqtt_stat(bool state) {
         return;
     }
 
-    // if we're in HA mode make sure we've first sent out the HA MQTT Discovery config topic
-    if ((Mqtt::mqtt_format() == Mqtt::Format::HA) && (!ha_config_)) {
-        Mqtt::register_mqtt_ha_binary_sensor(F("Shower Active"), EMSdevice::DeviceType::BOILER, "shower_active");
-        ha_config_ = true;
-    }
+    //first sent out the HA MQTT Discovery config topic
+    send_MQTT_discovery_config();
 
     char s[7];
     Mqtt::publish(F("shower_active"), Helpers::render_boolean(s, state));
@@ -135,22 +132,51 @@ void Shower::shower_alert_start() {
 // returns true if added to MQTT queue went ok
 void Shower::publish_values() {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
+    char                                           s[40];
 
-    char s[50];
+    //first sent out the HA MQTT Discovery config topic
+    send_MQTT_discovery_config();
+
     doc["shower_timer"] = Helpers::render_boolean(s, shower_timer_);
     doc["shower_alert"] = Helpers::render_boolean(s, shower_alert_);
 
     // only publish shower duration if there is a value
     if (duration_ > SHOWER_MIN_DURATION) {
-        char buffer[16] = {0};
-        strlcpy(s, Helpers::itoa(buffer, (uint8_t)((duration_ / (1000 * 60)) % 60), 10), 50);
-        strlcat(s, " minutes and ", 50);
-        strlcat(s, Helpers::itoa(buffer, (uint8_t)((duration_ / 1000) % 60), 10), 50);
-        strlcat(s, " seconds", 50);
+        snprintf_P(s, 40, PSTR("%d minutes and %d seconds"), (uint8_t)(duration_ / 60000), (uint8_t)((duration_ / 1000) % 60));
         doc["duration"] = s;
     }
 
     Mqtt::publish(F("shower_data"), doc.as<JsonObject>());
+}
+
+void Shower::send_MQTT_discovery_config() {
+    if (mqtt_discovery_config_send_) {
+        //nothing to do
+        return;
+    }
+
+    //send the config depending on the MQTT format used
+    if (Mqtt::mqtt_format() == Mqtt::Format::HA) {
+        StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
+        doc["name"]        = FJSON("Shower Data");
+        doc["uniq_id"]     = FJSON("shower_data");
+        doc["~"]           = Mqtt::base();
+        doc["json_attr_t"] = FJSON("~/shower_data");
+        doc["stat_t"]      = FJSON("~/shower_data");
+        doc["val_tpl"]     = FJSON("{{value_json['shower_timer']}}");
+        doc["ic"]          = FJSON("mdi:shower");
+        JsonObject dev     = doc.createNestedObject("dev");
+        JsonArray  ids     = dev.createNestedArray("ids");
+        ids.add("ems-esp-boiler");
+        Mqtt::publish_ha(F("homeassistant/sensor/ems-esp/shower_data/config"), doc.as<JsonObject>());
+
+        Mqtt::register_mqtt_ha_binary_sensor(F("Shower Active"), EMSdevice::DeviceType::BOILER, "shower_active");
+
+        mqtt_discovery_config_send_ = true;
+    } else {
+        //no valiid config defined
+        mqtt_discovery_config_send_ = true;
+    }
 }
 
 } // namespace emsesp

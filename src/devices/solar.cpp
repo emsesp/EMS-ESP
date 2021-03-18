@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,7 +51,7 @@ Solar::Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
             register_telegram_type(0x038E, F("SM100Energy"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Energy(t); });
             register_telegram_type(0x0391, F("SM100Time"), true, [&](std::shared_ptr<const Telegram> t) { process_SM100Time(t); });
 
-            register_mqtt_cmd(F("SM100Tank1MaxTemp"), [&](const char * value, const int8_t id) { return set_SM100Tank1MaxTemp(value, id); });
+            register_mqtt_cmd(F("SM100Tank1MaxTemp"), [&](const char * value, const int8_t id) { return set_SM100TankBottomMaxTemp(value, id); });
         }
     }
 
@@ -62,7 +62,7 @@ Solar::Solar(uint8_t device_type, uint8_t device_id, uint8_t product_id, const s
 }
 
 // print to web
-void Solar::device_info_web(JsonArray & root) {
+void Solar::device_info_web(JsonArray & root, uint8_t & part) {
     // fetch the values into a JSON document
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> doc;
     JsonObject                                      json = doc.to<JsonObject>();
@@ -71,9 +71,10 @@ void Solar::device_info_web(JsonArray & root) {
     }
 
     create_value_json(root, F("collectorTemp"), nullptr, F_(collectorTemp), F_(degrees), json);
+    create_value_json(root, F("collectorMaxTemp"), nullptr, F_(collectorMaxTemp), F_(degrees), json);
     create_value_json(root, F("tankBottomTemp"), nullptr, F_(tankBottomTemp), F_(degrees), json);
-    create_value_json(root, F("tankBottomTemp2"), nullptr, F_(tankBottomTemp2), F_(degrees), json);
-    create_value_json(root, F("tank1MaxTempCurrent"), nullptr, F_(tank1MaxTempCurrent), F_(degrees), json);
+    create_value_json(root, F("tank2BottomTemp"), nullptr, F_(tank2BottomTemp), F_(degrees), json);
+    create_value_json(root, F("tankBottomMaxTemp"), nullptr, F_(tankBottomMaxTemp), F_(degrees), json);
     create_value_json(root, F("heatExchangerTemp"), nullptr, F_(heatExchangerTemp), F_(degrees), json);
     create_value_json(root, F("solarPumpModulation"), nullptr, F_(solarPumpModulation), F_(percent), json);
     create_value_json(root, F("cylinderPumpModulation"), nullptr, F_(cylinderPumpModulation), F_(percent), json);
@@ -84,8 +85,8 @@ void Solar::device_info_web(JsonArray & root) {
     create_value_json(root, F("energyLastHour"), nullptr, F_(energyLastHour), F_(wh), json);
     create_value_json(root, F("energyToday"), nullptr, F_(energyToday), F_(wh), json);
     create_value_json(root, F("energyTotal"), nullptr, F_(energyTotal), F_(kwh), json);
-    create_value_json(root, F("pumpWorkMin"), nullptr, F_(pumpWorkMin), F_(min), json);
-    create_value_json(root, F("pumpWorkMintxt"), nullptr, F_(pumpWorkMintxt), F_(min), json);
+    // create_value_json(root, F("pumpWorkTime"), nullptr, F_(pumpWorkTime), F_(min), json);
+    create_value_json(root, F("pumpWorkTimeText"), nullptr, F_(pumpWorkTimeText), nullptr, json);
 }
 
 // publish values via MQTT
@@ -121,8 +122,8 @@ void Solar::register_mqtt_ha_config() {
     doc["uniq_id"] = F_(solar);
     doc["ic"]      = F_(iconthermostat);
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/solar_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/solar_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["val_tpl"] = FJSON("{{value_json.solarPump}}");
@@ -136,18 +137,21 @@ void Solar::register_mqtt_ha_config() {
     Mqtt::publish_ha(F("homeassistant/sensor/ems-esp/solar/config"), doc.as<JsonObject>()); // publish the config payload with retain flag
 
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorTemp), device_type(), "collectorTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorMaxTemp), device_type(), "collectorMaxTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorMinTemp), device_type(), "collectorMinTemp", F_(degrees), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankBottomTemp), device_type(), "tankBottomTemp", F_(degrees), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankBottomTemp2), device_type(), "tankBottomTemp2", F_(degrees), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tank1MaxTempCurrent), device_type(), "tank1MaxTempCurrent", F_(degrees), nullptr);
+    // Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankMiddleTemp), device_type(), "tankMiddleTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tank2BottomTemp), device_type(), "tank2BottomTemp", F_(degrees), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankBottomMaxTemp), device_type(), "tankBottomMaxTemp", F_(degrees), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(heatExchangerTemp), device_type(), "heatExchangerTemp", F_(degrees), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPumpModulation), device_type(), "solarPumpModulation", F_(percent), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(cylinderPumpModulation), device_type(), "cylinderPumpModulation", F_(percent), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(pumpWorkMin), device_type(), "pumpWorkMin", F_(min), nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPumpModulation), device_type(), "solarPumpModulation", F_(percent), F_(iconpercent));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(cylinderPumpModulation), device_type(), "cylinderPumpModulation", F_(percent), F_(iconpercent));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(pumpWorkTime), device_type(), "pumpWorkTime", F_(min), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyLastHour), device_type(), "energyLastHour", F_(wh), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyToday), device_type(), "energyToday", F_(wh), nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(energyTotal), device_type(), "energyTotal", F_(kwh), nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPump), device_type(), "solarPump", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(valveStatus), device_type(), "valveStatus", nullptr, nullptr);
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(solarPump), device_type(), "solarPump", nullptr, F_(iconpump));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(valveStatus), device_type(), "valveStatus", nullptr, F_(iconvalve));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankHeated), device_type(), "tankHeated", nullptr, nullptr);
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(collectorShutdown), device_type(), "collectorShutdown", nullptr, nullptr);
 
@@ -156,27 +160,38 @@ void Solar::register_mqtt_ha_config() {
 
 // creates JSON doc from values
 // returns false if empty
-bool Solar::export_values(JsonObject & json) {
-    char s[10]; // for formatting strings
-
+bool Solar::export_values(JsonObject & json, int8_t id) {
+    // collector array temperature (TS1)
     if (Helpers::hasValue(collectorTemp_)) {
         json["collectorTemp"] = (float)collectorTemp_ / 10;
     }
-
+    // tank bottom temperature (TS2)
     if (Helpers::hasValue(tankBottomTemp_)) {
         json["tankBottomTemp"] = (float)tankBottomTemp_ / 10;
     }
-
-    if (Helpers::hasValue(tankBottomTemp2_)) {
-        json["tankBottomTemp2"] = (float)tankBottomTemp2_ / 10;
+    // tank middle temperature (TS3)
+    // if (Helpers::hasValue(tankMiddleTemp_)) {
+    // json["tankMiddleTemp"] = (float)tankMiddleTemp_ / 10;
+    // }
+    // second tank bottom temperature or swimming pool (TS5)
+    if (Helpers::hasValue(tank2BottomTemp_)) {
+        json["tank2BottomTemp"] = (float)tank2BottomTemp_ / 10;
     }
-
-    if (Helpers::hasValue(tank1MaxTempCurrent_)) {
-        json["tank1MaxTempCurrent"] = tank1MaxTempCurrent_;
-    }
-
+    // temperature heat exchanger (TS6)
     if (Helpers::hasValue(heatExchangerTemp_)) {
         json["heatExchangerTemp"] = (float)heatExchangerTemp_ / 10;
+    }
+
+    if (Helpers::hasValue(tankBottomMaxTemp_)) {
+        json["tankBottomMaxTemp"] = tankBottomMaxTemp_;
+    }
+
+    if (Helpers::hasValue(collectorMaxTemp_)) {
+        json["collectorMaxTemp"] = collectorMaxTemp_;
+    }
+
+    if (Helpers::hasValue(collectorMinTemp_)) {
+        json["collectorMinTemp"] = collectorMinTemp_;
     }
 
     if (Helpers::hasValue(solarPumpModulation_)) {
@@ -187,27 +202,19 @@ bool Solar::export_values(JsonObject & json) {
         json["cylinderPumpModulation"] = cylinderPumpModulation_;
     }
 
-    if (Helpers::hasValue(solarPump_, EMS_VALUE_BOOL)) {
-        json["solarPump"] = Helpers::render_value(s, solarPump_, EMS_VALUE_BOOL);
+    Helpers::json_boolean(json, "solarPump", solarPump_);
+
+    Helpers::json_boolean(json, "valveStatus", valveStatus_);
+
+    Helpers::json_time(json, "pumpWorkTimeText", pumpWorkTime_, true);
+
+    if (Helpers::hasValue(pumpWorkTime_)) {
+        json["pumpWorkTime"] = pumpWorkTime_;
     }
 
-    if (Helpers::hasValue(valveStatus_, EMS_VALUE_BOOL)) {
-        json["valveStatus"] = Helpers::render_value(s, valveStatus_, EMS_VALUE_BOOL);
-    }
+    Helpers::json_boolean(json, "tankHeated", tankHeated_);
 
-    if (Helpers::hasValue(pumpWorkMin_)) {
-        json["pumpWorkMin"] = pumpWorkMin_;
-        char slong[40];
-        json["pumpWorkMintxt"] = Helpers::render_value(slong, pumpWorkMin_, EMS_VALUE_TIME);
-    }
-
-    if (Helpers::hasValue(tankHeated_, EMS_VALUE_BOOL)) {
-        json["tankHeated"] = Helpers::render_value(s, tankHeated_, EMS_VALUE_BOOL);
-    }
-
-    if (Helpers::hasValue(collectorShutdown_, EMS_VALUE_BOOL)) {
-        json["collectorShutdown"] = Helpers::render_value(s, collectorShutdown_, EMS_VALUE_BOOL);
-    }
+    Helpers::json_boolean(json, "collectorShutdown", collectorShutdown_);
 
     if (Helpers::hasValue(energyLastHour_)) {
         json["energyLastHour"] = (float)energyLastHour_ / 10;
@@ -235,11 +242,11 @@ bool Solar::updated_values() {
 
 // SM10Monitor - type 0x97
 void Solar::process_SM10Monitor(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(collectorTemp_, 2);       // collector temp from SM10, is *10
-    changed_ |= telegram->read_value(tankBottomTemp_, 5);      // bottom temp from SM10, is *10
+    changed_ |= telegram->read_value(collectorTemp_, 2);       // is *10 - TS1: collector temp from SM10
+    changed_ |= telegram->read_value(tankBottomTemp_, 5);      // is *10 - TS2: Temperature sensor tank bottom
     changed_ |= telegram->read_value(solarPumpModulation_, 4); // modulation solar pump
-    changed_ |= telegram->read_bitvalue(solarPump_, 7, 1);
-    changed_ |= telegram->read_value(pumpWorkMin_, 8, 3);
+    changed_ |= telegram->read_bitvalue(solarPump_, 7, 1);     // PS1: solar pump on (1) or off (0)
+    changed_ |= telegram->read_value(pumpWorkTime_, 8, 3);
 }
 
 /*
@@ -259,9 +266,9 @@ void Solar::process_SM100SystemConfig(std::shared_ptr<const Telegram> telegram) 
  * e.g. B0 0B FF 00 02 5A 64 05 00 58 14 01 01 32 64 00 00 00 5A 0C
  */
 void Solar::process_SM100SolarCircuitConfig(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(collectorTempMax_, 0, 1);
-    changed_ |= telegram->read_value(tank1MaxTempCurrent_, 3, 1);
-    changed_ |= telegram->read_value(collectorTempMin_, 4, 1);
+    changed_ |= telegram->read_value(collectorMaxTemp_, 0, 1);
+    changed_ |= telegram->read_value(tankBottomMaxTemp_, 3, 1);
+    changed_ |= telegram->read_value(collectorMinTemp_, 4, 1);
     changed_ |= telegram->read_value(solarPumpMode_, 5, 1);
     changed_ |= telegram->read_value(solarPumpMinRPM_, 6, 1);
     changed_ |= telegram->read_value(solarPumpTurnoffDiff_, 7, 1);
@@ -307,14 +314,14 @@ void Solar::process_SM100ParamCfg(std::shared_ptr<const Telegram> telegram) {
  *      30 00 FF 18 02 62 80 00
  *      30 00 FF 00 02 62 01 A1 - for bottom temps
  * bytes 0+1 = TS1 Temperature sensor for collector
- * bytes 2+3 = TS2 Temperature sensor 1 cylinder, bottom
- * bytes 16+17 = TS5 Temperature sensor 2 cylinder, bottom, or swimming pool
+ * bytes 2+3 = TS2 Temperature sensor tank 1 bottom
+ * bytes 16+17 = TS5 Temperature sensor tank 2 bottom or swimming pool
  * bytes 20+21 = TS6 Temperature sensor external heat exchanger
  */
 void Solar::process_SM100Monitor(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_value(collectorTemp_, 0);      // is *10 - TS1: Temperature sensor for collector array 1
-    changed_ |= telegram->read_value(tankBottomTemp_, 2);     // is *10 - TS2: Temperature sensor 1 cylinder, bottom
-    changed_ |= telegram->read_value(tankBottomTemp2_, 16);   // is *10 - TS5: Temperature sensor 2 cylinder, bottom, or swimming pool
+    changed_ |= telegram->read_value(tankBottomTemp_, 2);     // is *10 - TS2: Temperature sensor 1st cylinder, bottom
+    changed_ |= telegram->read_value(tank2BottomTemp_, 16);   // is *10 - TS5: Temperature sensor 2nd cylinder, bottom, or swimming pool
     changed_ |= telegram->read_value(heatExchangerTemp_, 20); // is *10 - TS6: Heat exchanger temperature sensor
 }
 
@@ -391,7 +398,7 @@ void Solar::process_SM100Status(std::shared_ptr<const Telegram> telegram) {
  */
 void Solar::process_SM100Status2(std::shared_ptr<const Telegram> telegram) {
     changed_ |= telegram->read_bitvalue(valveStatus_, 4, 2); // on if bit 2 set
-    changed_ |= telegram->read_bitvalue(solarPump_, 10, 2);  // on if bit 2 set
+    changed_ |= telegram->read_bitvalue(solarPump_, 10, 2);  // PS1: solar circuit pump on (1) or off (0), on if bit 2 set
 }
 
 /*
@@ -418,7 +425,7 @@ void Solar::process_SM100Energy(std::shared_ptr<const Telegram> telegram) {
  * SM100Time - type 0x0391 EMS+ for pump working time
  */
 void Solar::process_SM100Time(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(pumpWorkMin_, 1, 3);
+    changed_ |= telegram->read_value(pumpWorkTime_, 1, 3);
 }
 
 /*
@@ -426,8 +433,8 @@ void Solar::process_SM100Time(std::shared_ptr<const Telegram> telegram) {
  *  e.g. B0 00 FF 00 00 03 32 00 00 00 00 13 00 D6 00 00 00 FB D0 F0
  */
 void Solar::process_ISM1StatusMessage(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(collectorTemp_, 4);  // Collector Temperature
-    changed_ |= telegram->read_value(tankBottomTemp_, 6); // Temperature Bottom of Solar Boiler
+    changed_ |= telegram->read_value(collectorTemp_, 4);  // is *10 - TS1: Temperature sensor for collector array 1
+    changed_ |= telegram->read_value(tankBottomTemp_, 6); // is *10 - TS2: Temperature sensor 1st cylinder, bottom
     uint16_t Wh = 0xFFFF;
     changed_ |= telegram->read_value(Wh, 2); // Solar Energy produced in last hour only ushort, is not * 10
 
@@ -435,21 +442,21 @@ void Solar::process_ISM1StatusMessage(std::shared_ptr<const Telegram> telegram) 
         energyLastHour_ = Wh * 10; // set to *10
     }
 
-    changed_ |= telegram->read_bitvalue(solarPump_, 8, 0);         // PS1 Solar pump on (1) or off (0)
-    changed_ |= telegram->read_value(pumpWorkMin_, 10, 3);         // force to 3 bytes
+    changed_ |= telegram->read_bitvalue(solarPump_, 8, 0);         // PS1: solar circuit pump on (1) or off (0)
+    changed_ |= telegram->read_value(pumpWorkTime_, 10, 3);        // force to 3 bytes
     changed_ |= telegram->read_bitvalue(collectorShutdown_, 9, 0); // collector shutdown on/off
-    changed_ |= telegram->read_bitvalue(tankHeated_, 9, 2);        // tank full
+    changed_ |= telegram->read_bitvalue(tankHeated_, 9, 2);        // tankBottomTemp reached tankBottomMaxTemp
 }
 
 /*
  * Junkers ISM1 Solar Module - type 0x0101 EMS+ for setting values
  */
 void Solar::process_ISM1Set(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(setpoint_maxBottomTemp_, 6);
+    changed_ |= telegram->read_value(setpoint_tankBottomMaxTemp_, 6);
 }
 
-// set temperature for tank
-bool Solar::set_SM100Tank1MaxTemp(const char * value, const int8_t id) {
+// set temperature for maximum tankBottomTemp
+bool Solar::set_SM100TankBottomMaxTemp(const char * value, const int8_t id) {
     int temperature;
     if (!Helpers::value2number(value, temperature)) {
         return false;
@@ -457,7 +464,7 @@ bool Solar::set_SM100Tank1MaxTemp(const char * value, const int8_t id) {
 
     // write value
     // 90 30 FF 03 02 5A 59 B3
-    // note: optionally add the validate to 0x035A which will pick up the adjusted tank1MaxTempCurrent_
+    // note: optionally add the validate to 0x035A which will pick up the adjusted tankBottomMaxTemp_
     write_command(0x35A, 0x03, (uint8_t)temperature);
 
     return true;

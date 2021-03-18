@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #define EMSESP_HELPERS_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <uuid/common.h>
 
 #include "telegram.h" // for EMS_VALUE_* settings
@@ -27,6 +28,7 @@
 #define BOOL_FORMAT_ONOFF 1
 #define BOOL_FORMAT_TRUEFALSE 2
 #define BOOL_FORMAT_NUMBERS 3
+#define BOOL_FORMAT_ONOFF_CAP 4
 
 // #define FJSON(x) x
 #define FJSON(x) F(x)
@@ -43,7 +45,9 @@ class Helpers {
     static char * render_value(char * result, const int16_t value, const uint8_t format);
     static char * render_value(char * result, const char * value, uint8_t format);
     static char * render_boolean(char * result, bool value);
-    static char * render_enum(char * result, const std::vector<const __FlashStringHelper *> & value, const uint8_t no);
+    static void   json_boolean(JsonObject & json, const char * name, uint8_t value);
+    static void   json_enum(JsonObject & json, const char * name, const std::vector<const __FlashStringHelper *> & value, const uint8_t no);
+    static void   json_time(JsonObject & json, const char * name, const uint32_t value, const bool textformat);
 
     static char *      hextoa(char * result, const uint8_t value);
     static std::string data_to_hex(const uint8_t * data, const uint8_t length);

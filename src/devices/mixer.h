@@ -1,7 +1,7 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -37,8 +37,8 @@ class Mixer : public EMSdevice {
     Mixer(uint8_t device_type, uint8_t device_id, uint8_t product_id, const std::string & version, const std::string & name, uint8_t flags, uint8_t brand);
 
     virtual void publish_values(JsonObject & json, bool force);
-    virtual bool export_values(JsonObject & json);
-    virtual void device_info_web(JsonArray & root);
+    virtual bool export_values(JsonObject & json, int8_t id = -1);
+    virtual void device_info_web(JsonArray & root, uint8_t & part);
     virtual bool updated_values();
 
   private:
@@ -69,11 +69,12 @@ class Mixer : public EMSdevice {
     }
 
   private:
-    uint16_t hc_          = EMS_VALUE_USHORT_NOTSET;
-    uint16_t flowTemp_    = EMS_VALUE_USHORT_NOTSET;
+    uint16_t hc_ = EMS_VALUE_USHORT_NOTSET;
+    // uint8_t  flowTempLowLoss_ = EMS_VALUE_UINT_NOTSET; // T0 on MM100 unknown position/telegram
+    uint8_t  flowSetTemp_ = EMS_VALUE_UINT_NOTSET;
+    uint16_t flowTempHc_  = EMS_VALUE_USHORT_NOTSET;
     uint8_t  pumpStatus_  = EMS_VALUE_UINT_NOTSET;
     int8_t   status_      = EMS_VALUE_INT_NOTSET;
-    uint8_t  flowSetTemp_ = EMS_VALUE_UINT_NOTSET;
 
     Type type_ = Type::NONE;
 

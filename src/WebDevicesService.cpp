@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -65,12 +65,11 @@ void WebDevicesService::all_devices(AsyncWebServerRequest * request) {
     JsonArray sensors = root.createNestedArray("sensors");
     if (EMSESP::have_sensors()) {
         uint8_t i = 1;
-        char    s[8];
         for (const auto & sensor : EMSESP::sensor_devices()) {
             JsonObject obj = sensors.createNestedObject();
             obj["no"]      = i++;
             obj["id"]      = sensor.to_string();
-            obj["temp"]    = Helpers::render_value(s, sensor.temperature_c, 10);
+            obj["temp"]    = (float)sensor.temperature_c / 10;
         }
     }
 

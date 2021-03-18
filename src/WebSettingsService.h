@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -36,7 +36,11 @@
 #define EMSESP_DEFAULT_MASTER_THERMOSTAT 0 // not set
 #define EMSESP_DEFAULT_SHOWER_TIMER false
 #define EMSESP_DEFAULT_SHOWER_ALERT false
+#if defined(ESP32)
+#define EMSESP_DEFAULT_HIDE_LED true
+#else
 #define EMSESP_DEFAULT_HIDE_LED false
+#endif
 #define EMSESP_DEFAULT_DALLAS_PARASITE false
 #define EMSESP_DEFAULT_API_ENABLED false // turn off, because its insecure
 #define EMSESP_DEFAULT_BOOL_FORMAT 1     // on/off

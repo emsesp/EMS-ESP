@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,13 @@
  */
 
 #include "system.h"
-#include "emsesp.h" // for send_raw_telegram() command
-
+#include "emsesp.h"  // for send_raw_telegram() command
 #include "version.h" // firmware version of EMS-ESP
+
+#if defined(ESP32)
+#include "driver/adc.h"
+#include <esp_bt.h>
+#endif
 
 #if defined(EMSESP_TEST)
 #include "test/test.h"
@@ -34,20 +38,20 @@ uuid::syslog::SyslogService System::syslog_;
 #endif
 
 // init statics
-uint32_t    System::heap_start_     = 0;
-bool        System::upload_status_  = false;
-bool        System::hide_led_       = false;
-uint8_t     System::led_gpio_       = 0;
-uint16_t    System::analog_         = 0;
-bool        System::analog_enabled_ = false;
-bool        System::syslog_enabled_ = false;
-std::string System::hostname_;
+uint32_t System::heap_start_     = 0;
+bool     System::upload_status_  = false;
+bool     System::hide_led_       = false;
+uint8_t  System::led_gpio_       = 0;
+uint16_t System::analog_         = 0;
+bool     System::analog_enabled_ = false;
+bool     System::syslog_enabled_ = false;
+PButton  System::myPButton_;
 
 // send on/off to a gpio pin
 // value: true = HIGH, false = LOW
 // http://ems-esp/api?device=system&cmd=pin&data=1&id=2
 bool System::command_pin(const char * value, const int8_t id) {
-    if (id < 0) {
+    if (id < 1) { // pin 0 used for PButton
         return false;
     }
 
@@ -162,7 +166,7 @@ void System::syslog_init() {
         syslog_enabled_ = false;
     }
 
-    // in case service is still running, this flushes the queue - https://github.com/proddy/EMS-ESP/issues/496
+    // in case service is still running, this flushes the queue - https://github.com/emsesp/EMS-ESP/issues/496
     if (!syslog_enabled_) {
         syslog_.log_level((uuid::log::Level)-1);
         syslog_.mark_interval(0);
@@ -219,6 +223,46 @@ void System::other_init() {
         Helpers::bool_format(settings.bool_format);
         analog_enabled_ = settings.analog_enabled;
     });
+#ifdef ESP32
+    // Wifi power settings 2 - 19.5dBm, raw values 4/dBm (8-78)
+    // WiFi.setTxPower(WIFI_POWER_13dBm);
+    btStop();
+    esp_bt_controller_disable();
+    if (analog_enabled_) {
+        adc_power_on();
+    } else {
+        adc_power_off();
+    }
+#endif
+}
+
+// button indefinite press
+void System::button_OnVLongPress(PButton & b) {
+    LOG_DEBUG(F("Button pressed - very long press"));
+    LOG_WARNING(F("Performing factory reset..."));
+
+#ifndef EMSESP_STANDALONE
+    EMSuart::stop();
+    EMSESP::esp8266React.factoryReset();
+#endif
+}
+
+// push button
+void System::button_init() {
+    if (!myPButton_.init(0, HIGH)) {
+        LOG_INFO(F("External multi-functional button not detected"));
+    } else {
+        LOG_INFO(F("External multi-functional button enabled"));
+    }
+#if defined(ESP8266)
+    pinMode(4, OUTPUT);
+    digitalWrite(4, 0); // set D2 to low for easy connecting D2/D3
+#endif
+
+    // myPButton_.onClick(BUTTON_Debounce, button_OnClick);
+    // myPButton_.onDblClick(BUTTON_DblClickDelay, button_OnDblClick);
+    // myPButton_.onLongPress(BUTTON_LongPressDelay, button_OnLongPress);
+    myPButton_.onVLongPress(BUTTON_VLongPressDelay, button_OnVLongPress);
 }
 
 // init stuff. This is called when settings are changed in the web
@@ -228,8 +272,7 @@ void System::init() {
     other_init();
 
     syslog_init(); // init SysLog
-
-    EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & settings) { hostname(settings.hostname.c_str()); });
+    button_init();
 
     EMSESP::init_tx(); // start UART
 }
@@ -270,6 +313,7 @@ void System::loop() {
     if (syslog_enabled_) {
         syslog_.loop();
     }
+    myPButton_.check(); // check button press
 
     led_monitor();  // check status and report back using the LED
     system_check(); // check system health
@@ -307,17 +351,15 @@ void System::show_mem(const char * note) {
 
 // send periodic MQTT message with system information
 void System::send_heartbeat() {
-    // don't send heartbeat if WiFi is not connected
+    // don't send heartbeat if WiFi or MQTT is not connected
+    if (!Mqtt::connected()) {
+        return;
+    }
+
     int8_t rssi = wifi_quality();
     if (rssi == -1) {
         return;
     }
-
-    uint32_t free_memory = free_mem();
-
-#if defined(ESP8266)
-    uint8_t frag_memory = ESP.getHeapFragmentation();
-#endif
 
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
 
@@ -330,15 +372,16 @@ void System::send_heartbeat() {
         doc["status"] = FJSON("disconnected");
     }
 
-    doc["rssi"]       = rssi;
-    doc["uptime"]     = uuid::log::format_timestamp_ms(uuid::get_uptime_ms(), 3);
-    doc["uptime_sec"] = uuid::get_uptime_sec();
-    doc["mqttfails"]  = Mqtt::publish_fails();
-    doc["txfails"]    = EMSESP::txservice_.telegram_fail_count();
-    doc["rxfails"]    = EMSESP::rxservice_.telegram_error_count();
-    doc["freemem"]    = free_memory;
+    doc["rssi"]         = rssi;
+    doc["uptime"]       = uuid::log::format_timestamp_ms(uuid::get_uptime_ms(), 3);
+    doc["uptime_sec"]   = uuid::get_uptime_sec();
+    doc["mqtt_fails"]   = Mqtt::publish_fails();
+    doc["tx_fails"]     = EMSESP::txservice_.telegram_fail_count();
+    doc["rx_fails"]     = EMSESP::rxservice_.telegram_error_count();
+    doc["dallas_fails"] = EMSESP::sensor_fails();
+    doc["freemem"]      = free_mem();
 #if defined(ESP8266)
-    doc["fragmem"] = frag_memory;
+    doc["fragmem"] = ESP.getHeapFragmentation();
 #endif
     if (analog_enabled_) {
         doc["adc"] = analog_;
@@ -354,9 +397,10 @@ void System::measure_analog() {
     if (!measure_last_ || (uint32_t)(uuid::get_uptime() - measure_last_) >= SYSTEM_MEASURE_ANALOG_INTERVAL) {
         measure_last_ = uuid::get_uptime();
 #if defined(ESP8266)
-        uint16_t a = analogRead(A0);
+        // uint16_t a = analogRead(A0); // 10 bit 3,2V
+        uint16_t a = ((analogRead(A0) * 27) / 8); // scale to esp32 result in mV
 #elif defined(ESP32)
-        uint16_t a = analogRead(36);
+        uint16_t a = analogRead(36); // arduino scale mV
 #else
         uint16_t a = 0; // standalone
 #endif
@@ -817,18 +861,17 @@ bool System::check_upgrade() {
 
             EMSESP::esp8266React.getMqttSettingsService()->update(
                 [&](MqttSettings & mqttSettings) {
-                    mqttSettings.host           = mqtt["ip"] | FACTORY_MQTT_HOST;
-                    mqttSettings.mqtt_format    = (mqtt["nestedjson"] ? Mqtt::Format::NESTED : Mqtt::Format::SINGLE);
-                    mqttSettings.mqtt_qos       = mqtt["qos"] | 0;
-                    mqttSettings.mqtt_retain    = mqtt["retain"];
-                    mqttSettings.username       = mqtt["user"] | "";
-                    mqttSettings.password       = mqtt["password"] | "";
-                    mqttSettings.port           = mqtt["port"] | FACTORY_MQTT_PORT;
-                    mqttSettings.clientId       = FACTORY_MQTT_CLIENT_ID;
-                    mqttSettings.enabled        = mqtt["enabled"];
-                    mqttSettings.keepAlive      = FACTORY_MQTT_KEEP_ALIVE;
-                    mqttSettings.cleanSession   = FACTORY_MQTT_CLEAN_SESSION;
-                    mqttSettings.maxTopicLength = FACTORY_MQTT_MAX_TOPIC_LENGTH;
+                    mqttSettings.host         = mqtt["ip"] | FACTORY_MQTT_HOST;
+                    mqttSettings.mqtt_format  = (mqtt["nestedjson"] ? Mqtt::Format::NESTED : Mqtt::Format::SINGLE);
+                    mqttSettings.mqtt_qos     = mqtt["qos"] | 0;
+                    mqttSettings.mqtt_retain  = mqtt["retain"];
+                    mqttSettings.username     = mqtt["user"] | "";
+                    mqttSettings.password     = mqtt["password"] | "";
+                    mqttSettings.port         = mqtt["port"] | FACTORY_MQTT_PORT;
+                    mqttSettings.clientId     = FACTORY_MQTT_CLIENT_ID;
+                    mqttSettings.enabled      = mqtt["enabled"];
+                    mqttSettings.keepAlive    = FACTORY_MQTT_KEEP_ALIVE;
+                    mqttSettings.cleanSession = FACTORY_MQTT_CLEAN_SESSION;
 
                     return StateUpdateResult::CHANGED;
                 },
@@ -910,17 +953,18 @@ bool System::check_upgrade() {
 // export all settings to JSON text
 // http://ems-esp/api?device=system&cmd=settings
 // value and id are ignored
+// output with true/false, ignore boolean format
 bool System::command_settings(const char * value, const int8_t id, JsonObject & json) {
 #ifdef EMSESP_STANDALONE
     json["test"] = "testing system info command";
 #else
     EMSESP::esp8266React.getWiFiSettingsService()->read([&](WiFiSettings & settings) {
-        char       s[7];
         JsonObject node = json.createNestedObject("WIFI");
         node["ssid"]    = settings.ssid;
         // node["password"]         = settings.password;
-        node["hostname"]         = settings.hostname;
-        node["static_ip_config"] = Helpers::render_boolean(s, settings.staticIPConfig);
+        node["hostname"] = settings.hostname;
+        // Helpers::json_boolean(node, "static_ip_config", settings.staticIPConfig);
+        node["static_ip_config"] = settings.staticIPConfig;
         JsonUtils::writeIP(node, "local_ip", settings.localIP);
         JsonUtils::writeIP(node, "gateway_ip", settings.gatewayIP);
         JsonUtils::writeIP(node, "subnet_mask", settings.subnetMask);
@@ -939,17 +983,18 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
     });
 
     EMSESP::esp8266React.getMqttSettingsService()->read([&](MqttSettings & settings) {
-        char       s[7];
-        JsonObject node  = json.createNestedObject("MQTT");
-        node["enabled"]  = Helpers::render_boolean(s, settings.enabled);
+        JsonObject node = json.createNestedObject("MQTT");
+        // Helpers::json_boolean(node, "enabled", settings.enabled);
+        node["enabled"]  = settings.enabled;
         node["host"]     = settings.host;
         node["port"]     = settings.port;
         node["username"] = settings.username;
         // node["password"]                = settings.password;
-        node["client_id"]               = settings.clientId;
-        node["keep_alive"]              = settings.keepAlive;
-        node["clean_session"]           = Helpers::render_boolean(s, settings.cleanSession);
-        node["max_topic_length"]        = settings.maxTopicLength;
+        node["base"]       = settings.base;
+        node["client_id"]  = settings.clientId;
+        node["keep_alive"] = settings.keepAlive;
+        // Helpers::json_boolean(node, "clean_session", settings.cleanSession);
+        node["clean_session"]           = settings.cleanSession;
         node["publish_time_boiler"]     = settings.publish_time_boiler;
         node["publish_time_thermostat"] = settings.publish_time_thermostat;
         node["publish_time_solar"]      = settings.publish_time_solar;
@@ -958,47 +1003,54 @@ bool System::command_settings(const char * value, const int8_t id, JsonObject & 
         node["publish_time_sensor"]     = settings.publish_time_sensor;
         node["mqtt_format"]             = settings.mqtt_format;
         node["mqtt_qos"]                = settings.mqtt_qos;
-        node["mqtt_retain"]             = Helpers::render_boolean(s, settings.mqtt_retain);
+        // Helpers::json_boolean(node, "mqtt_retain", settings.mqtt_retain);
+        node["mqtt_retain"] = settings.mqtt_retain;
     });
 
     EMSESP::esp8266React.getNTPSettingsService()->read([&](NTPSettings & settings) {
-        char       s[7];
-        JsonObject node   = json.createNestedObject("NTP");
-        node["enabled"]   = Helpers::render_boolean(s, settings.enabled);
+        JsonObject node = json.createNestedObject("NTP");
+        // Helpers::json_boolean(node, "enabled", settings.enabled);
+        node["enabled"]   = settings.enabled;
         node["server"]    = settings.server;
         node["tz_label"]  = settings.tzLabel;
         node["tz_format"] = settings.tzFormat;
     });
 
     EMSESP::esp8266React.getOTASettingsService()->read([&](OTASettings & settings) {
-        char       s[7];
         JsonObject node = json.createNestedObject("OTA");
-        node["enabled"] = Helpers::render_boolean(s, settings.enabled);
+        // Helpers::json_boolean(node, "enabled", settings.enabled);
+        node["enabled"] = settings.enabled;
         node["port"]    = settings.port;
         // node["password"] = settings.password;
     });
 
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        char       s[7];
-        JsonObject node              = json.createNestedObject("Settings");
-        node["tx_mode"]              = settings.tx_mode;
-        node["ems_bus_id"]           = settings.ems_bus_id;
-        node["syslog_enabled"]       = Helpers::render_boolean(s, settings.syslog_enabled);
+        JsonObject node    = json.createNestedObject("Settings");
+        node["tx_mode"]    = settings.tx_mode;
+        node["ems_bus_id"] = settings.ems_bus_id;
+        // Helpers::json_boolean(node, "syslog_enabled", settings.syslog_enabled);
+        node["syslog_enabled"]       = settings.syslog_enabled;
         node["syslog_level"]         = settings.syslog_level;
         node["syslog_mark_interval"] = settings.syslog_mark_interval;
         node["syslog_host"]          = settings.syslog_host;
         node["master_thermostat"]    = settings.master_thermostat;
-        node["shower_timer"]         = Helpers::render_boolean(s, settings.shower_timer);
-        node["shower_alert"]         = Helpers::render_boolean(s, settings.shower_alert);
-        node["rx_gpio"]              = settings.rx_gpio;
-        node["tx_gpio"]              = settings.tx_gpio;
-        node["dallas_gpio"]          = settings.dallas_gpio;
-        node["dallas_parasite"]      = Helpers::render_boolean(s, settings.dallas_parasite);
-        node["led_gpio"]             = settings.led_gpio;
-        node["hide_led"]             = Helpers::render_boolean(s, settings.hide_led);
-        node["api_enabled"]          = Helpers::render_boolean(s, settings.api_enabled);
-        node["bool_format"]          = settings.bool_format;
-        node["analog_enabled"]       = Helpers::render_boolean(s, settings.analog_enabled);
+        // Helpers::json_boolean(node, "shower_timer", settings.shower_timer);
+        // Helpers::json_boolean(node, "shower_alert", settings.shower_alert);
+        node["shower_timer"] = settings.shower_timer;
+        node["shower_alert"] = settings.shower_alert;
+        node["rx_gpio"]      = settings.rx_gpio;
+        node["tx_gpio"]      = settings.tx_gpio;
+        node["dallas_gpio"]  = settings.dallas_gpio;
+        // Helpers::json_boolean(node, "dallas_parasite", settings.dallas_parasite);
+        node["dallas_parasite"] = settings.dallas_parasite;
+        node["led_gpio"]        = settings.led_gpio;
+        // Helpers::json_boolean(node, "hide_led", settings.hide_led);
+        node["hide_led"] = settings.hide_led;
+        // Helpers::json_boolean(node, "api_enabled", settings.api_enabled);
+        node["api_enabled"] = settings.api_enabled;
+        node["bool_format"] = settings.bool_format;
+        // Helpers::json_boolean(node, "analog_enabled", settings.analog_enabled);
+        node["analog_enabled"] = settings.analog_enabled;
     });
 
 #endif
@@ -1019,11 +1071,11 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
     node["fragmem"] = ESP.getHeapFragmentation();
 #endif
 
+    /* Use call system settings for all settings
     node = json.createNestedObject("Settings");
 
     EMSESP::esp8266React.getMqttSettingsService()->read([&](MqttSettings & settings) {
-        char s[7];
-        node["enabled"]                 = Helpers::render_boolean(s, settings.enabled);
+        node["enabled"]                 = settings.enabled;
         node["publish_time_boiler"]     = settings.publish_time_boiler;
         node["publish_time_thermostat"] = settings.publish_time_thermostat;
         node["publish_time_solar"]      = settings.publish_time_solar;
@@ -1032,24 +1084,24 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
         node["publish_time_sensor"]     = settings.publish_time_sensor;
         node["mqtt_format"]             = settings.mqtt_format;
         node["mqtt_qos"]                = settings.mqtt_qos;
-        node["mqtt_retain"]             = Helpers::render_boolean(s, settings.mqtt_retain);
+        node["mqtt_retain"]             = settings.mqtt_retain;
     });
 
     EMSESP::webSettingsService.read([&](WebSettings & settings) {
-        char s[7];
         node["tx_mode"]           = settings.tx_mode;
         node["ems_bus_id"]        = settings.ems_bus_id;
         node["master_thermostat"] = settings.master_thermostat;
         node["rx_gpio"]           = settings.rx_gpio;
         node["tx_gpio"]           = settings.tx_gpio;
         node["dallas_gpio"]       = settings.dallas_gpio;
-        node["dallas_parasite"]   = Helpers::render_boolean(s, settings.dallas_parasite);
+        node["dallas_parasite"]   = settings.dallas_parasite;
         node["led_gpio"]          = settings.led_gpio;
-        node["hide_led"]          = Helpers::render_boolean(s, settings.hide_led);
-        node["api_enabled"]       = Helpers::render_boolean(s, settings.api_enabled);
+        node["hide_led"]          = settings.hide_led;
+        node["api_enabled"]       = settings.api_enabled;
         node["bool_format"]       = settings.bool_format;
-        node["analog_enabled"]    = Helpers::render_boolean(s, settings.analog_enabled);
+        node["analog_enabled"]    = settings.analog_enabled;
     });
+*/
 
     node = json.createNestedObject("Status");
 
@@ -1072,11 +1124,12 @@ bool System::command_info(const char * value, const int8_t id, JsonObject & json
         node["#read requests sent"]   = EMSESP::txservice_.telegram_read_count();
         node["#write requests sent"]  = EMSESP::txservice_.telegram_write_count();
         node["#incomplete telegrams"] = EMSESP::rxservice_.telegram_error_count();
-        node["#tx fails"]             = TxService::MAXIMUM_TX_RETRIES, EMSESP::txservice_.telegram_fail_count();
+        node["#tx fails"]             = EMSESP::txservice_.telegram_fail_count();
         node["rx line quality"]       = EMSESP::rxservice_.quality();
         node["tx line quality"]       = EMSESP::txservice_.quality();
         node["#MQTT publish fails"]   = Mqtt::publish_fails();
         node["#dallas sensors"]       = EMSESP::sensor_devices().size();
+        node["#dallas fails"]         = EMSESP::sensor_fails();
     }
 
     JsonArray devices2 = json.createNestedArray("Devices");

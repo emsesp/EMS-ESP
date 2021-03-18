@@ -1,6 +1,6 @@
 
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -398,7 +398,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
         shell.printfln(F("Testing adding a TC100 thermostat to the EMS bus..."));
 
         // add a thermostat
-        add_device(0x18, 202); // Bosch TC100 - https://github.com/proddy/EMS-ESP/issues/474
+        add_device(0x18, 202); // Bosch TC100 - https://github.com/emsesp/EMS-ESP/issues/474
 
         // 0x0A
         uart_telegram({0x98, 0x0B, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -459,7 +459,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
         add_device(0x10, 158); // RC300
         add_device(0x48, 189); // KM200
 
-        // see https://github.com/proddy/EMS-ESP/issues/390
+        // see https://github.com/emsesp/EMS-ESP/issues/390
 
         uart_telegram_withCRC("90 48 FF 04 01 A6 5C");
         uart_telegram_withCRC("90 48 FF 00 01 A6 4C");
@@ -518,7 +518,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
 
         EMSESP::rxservice_.ems_mask(EMSbus::EMS_MASK_HT3); // switch to junkers
 
-        add_device(0x18, 157); // Bosch CR100 - https://github.com/proddy/EMS-ESP/issues/355
+        add_device(0x18, 157); // Bosch CR100 - https://github.com/emsesp/EMS-ESP/issues/355
 
         // RCPLUSStatusMessage_HC1(0x01A5)
         // 98 00 FF 00 01 A5 00 CF 21 2E 00 00 2E 24 03 25 03 03 01 03 25 00 C8 00 00 11 01 03 (no CRC)
@@ -612,11 +612,11 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
 
         // TX queue example - Me -> Thermostat, (0x91), telegram: 0B 17 91 05 44 45 46 47 (#data=4)
         uint8_t t11[] = {0x44, 0x45, 0x46, 0x47};
-        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, 0x17, 0x91, 0x05, t11, sizeof(t11));
+        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, 0x17, 0x91, 0x05, t11, sizeof(t11), 0);
 
         // TX - raw example test
         uint8_t t12[] = {0x10, 0x08, 0x63, 0x04, 0x64};
-        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, t12, sizeof(t12));
+        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, t12, sizeof(t12), 0);
 
         // TX - sending raw string
         EMSESP::txservice_.send_raw("10 08 63 03 64 65 66");
@@ -631,7 +631,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
         // TX - send EMS+
         const uint8_t t13[] = {0x90, 0x0B, 0xFF, 00, 01,   0xBA, 00,   0x2E, 0x2A, 0x26, 0x1E, 0x03,
                                00,   0xFF, 0xFF, 05, 0x2A, 01,   0xE1, 0x20, 0x01, 0x0F, 05,   0x2A};
-        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, t13, sizeof(t13));
+        EMSESP::txservice_.add(Telegram::Operation::TX_RAW, t13, sizeof(t13), 0);
 
         // EMS+ Junkers read request
         EMSESP::send_read_request(0x16F, 0x10);
@@ -654,7 +654,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
 
         // simulate sending a read request
         // uint8_t t16[] = {0x44, 0x45, 0x46, 0x47}; // Me -> Thermostat, (0x91), telegram: 0B 17 91 05 44 45 46 47 (#data=4)
-        // EMSESP::txservice_.add(Telegram::Operation::TX_RAW, 0x17, 0x91, 0x05, t16, sizeof(t16));
+        // EMSESP::txservice_.add(Telegram::Operation::TX_RAW, 0x17, 0x91, 0x05, t16, sizeof(t16), 0);
         EMSESP::send_read_request(0x91, 0x17);
         // EMSESP::txservice_.show_tx_queue();
 
@@ -716,7 +716,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
         add_device(0x08, 123); // Nefit Trendline
 
         // add a thermostat
-        add_device(0x18, 157); // Bosch CR100 - https://github.com/proddy/EMS-ESP/issues/355
+        add_device(0x18, 157); // Bosch CR100 - https://github.com/emsesp/EMS-ESP/issues/355
 
         // RCPLUSStatusMessage_HC1(0x01A5) - HC1
         uart_telegram({0x98, 0x00, 0xFF, 0x00, 0x01, 0xA5, 0x00, 0xCF, 0x21, 0x2E, 0x00, 0x00, 0x2E, 0x24,
@@ -796,7 +796,7 @@ void Test::run_test(uuid::console::Shell & shell, const std::string & cmd) {
                        0x73, 0xFF, 0xFF, 0xCB, 0xDF, 0xB7, 0xA7, 0xB5, 0x67, 0x77, 0x77, 0xE4, 0xFF, 0xFD, 0x77, 0xFF});
     }
 
-    // https://github.com/proddy/EMS-ESP/issues/380#issuecomment-633663007
+    // https://github.com/emsesp/EMS-ESP/issues/380#issuecomment-633663007
     if (command == "rx3") {
         shell.printfln(F("Testing rx3..."));
 

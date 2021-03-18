@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -149,6 +149,10 @@ class Mqtt {
         return mqttClient_;
     }
 
+    static std::string base() {
+        return mqtt_base_;
+    }
+
   private:
     static uuid::log::Logger logger_;
 
@@ -180,7 +184,7 @@ class Mqtt {
     static constexpr size_t MAX_MQTT_MESSAGES = 20; // size of queue
 #endif
 
-    static constexpr uint32_t MQTT_PUBLISH_WAIT      = 200; // delay between sending publishes, to account for large payloads
+    static constexpr uint32_t MQTT_PUBLISH_WAIT      = 100; // delay between sending publishes, to account for large payloads
     static constexpr uint8_t  MQTT_PUBLISH_MAX_RETRY = 3;   // max retries for giving up on publishing
 
     static std::shared_ptr<const MqttMessage> queue_message(const uint8_t operation, const std::string & topic, const std::string & payload, bool retain);
@@ -195,13 +199,11 @@ class Mqtt {
     struct MQTTSubFunction {
         uint8_t            device_type_;      // which device type, from DeviceType::
         const std::string  topic_;            // short topic name
-        const std::string  full_topic_;       // the fully qualified topic name, usually with the hostname prefixed
         mqtt_subfunction_p mqtt_subfunction_; // can be empty
 
-        MQTTSubFunction(uint8_t device_type, const std::string && topic, const std::string && full_topic, mqtt_subfunction_p mqtt_subfunction)
+        MQTTSubFunction(uint8_t device_type, const std::string && topic, mqtt_subfunction_p mqtt_subfunction)
             : device_type_(device_type)
             , topic_(topic)
-            , full_topic_(full_topic)
             , mqtt_subfunction_(mqtt_subfunction) {
         }
     };
@@ -222,7 +224,7 @@ class Mqtt {
     static uint8_t  connectcount_;
 
     // settings, copied over
-    static std::string hostname_;
+    static std::string mqtt_base_;
     static uint8_t     mqtt_qos_;
     static bool        mqtt_retain_;
     static uint32_t    publish_time_;

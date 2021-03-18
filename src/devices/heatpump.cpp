@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@ Heatpump::Heatpump(uint8_t device_type, uint8_t device_id, uint8_t product_id, c
 
 // creates JSON doc from values
 // returns false if empty
-bool Heatpump::export_values(JsonObject & json) {
+bool Heatpump::export_values(JsonObject & json, int8_t id) {
     if (Helpers::hasValue(airHumidity_)) {
         json["airHumidity"] = (float)airHumidity_ / 2;
     }
@@ -47,7 +47,7 @@ bool Heatpump::export_values(JsonObject & json) {
     return json.size();
 }
 
-void Heatpump::device_info_web(JsonArray & root) {
+void Heatpump::device_info_web(JsonArray & root, uint8_t & part) {
     // fetch the values into a JSON document
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
     JsonObject                                     json = doc.to<JsonObject>();
@@ -85,10 +85,10 @@ void Heatpump::register_mqtt_ha_config() {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_HA_CONFIG> doc;
     doc["name"]    = F_(EMSESP);
     doc["uniq_id"] = F_(heatpump);
-    doc["ic"]      = F_(iconheatpump);
+    doc["ic"]      = F_(iconpump);
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/heatpump_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/heatpump_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["val_tpl"] = FJSON("{{value_json.airHumidity}}");

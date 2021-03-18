@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -71,10 +71,20 @@ void DallasSensor::loop() {
                 YIELD;
                 bus_.skip();
                 bus_.write(CMD_CONVERT_TEMP, parasite_ ? 1 : 0);
-                state_ = State::READING;
+                state_     = State::READING;
+                scanretry_ = 0;
             } else {
                 // no sensors found
-                // LOG_ERROR(F("Bus reset failed")); // uncomment for debug
+                if (sensors_.size()) {
+                    sensorfails_++;
+                    if (++scanretry_ > SCAN_MAX) { // every 30 sec
+                        scanretry_ = 0;
+                        LOG_ERROR(F("Bus reset failed"));
+                        for (auto & sensor : sensors_) {
+                            sensor.temperature_c = EMS_VALUE_SHORT_NOTSET;
+                        }
+                    }
+                }
             }
             last_activity_ = time_now;
         }
@@ -86,11 +96,13 @@ void DallasSensor::loop() {
         } else if (time_now - last_activity_ > READ_TIMEOUT_MS) {
             LOG_WARNING(F("Dallas sensor read timeout"));
             state_ = State::IDLE;
+            sensorfails_++;
         }
     } else if (state_ == State::SCANNING) {
         if (time_now - last_activity_ > SCAN_TIMEOUT_MS) {
             LOG_ERROR(F("Dallas sensor scan timeout"));
             state_ = State::IDLE;
+            sensorfails_++;
         } else {
             uint8_t addr[ADDR_LEN] = {0};
 
@@ -125,14 +137,18 @@ void DallasSensor::loop() {
                                 sensors_.back().read          = true;
                                 changed_                      = true;
                             }
+                        } else {
+                            sensorfails_++;
                         }
                         break;
 
                     default:
+                        sensorfails_++;
                         LOG_ERROR(F("Unknown dallas sensor %s"), Sensor(addr).to_string().c_str());
                         break;
                     }
                 } else {
+                    sensorfails_++;
                     LOG_ERROR(F("Invalid dallas sensor %s"), Sensor(addr).to_string().c_str());
                 }
             } else {
@@ -140,7 +156,7 @@ void DallasSensor::loop() {
                     bus_.depower();
                 }
                 // check for missing sensors after some samples
-                if (++scancnt_ > 5) {
+                if (++scancnt_ > SCAN_MAX) {
                     for (auto & sensor : sensors_) {
                         if (!sensor.read) {
                             sensor.temperature_c = EMS_VALUE_SHORT_NOTSET;
@@ -149,11 +165,11 @@ void DallasSensor::loop() {
                         sensor.read = false;
                     }
                     scancnt_ = 0;
-                } else if (scancnt_ == -2) { // startup
+                } else if (scancnt_ == SCAN_START + 1) { // startup
                     firstscan_ = sensors_.size();
                     LOG_DEBUG(F("Adding %d dallassensor(s) from first scan"), firstscan_);
                 } else if ((scancnt_ <= 0) && (firstscan_ != sensors_.size())) { // check 2 times for no change of sensor #
-                    scancnt_ = -3;
+                    scancnt_ = SCAN_START;
                     sensors_.clear(); // restart scaning and clear to get correct numbering
                 }
                 state_ = State::IDLE;
@@ -344,8 +360,8 @@ void DallasSensor::publish_values(const bool force) {
                 StaticJsonDocument<EMSESP_MAX_JSON_SIZE_MEDIUM> config;
                 config["dev_cla"] = FJSON("temperature");
 
-                char stat_t[50];
-                snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/dallassensor_data"), System::hostname().c_str());
+                char stat_t[128];
+                snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/dallassensor_data"), Mqtt::base().c_str());
                 config["stat_t"] = stat_t;
 
                 config["unit_of_meas"] = FJSON("°C");
@@ -375,7 +391,7 @@ void DallasSensor::publish_values(const bool force) {
         sensor_no++; // increment sensor count
     }
 
-    // doc.shrinkToFit();
+    doc.shrinkToFit();
     Mqtt::publish(F("dallassensor_data"), doc.as<JsonObject>());
 }
 

@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -67,7 +67,7 @@ void EMSESPShell::display_banner() {
     println();
     printfln(F("┌──────────────────────────────────────────┐"));
     printfln(F("│ %sEMS-ESP version %-10s%s               │"), COLOR_BOLD_ON, EMSESP_APP_VERSION, COLOR_BOLD_OFF);
-    printfln(F("│ %s%shttps://github.com/proddy/EMS-ESP%s        │"), COLOR_BRIGHT_GREEN, COLOR_UNDERLINE, COLOR_RESET);
+    printfln(F("│ %s%shttps://github.com/emsesp/EMS-ESP%s        │"), COLOR_BRIGHT_GREEN, COLOR_UNDERLINE, COLOR_RESET);
     printfln(F("│                                          │"));
     printfln(F("│ type %shelp%s to show available commands     │"), COLOR_UNDERLINE, COLOR_RESET);
     printfln(F("└──────────────────────────────────────────┘"));
@@ -288,7 +288,7 @@ void EMSESPShell::add_console_commands() {
                           [](Shell & shell, const std::vector<std::string> & arguments) {
                               uint16_t value = Helpers::atoint(arguments.front().c_str());
                               telnet_.initial_idle_timeout(value * 60);
-                              shell.printfln(F("Telnet timout is %d minutes"), value);
+                              shell.printfln(F("Telnet timeout is %d minutes"), value);
                           });
 #endif
 
@@ -312,9 +312,9 @@ void EMSESPShell::add_console_commands() {
                                       watch_id = WATCH_ID_NONE;
                                   } else {
                                       watch_id = Helpers::hextoint(arguments[0].c_str());
-                                      if ((emsesp::EMSESP::watch() == EMSESP::WATCH_OFF) && watch_id) {
+                                      if (watch_id && ((emsesp::EMSESP::watch() == EMSESP::WATCH_OFF) || (emsesp::EMSESP::watch() == EMSESP::WATCH_UNKNOWN))) {
                                           emsesp::EMSESP::watch(EMSESP::WATCH_ON); // on
-                                      } else if ((emsesp::EMSESP::watch() == EMSESP::WATCH_UNKNOWN) || !watch_id) {
+                                      } else if (!watch_id) {
                                           return;
                                       }
                                   }
@@ -334,8 +334,9 @@ void EMSESPShell::add_console_commands() {
                               }
 
                               // if logging is off, the watch won't show anything, show force it back to NOTICE
-                              if (!shell.logger().enabled(Level::NOTICE)) {
+                              if (shell.log_level() < Level::NOTICE) {
                                   shell.log_level(Level::NOTICE);
+                                  shell.printfln(F("Force log level to notice"));
                               }
 
                               if (watch == EMSESP::WATCH_ON) {
@@ -396,13 +397,18 @@ void EMSESPShell::add_console_commands() {
                 ok = Command::call(device_type, cmd, nullptr, -1, json);
             } else if (arguments.size() == 3) {
                 // has a value but no id
-                ok = Command::call(device_type, cmd, arguments.back().c_str(), -1, json);
+                if (strncmp(cmd, "info", 4) == 0) {
+                    ok = Command::call(device_type, cmd, nullptr, atoi(arguments.back().c_str()), json);
+                } else {
+                    ok = Command::call(device_type, cmd, arguments.back().c_str(), -1, json);
+                }
             } else {
                 // use value, which could be an id or hc
                 ok = Command::call(device_type, cmd, arguments[2].c_str(), atoi(arguments[3].c_str()), json);
             }
 
             if (ok && json.size()) {
+                doc.shrinkToFit();
                 serializeJsonPretty(doc, shell);
                 shell.println();
             }
@@ -699,13 +705,7 @@ void Console::loop() {
     telnet_.loop();
 #endif
 
-#if defined(ESP8266)
-    if (!EMSuart::sending()) {
-        Shell::loop_all();
-    }
-#else
     Shell::loop_all();
-#endif
 }
 
 } // namespace emsesp

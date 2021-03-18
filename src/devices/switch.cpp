@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -36,12 +36,12 @@ Switch::Switch(uint8_t device_type, uint8_t device_id, uint8_t product_id, const
 }
 
 // fetch the values into a JSON document for display in the web
-void Switch::device_info_web(JsonArray & root) {
+void Switch::device_info_web(JsonArray & root, uint8_t & part) {
     StaticJsonDocument<EMSESP_MAX_JSON_SIZE_SMALL> doc;
     JsonObject                                     json = doc.to<JsonObject>();
     if (export_values(json)) {
         create_value_json(root, F("activated"), nullptr, F_(activated), nullptr, json);
-        create_value_json(root, F("flowTemp"), nullptr, F_(flowTemp), F_(degrees), json);
+        create_value_json(root, F("flowTemp"), nullptr, F_(flowTempHc), F_(degrees), json);
         create_value_json(root, F("status"), nullptr, F_(status), nullptr, json);
     }
 }
@@ -63,17 +63,14 @@ void Switch::publish_values(JsonObject & json, bool force) {
 }
 
 // export values to JSON
-bool Switch::export_values(JsonObject & json) {
-    if (Helpers::hasValue(flowTemp_)) {
-        char s[7];
-        json["activated"] = Helpers::render_value(s, activated_, EMS_VALUE_BOOL);
+bool Switch::export_values(JsonObject & json, int8_t id) {
+    Helpers::json_boolean(json, "activated", activated_);
+
+    if (Helpers::hasValue(flowTempHc_)) {
+        json["flowTemp"] = (float)flowTempHc_ / 10;
     }
 
-    if (Helpers::hasValue(flowTemp_)) {
-        json["flowTemp"] = (float)flowTemp_ / 10;
-    }
-
-    if (Helpers::hasValue(flowTemp_)) {
+    if (Helpers::hasValue(status_)) {
         json["status"] = status_;
     }
 
@@ -96,7 +93,7 @@ void Switch::register_mqtt_ha_config() {
     }
 
     // if we don't have valid values for this HC don't add it ever again
-    if (!Helpers::hasValue(flowTemp_)) {
+    if (!Helpers::hasValue(flowTempHc_)) {
         return;
     }
 
@@ -113,8 +110,8 @@ void Switch::register_mqtt_ha_config() {
 
     doc["ic"] = FJSON("mdi:home-thermometer-outline");
 
-    char stat_t[50];
-    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/switch_data"), System::hostname().c_str());
+    char stat_t[128];
+    snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/switch_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
     doc["val_tpl"] = FJSON("{{value_json.type}}"); // HA needs a single value. We take the type which is wwc or hc
@@ -130,7 +127,7 @@ void Switch::register_mqtt_ha_config() {
     Mqtt::publish_ha(F("homeassistant/sensor/ems-esp/switch/config"), doc.as<JsonObject>()); // publish the config payload with retain flag
 
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(activated), device_type(), "activated", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(flowTemp), device_type(), "flowTemp", F_(degrees), F_(icontemperature));
+    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(flowTempHc), device_type(), "flowTempHc", F_(degrees), F_(iconwatertemp));
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(status), device_type(), "status", nullptr, nullptr);
 
     mqtt_ha_config_ = true; // done
@@ -145,7 +142,7 @@ void Switch::process_WM10SetMessage(std::shared_ptr<const Telegram> telegram) {
 // message 0x9C holds flowtemp and unknown status value
 // Switch(0x11) -> All(0x00), ?(0x9C), data: 01 BA 00 01 00
 void Switch::process_WM10MonitorMessage(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(flowTemp_, 0); // is * 10
+    changed_ |= telegram->read_value(flowTempHc_, 0); // is * 10
     changed_ |= telegram->read_value(status_, 2);
     // changed_ |= telegram->read_value(status2_, 3); // unknown
 }
@@ -153,7 +150,7 @@ void Switch::process_WM10MonitorMessage(std::shared_ptr<const Telegram> telegram
 // message 0x1E flow temperature, same as in 9C, published often, republished also by boiler UBAFast 0x18
 // Switch(0x11) -> Boiler(0x08), ?(0x1E), data: 01 BA
 void Switch::process_WM10TempMessage(std::shared_ptr<const Telegram> telegram) {
-    changed_ |= telegram->read_value(flowTemp_, 0); // is * 10
+    changed_ |= telegram->read_value(flowTempHc_, 0); // is * 10
 }
 
 } // namespace emsesp

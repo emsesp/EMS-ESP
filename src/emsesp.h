@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -123,6 +123,9 @@ class EMSESP {
     static bool have_sensors() {
         return (!(dallassensor_.sensors().empty()));
     }
+    static uint32_t sensor_fails() {
+        return dallassensor_.fails();
+    }
 
     enum Watch : uint8_t { WATCH_OFF, WATCH_ON, WATCH_RAW, WATCH_UNKNOWN };
     static void     watch_id(uint16_t id);
@@ -139,6 +142,7 @@ class EMSESP {
     static uint8_t watch() {
         return watch_;
     }
+
     static void set_read_id(uint16_t id) {
         read_id_ = id;
     }
@@ -202,7 +206,7 @@ class EMSESP {
     static void publish_response(std::shared_ptr<const Telegram> telegram);
     static void publish_all_loop();
 
-    static bool command_info(uint8_t device_type, JsonObject & json);
+    static bool command_info(uint8_t device_type, JsonObject & json, const int8_t id);
 
     static constexpr uint32_t EMS_FETCH_FREQUENCY = 60000; // check every minute
     static uint32_t           last_fetch_;
@@ -227,6 +231,7 @@ class EMSESP {
     static uint8_t  unique_id_count_;
     static bool     trace_raw_;
     static uint64_t tx_delay_;
+    static bool     force_scan_;
 };
 
 } // namespace emsesp

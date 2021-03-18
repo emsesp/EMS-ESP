@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -123,34 +123,70 @@ char * Helpers::smallitoa(char * result, const uint16_t value) {
     return result;
 }
 
+// set a json value to boolean format
+void Helpers::json_boolean(JsonObject & json, const char * name, uint8_t value) {
+    if (value == EMS_VALUE_BOOL_NOTSET) {
+        return;
+    }
+    if (bool_format() == BOOL_FORMAT_ONOFF) {
+        json[name] = (value != EMS_VALUE_BOOL_OFF) ? "on" : "off";
+    } else if (bool_format() == BOOL_FORMAT_ONOFF_CAP) {
+        json[name] = (value != EMS_VALUE_BOOL_OFF) ? "ON" : "OFF";
+    } else if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
+        json[name] = (value != EMS_VALUE_BOOL_OFF); // ? true : false;
+    } else {
+        json[name] = (value != EMS_VALUE_BOOL_OFF) ? 1 : 0;
+    }
+}
+
+// set a json value to enumerated strings or numbers
+void Helpers::json_enum(JsonObject & json, const char * name, const std::vector<const __FlashStringHelper *> & value, const uint8_t no) {
+    if (no >= value.size()) {
+        return; // out of bounds
+    }
+    // return as number
+    if (bool_format() == BOOL_FORMAT_NUMBERS) {
+        json[name] = no;
+        return;
+    }
+    // return text
+    json[name] = uuid::read_flash_string(value[no]);
+    /* replace on/off by true/false, but mismatch to other strings in the enum
+    if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
+        if (no == 0 && uuid::read_flash_string(value[0]) == "off") {
+            json[name] = false;
+        } else if (no == 1 && uuid::read_flash_string(value[1]) == "on") {
+            json[name] = true;
+        }
+    }
+    */
+}
+
+// set json value to time from uint32
+void Helpers::json_time(JsonObject & json, const char * name, const uint32_t value, const bool textformat) {
+    if (value == EMS_VALUE_ULONG_NOTSET || value == EMS_VALUE_ULONG_NOTSET / 60) {
+        return;
+    }
+    if (textformat) {
+        char s[40];
+        snprintf_P(s, 40, PSTR("%d days %d hours %d minutes"), (value / 1440), ((value % 1440) / 60), (value % 60));
+        json[name] = s;
+        return;
+    }
+    json[name] = value;
+}
+
+
 // work out how to display booleans
 char * Helpers::render_boolean(char * result, bool value) {
     if (bool_format() == BOOL_FORMAT_ONOFF) {
         strlcpy(result, value ? "on" : "off", 5);
+    } else if (bool_format() == BOOL_FORMAT_ONOFF_CAP) {
+        strlcpy(result, value ? "ON" : "OFF", 5);
     } else if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
         strlcpy(result, value ? "true" : "false", 7);
     } else {
         strlcpy(result, value ? "1" : "0", 2);
-    }
-
-    return result;
-}
-
-// depending on format render a number or a string
-char * Helpers::render_enum(char * result, const std::vector<const __FlashStringHelper *> & value, const uint8_t no) {
-    if (no >= value.size()) {
-        return nullptr; // out of bounds
-    }
-
-    strcpy(result, uuid::read_flash_string(value[no]).c_str());
-    if (bool_format() == BOOL_FORMAT_TRUEFALSE) {
-        if (no == 0 && uuid::read_flash_string(value[0]) == "off") {
-            strlcpy(result, "false", 7);
-        } else if (no == 1 && uuid::read_flash_string(value[1]) == "on") {
-            strlcpy(result, "true", 6);
-        }
-    } else if (bool_format() == BOOL_FORMAT_NUMBERS) {
-        itoa(result, no);
     }
 
     return result;
@@ -163,20 +199,8 @@ char * Helpers::render_value(char * result, const char * value, uint8_t format) 
 }
 
 // convert unsigned int (single byte) to text value and returns it
-// format: 255(0xFF)=boolean, 0=no formatting, otherwise divide by format
+// format: 0=no formatting, otherwise divide by format
 char * Helpers::render_value(char * result, uint8_t value, uint8_t format) {
-    // special check if its a boolean
-    if (format == EMS_VALUE_BOOL) {
-        if (value == EMS_VALUE_BOOL_OFF) {
-            render_boolean(result, false);
-        } else if (value == EMS_VALUE_BOOL_NOTSET) {
-            return nullptr;
-        } else {
-            render_boolean(result, true); // assume on. could have value 0x01 or 0xFF
-        }
-        return result;
-    }
-
     if (!hasValue(value)) {
         return nullptr;
     }
@@ -348,6 +372,10 @@ std::string Helpers::data_to_hex(const uint8_t * data, const uint8_t length) {
 // works with only positive numbers
 uint32_t Helpers::hextoint(const char * hex) {
     uint32_t val = 0;
+    // remove optional leading '0x'
+    if (hex[0] == '0' && hex[1] == 'x') {
+        hex += 2;
+    }
     while (*hex) {
         // get current character then increment
         char byte = *hex++;
@@ -457,12 +485,12 @@ bool Helpers::value2bool(const char * v, bool & value) {
 
     std::string bool_str = toLower(v); // convert to lower case
 
-    if ((bool_str == "on") || (bool_str == "1") or (bool_str == "true")) {
+    if ((bool_str == "on") || (bool_str == "1") or (bool_str == "true") || (bool_str == "high")) {
         value = true;
         return true; // is a bool
     }
 
-    if ((bool_str == "off") || (bool_str == "0") or (bool_str == "false")) {
+    if ((bool_str == "off") || (bool_str == "0") or (bool_str == "false") || (bool_str == "low")) {
         value = false;
         return true; // is a bool
     }
@@ -478,7 +506,7 @@ bool Helpers::value2enum(const char * v, uint8_t & value, const std::vector<cons
     std::string str = toLower(v);
     for (value = 0; value < strs.size(); value++) {
         std::string str1 = uuid::read_flash_string(strs[value]);
-        if ((str1 == "off" && str == "false") || (str1 == "on" && str == "true") || (str == str1) || (v[0] == '0' + value)) {
+        if ((str1 == "off" && str == "false") || (str1 == "on" && str == "true") || (str == str1) || (v[0] == ('0' + value) && v[1] == '\0')) {
             return true;
         }
     }

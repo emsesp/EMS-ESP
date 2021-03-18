@@ -1,5 +1,5 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -274,8 +274,9 @@ class TxService : public EMSbus {
                  const uint8_t  offset,
                  uint8_t *      message_data,
                  const uint8_t  message_length,
+                 const uint16_t validateid,
                  const bool     front = false);
-    void     add(const uint8_t operation, const uint8_t * data, const uint8_t length, const bool front = false);
+    void     add(const uint8_t operation, const uint8_t * data, const uint8_t length, const uint16_t validateid, const bool front = false);
     void     read_request(const uint16_t type_id, const uint8_t dest, const uint8_t offset = 0);
     void     send_raw(const char * telegram_data);
     void     send_poll();
@@ -349,12 +350,14 @@ class TxService : public EMSbus {
         const uint16_t                        id_;
         const std::shared_ptr<const Telegram> telegram_;
         const bool                            retry_; // is a retry
+        const uint16_t                        validateid_;
 
         ~QueuedTxTelegram() = default;
-        QueuedTxTelegram(uint16_t id, std::shared_ptr<Telegram> && telegram, bool retry)
+        QueuedTxTelegram(uint16_t id, std::shared_ptr<Telegram> && telegram, bool retry, uint16_t validateid)
             : id_(id)
             , telegram_(std::move(telegram))
-            , retry_(retry) {
+            , retry_(retry)
+            , validateid_(validateid) {
         }
     };
 
@@ -367,6 +370,7 @@ class TxService : public EMSbus {
 #else
     static constexpr uint8_t MAXIMUM_TX_RETRIES = 3;
 #endif
+    static constexpr uint32_t POST_SEND_DELAY = 2000;
 
   private:
     std::list<QueuedTxTelegram> tx_telegrams_; // the Tx queue
@@ -377,12 +381,13 @@ class TxService : public EMSbus {
 
     std::shared_ptr<Telegram> telegram_last_;
     uint16_t                  telegram_last_post_send_query_; // which type ID to query after a successful send, to read back the values just written
-    uint8_t                   retry_count_ = 0;               // count for # Tx retries
+    uint8_t                   retry_count_  = 0;              // count for # Tx retries
+    uint32_t                  delayed_send_ = 0;              // manage delay for post send query
 
     uint8_t tx_telegram_id_ = 0; // queue counter
 
     void send_telegram(const QueuedTxTelegram & tx_telegram);
-    void send_telegram(const uint8_t * data, const uint8_t length);
+    // void send_telegram(const uint8_t * data, const uint8_t length);
 };
 
 } // namespace emsesp

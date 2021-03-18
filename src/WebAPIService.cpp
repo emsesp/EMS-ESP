@@ -1,7 +1,7 @@
 /*
- * EMS-ESP - https://github.com/proddy/EMS-ESP
+ * EMS-ESP - https://github.com/emsesp/EMS-ESP
  * Copyright 2020  Paul Derbyshire
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -101,6 +101,7 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
                ok ? PSTR("OK") : PSTR("Invalid"));
     EMSESP::logger().debug(debug.c_str());
     if (json.size()) {
+        doc.shrinkToFit();
         std::string buffer2;
         serializeJson(doc, buffer2);
         EMSESP::logger().debug("json (max 255 chars): %s", buffer2.c_str());
@@ -109,6 +110,7 @@ void WebAPIService::webAPIService(AsyncWebServerRequest * request) {
 
     // if we have returned data in JSON format, send this to the WEB
     if (json.size()) {
+        doc.shrinkToFit();
         std::string buffer;
         serializeJsonPretty(doc, buffer);
         request->send(200, "text/plain", buffer.c_str());
