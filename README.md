@@ -8,7 +8,6 @@ This is the firmware for the ESP8266.
 [![release-date](https://img.shields.io/github/release-date/proddy/EMS-ESP.svg?label=Released)](https://github.com/proddy/EMS-ESP/commits/master)
 [![license](https://img.shields.io/github/license/proddy/EMS-ESP.svg)](LICENSE)
 [![Build ESP8266 Dev Firmware](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml/badge.svg?branch=esp8266_dev)](https://github.com/proddy/EMS-ESP/actions/workflows/build_esp8266_dev_firmware.yml)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/5540f03fb3824699ad64ca8d9631c123)](https://www.codacy.com/gh/emsesp/EMS-ESP/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=emsesp/EMS-ESP&amp;utm_campaign=Badge_Grade)
 [![downloads](https://img.shields.io/github/downloads/proddy/EMS-ESP/total.svg)](https://github.com/proddy/EMS-ESP/releases)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/proddy/EMS-ESP.svg)](http://isitmaintained.com/project/proddy/EMS-ESP "Percentage of issues still open")
