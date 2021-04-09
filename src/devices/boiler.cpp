@@ -1269,9 +1269,7 @@ bool Boiler::set_flow_temp(const char * value, const int8_t id) {
     }
 
     LOG_INFO(F("Setting boiler flow temperature to %d C"), v);
-    // some boiler have it in 0x1A, some in 0x35, but both telegrams are sometimes writeonly
     write_command(EMS_TYPE_UBASetPoints, 0, v, EMS_TYPE_UBASetPoints);
-    write_command(0x35, 3, v, 0x35);
 
     return true;
 }
