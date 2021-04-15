@@ -661,7 +661,7 @@ bool Thermostat::ha_config(bool force) {
     }
 
     // set up the main controller
-    if (!ha_registered() && uuid::get_uptime_sec() > 60) {
+    if (!ha_registered() && uuid::get_uptime_sec() > (EMSESP::tx_delay() + 60u)) {
         register_mqtt_ha_config();
         ha_registered(true);
         // return false; // heating circuits in next cycle

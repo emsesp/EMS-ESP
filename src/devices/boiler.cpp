@@ -958,10 +958,10 @@ void Boiler::publish_values(JsonObject & json, bool force) {
             mqtt_ha_config_ww_ = false;
         }
         // register ww in next cycle if both unregistered
-        if (!mqtt_ha_config_ && uuid::get_uptime_sec() > 60) {
+        if (!mqtt_ha_config_ && uuid::get_uptime_sec() > (EMSESP::tx_delay() + 60u)) {
             register_mqtt_ha_config();
             return;
-        } else if (!mqtt_ha_config_ww_ && uuid::get_uptime_sec() > 60) {
+        } else if (!mqtt_ha_config_ww_ && uuid::get_uptime_sec() > (EMSESP::tx_delay() + 60u)) {
             register_mqtt_ha_config_ww();
             return;
         }
