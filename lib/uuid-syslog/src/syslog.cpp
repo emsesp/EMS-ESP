@@ -388,12 +388,13 @@ bool SyslogService::can_transmit() {
 
 bool SyslogService::transmit(const QueuedLogMessage & message) {
     // modifications by Proddy. From https://github.com/emsesp/EMS-ESP/issues/395#issuecomment-640053528
+    // also see https://github.com/emsesp/EMS-ESP/issues/758
     struct tm tm;
-    struct tm utc;
     int8_t    tz = 0;
 
     tm.tm_year = 0;
     if (message.time_.tv_sec != (time_t)-1) {
+        struct tm utc;
         gmtime_r(&message.time_.tv_sec, &utc);
         localtime_r(&message.time_.tv_sec, &tm);
         tz = tm.tm_hour - utc.tm_hour;
@@ -421,16 +422,11 @@ bool SyslogService::transmit(const QueuedLogMessage & message) {
         udp_.print('-');
     }
 
-    // udp_.printf_P(PSTR(" %s - - - - \xEF\xBB\xBF"), hostname_.c_str());
-    udp_.printf_P(PSTR(" %s %s: - - - \xEF\xBB\xBF"), hostname_.c_str(), uuid::read_flash_string(message.content_->name).c_str());
+    udp_.printf_P(PSTR(" %s %s - - - \xEF\xBB\xBF"), hostname_.c_str(), uuid::read_flash_string(message.content_->name).c_str());
 
     udp_.print(uuid::log::format_timestamp_ms(message.content_->uptime_ms, 3).c_str());
 
-// #pragma GCC diagnostic push
-// #pragma GCC diagnostic ignored "-Wformat"
-    // udp_.printf_P(PSTR(" %c %lu: [%S] "), uuid::log::format_level_char(message.content_->level), message.id_, message.content_->name);
     udp_.printf_P(PSTR(" %c %lu: "), uuid::log::format_level_char(message.content_->level), message.id_);
-// #pragma GCC diagnostic pop
     udp_.print(message.content_->text.c_str());
     bool ok = (udp_.endPacket() == 1);
 
