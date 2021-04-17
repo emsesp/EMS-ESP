@@ -168,11 +168,11 @@ Thermostat::Thermostat(uint8_t device_type, uint8_t device_id, uint8_t product_i
         EMSESP::send_read_request(monitor_typeids[i], device_id);
     }
 
-    /* do not flood tx-queue now, these values are fetched later by toggle fetch
-
     for (uint8_t i = 0; i < set_typeids.size(); i++) {
         EMSESP::send_read_request(set_typeids[i], device_id);
     }
+
+    /* do not flood tx-queue now, these values are fetched later by toggle fetch
     for (uint8_t i = 0; i < summer_typeids.size(); i++) {
         EMSESP::send_read_request(summer_typeids[i], device_id);
     }
@@ -779,6 +779,11 @@ std::shared_ptr<Thermostat::HeatingCircuit> Thermostat::heating_circuit(std::sha
         }
     }
 
+    // register new heatingcircuits only on active monitor telegrams
+    if (!toggle_) {
+        return nullptr;
+    }
+
     // create a new heating circuit object
     auto new_hc = std::make_shared<Thermostat::HeatingCircuit>(hc_num);
     heating_circuits_.push_back(new_hc);
@@ -816,7 +821,7 @@ void Thermostat::register_mqtt_ha_config() {
     doc["stat_t"] = stat_t;
 
     doc["name"]    = FJSON("Thermostat Status");
-    doc["val_tpl"] = FJSON("{{value_json.errorcode}}"); // default value - must have one, so we use errorcode
+    doc["val_tpl"] = FJSON("{{value_json.dateTime}}"); // default value - must have one, so we use dateTime
     JsonObject dev = doc.createNestedObject("dev");
     dev["name"]    = FJSON("EMS-ESP Thermostat");
     dev["sw"]      = EMSESP_APP_VERSION;
@@ -827,7 +832,10 @@ void Thermostat::register_mqtt_ha_config() {
     Mqtt::publish_ha(F("homeassistant/sensor/ems-esp/thermostat/config"), doc.as<JsonObject>()); // publish the config payload with retain flag
 
     Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(time), device_type(), "dateTime", nullptr, nullptr);
-    Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(error), device_type(), "errorcode", nullptr, nullptr);
+
+    if (Helpers::hasValue(errorNumber_)) {
+        Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(error), device_type(), "errorcode", nullptr, nullptr);
+    }
 
     uint8_t model = this->model();
 
