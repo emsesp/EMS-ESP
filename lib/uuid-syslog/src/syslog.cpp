@@ -408,7 +408,7 @@ bool SyslogService::transmit(const QueuedLogMessage & message) {
     udp_.printf_P(PSTR("<%u>1 "), ((unsigned int)message.content_->facility * 8) + std::min(7U, (unsigned int)message.content_->level));
 
     if (tm.tm_year != 0) {
-        udp_.printf_P(PSTR("%04u-%02u-%02uT%02u:%02u:%02u.%06lu%+02:00"),
+        udp_.printf_P(PSTR("%04u-%02u-%02uT%02u:%02u:%02u.%06lu%+02d:00"),
                       tm.tm_year + 1900,
                       tm.tm_mon + 1,
                       tm.tm_mday,
@@ -422,7 +422,7 @@ bool SyslogService::transmit(const QueuedLogMessage & message) {
     }
 
     // udp_.printf_P(PSTR(" %s - - - - \xEF\xBB\xBF"), hostname_.c_str());
-    udp_.printf_P(PSTR(" %s %s: - - - \xEF\xBB\xBF"), hostname_.c_str(), uuid::read_flash_string( message.content_->name).c_str());
+    udp_.printf_P(PSTR(" %s %s: - - - \xEF\xBB\xBF"), hostname_.c_str(), uuid::read_flash_string(message.content_->name).c_str());
 
     udp_.print(uuid::log::format_timestamp_ms(message.content_->uptime_ms, 3).c_str());
 
