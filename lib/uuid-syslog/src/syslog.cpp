@@ -389,10 +389,15 @@ bool SyslogService::can_transmit() {
 bool SyslogService::transmit(const QueuedLogMessage & message) {
     // modifications by Proddy. From https://github.com/emsesp/EMS-ESP/issues/395#issuecomment-640053528
     struct tm tm;
+    struct tm utc;
+    int8_t    tz = 0;
 
     tm.tm_year = 0;
     if (message.time_.tv_sec != (time_t)-1) {
-        gmtime_r(&message.time_.tv_sec, &tm);
+        gmtime_r(&message.time_.tv_sec, &utc);
+        localtime_r(&message.time_.tv_sec, &tm);
+        tz = tm.tm_hour - utc.tm_hour;
+        tz = tz > 12 ? tz - 24 : tz < -12 ? tz + 24 : tz;
     }
 
     if (udp_.beginPacket(host_, port_) != 1) {
@@ -403,25 +408,29 @@ bool SyslogService::transmit(const QueuedLogMessage & message) {
     udp_.printf_P(PSTR("<%u>1 "), ((unsigned int)message.content_->facility * 8) + std::min(7U, (unsigned int)message.content_->level));
 
     if (tm.tm_year != 0) {
-        udp_.printf_P(PSTR("%04u-%02u-%02uT%02u:%02u:%02u.%06luZ"),
+        udp_.printf_P(PSTR("%04u-%02u-%02uT%02u:%02u:%02u.%06lu%+02:00"),
                       tm.tm_year + 1900,
                       tm.tm_mon + 1,
                       tm.tm_mday,
                       tm.tm_hour,
                       tm.tm_min,
                       tm.tm_sec,
-                      (unsigned long)message.time_.tv_usec);
+                      (unsigned long)message.time_.tv_usec,
+                      tz);
     } else {
         udp_.print('-');
     }
 
-    udp_.printf_P(PSTR(" %s - - - - \xEF\xBB\xBF"), hostname_.c_str());
+    // udp_.printf_P(PSTR(" %s - - - - \xEF\xBB\xBF"), hostname_.c_str());
+    udp_.printf_P(PSTR(" %s %s: - - - \xEF\xBB\xBF"), hostname_.c_str(), uuid::read_flash_string( message.content_->name).c_str());
+
     udp_.print(uuid::log::format_timestamp_ms(message.content_->uptime_ms, 3).c_str());
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat"
-    udp_.printf_P(PSTR(" %c %lu: [%S] "), uuid::log::format_level_char(message.content_->level), message.id_, message.content_->name);
-#pragma GCC diagnostic pop
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wformat"
+    // udp_.printf_P(PSTR(" %c %lu: [%S] "), uuid::log::format_level_char(message.content_->level), message.id_, message.content_->name);
+    udp_.printf_P(PSTR(" %c %lu: "), uuid::log::format_level_char(message.content_->level), message.id_);
+// #pragma GCC diagnostic pop
     udp_.print(message.content_->text.c_str());
     bool ok = (udp_.endPacket() == 1);
 
