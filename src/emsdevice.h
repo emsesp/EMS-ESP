@@ -229,6 +229,7 @@ class EMSdevice {
     static constexpr uint8_t EMS_DEVICE_FLAG_RC300       = 8;
     static constexpr uint8_t EMS_DEVICE_FLAG_RC100       = 9;
     static constexpr uint8_t EMS_DEVICE_FLAG_JUNKERS     = 10;
+    static constexpr uint8_t EMS_DEVICE_FLAG_CRF         = 11;
 
   private:
     uint8_t     unique_id_;
