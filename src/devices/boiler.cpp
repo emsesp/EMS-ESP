@@ -51,10 +51,13 @@ Boiler::Boiler(uint8_t device_type, int8_t device_id, uint8_t product_id, const 
     register_telegram_type(0x16, F("UBAParameters"), true, [&](std::shared_ptr<const Telegram> t) { process_UBAParameters(t); });
     register_telegram_type(0x33, F("UBAParameterWW"), true, [&](std::shared_ptr<const Telegram> t) { process_UBAParameterWW(t); });
     register_telegram_type(0x34, F("UBAMonitorWW"), false, [&](std::shared_ptr<const Telegram> t) { process_UBAMonitorWW(t); });
-    // only EMS+ and Heatpump
-    if (model() != EMSdevice::EMS_DEVICE_FLAG_EMS && model() != EMSdevice::EMS_DEVICE_FLAG_HT3) {
+    // not ems1.0, but HT3
+    if (model() != EMSdevice::EMS_DEVICE_FLAG_EMS) {
         register_telegram_type(0x26, F("UBASettingsWW"), true, [&](std::shared_ptr<const Telegram> t) { process_UBASettingsWW(t); });
         register_telegram_type(0x2A, F("MC10Status"), false, [&](std::shared_ptr<const Telegram> t) { process_MC10Status(t); });
+    }
+    // only EMS+ and Heatpump
+    if (model() != EMSdevice::EMS_DEVICE_FLAG_EMS && model() != EMSdevice::EMS_DEVICE_FLAG_HT3) {
         register_telegram_type(0xD1, F("UBAOutdoorTemp"), false, [&](std::shared_ptr<const Telegram> t) { process_UBAOutdoorTemp(t); });
         register_telegram_type(0xE3, F("UBAMonitorSlowPlus"), false, [&](std::shared_ptr<const Telegram> t) { process_UBAMonitorSlowPlus2(t); });
         register_telegram_type(0xE4, F("UBAMonitorFastPlus"), false, [&](std::shared_ptr<const Telegram> t) { process_UBAMonitorFastPlus(t); });
@@ -235,22 +238,18 @@ void Boiler::register_mqtt_ha_config() {
     if (Helpers::hasValue(maintenanceType_)) {
         Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(maintenance), device_type(), "maintenance", nullptr, nullptr);
     }
+    // optional etra values for date and time if not handled by maintenance
     // if (Helpers::hasValue(maintenanceTime_)) {
     //      Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(maintenanceTime), device_type(), "maintenanceTime", F_(hours), nullptr);
     // }
     // if (strlen(maintenanceDate_) > 0) {
     //      Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_info), F_(maintenanceDate), device_type(), "maintenanceDate", nullptr, nullptr);
     // }
-    // optional in info
-
-    // ems+ and heatpumps only
-   if (model() != EMSdevice::EMS_DEVICE_FLAG_EMS && model() != EMSdevice::EMS_DEVICE_FLAG_HT3) {
-        if (Helpers::hasValue(mixerTemp_)) {
-            Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(mixerTemp), device_type(), "mixerTemp", F_(degrees), nullptr);
-        }
-        if (Helpers::hasValue(tankMiddleTemp_)) {
-            Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankMiddleTemp), device_type(), "tankMiddleTemp", F_(degrees), nullptr);
-        }
+    if (Helpers::hasValue(mixerTemp_)) {
+        Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(mixerTemp), device_type(), "mixerTemp", F_(degrees), nullptr);
+    }
+    if (Helpers::hasValue(tankMiddleTemp_)) {
+        Mqtt::register_mqtt_ha_sensor(nullptr, nullptr, F_(tankMiddleTemp), device_type(), "tankMiddleTemp", F_(degrees), nullptr);
     }
 
     // information for heatpumps
@@ -363,10 +362,8 @@ void Boiler::register_mqtt_ha_config_ww() {
     if (Helpers::hasValue(wWWorkM_)) {
         Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWWorkM), device_type(), "wWWorkM", F_(min), nullptr);
     }
-    if (model() != EMSdevice::EMS_DEVICE_FLAG_EMS && model() != EMSdevice::EMS_DEVICE_FLAG_HT3) {
-        if (Helpers::hasValue(wWMaxPower_)) {
-            Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWMaxPower), device_type(), "wWMaxPower", F_(percent), nullptr);
-        }
+    if (Helpers::hasValue(wWMaxPower_)) {
+        Mqtt::register_mqtt_ha_sensor(nullptr, F_(mqtt_suffix_ww), F_(wWMaxPower), device_type(), "wWMaxPower", F_(percent), nullptr);
 	}
     mqtt_ha_config_ww_ = true; // done
 }
