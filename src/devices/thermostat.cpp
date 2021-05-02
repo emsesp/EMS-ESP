@@ -311,7 +311,7 @@ void Thermostat::publish_values(JsonObject & json, bool force) {
         JsonObject                                      json_data = doc.to<JsonObject>();
         if (export_values_main(json_data)) {
             Mqtt::publish(F("thermostat_data"), json_data);
-            json_data.clear();
+            doc.clear();
         }
         for (const auto & hc : heating_circuits_) {
             if (export_values_hc(hc, json_data)) {
@@ -319,7 +319,7 @@ void Thermostat::publish_values(JsonObject & json, bool force) {
                 snprintf_P(topic, 30, PSTR("thermostat_data_hc%d"), hc->hc_num());
                 Mqtt::publish(topic, json_data);
             }
-            json_data.clear();
+            doc.clear();
         }
         return;
     }
