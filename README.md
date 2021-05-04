@@ -2,7 +2,7 @@
 
 **EMS-ESP** is an open-source firmware for the Espressif ESP8266 and ESP32 microcontroller that communicates with **EMS** (Energy Management System) based equipment from manufacturers like Bosch, Buderus, Nefit, Junkers, Worcester and Sieger.
 
-This is the firmware for the ESP8266.
+This is the firmware for the ESP8266, known as version 2. We've since moved to the ESP32 platform with v3 which opens up many more possibilities for additional features. Make sure you check out https://github.com/emsesp/EMS-ESP32. Version 2 will be restricted to only maintaince releases.
 
 [![version](https://img.shields.io/github/release/emsesp/EMS-ESP.svg?label=Latest%20Release)](https://github.com/emsesp/EMS-ESP/blob/main/CHANGELOG.md)
 [![release-date](https://img.shields.io/github/release-date/emsesp/EMS-ESP.svg?label=Released)](https://github.com/emsesp/EMS-ESP/commits/main)

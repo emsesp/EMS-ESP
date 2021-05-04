@@ -5,15 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] May 4 2021
+
+## Added
+
+- differ between boiler-types
+- publish HA delayed 1 minute, only for topics with values
+- thermostat CRF200S, PID 216
+
+## Changed
+
+- syslog timestamp to localtime+timezone, set `appname` to message->name
+
+## Removed
+
 ## [2.2.1] March 18 2021
 
 ### Added
+
 - Boiler WB Greenstar 8000 (195) and Cascade Modul MC400 (210)
 - show cascaded boilers
 - optional id to info command to output heatingcircuits separated
 - Reset to factory setting with PButton (io0 to GND for >9 sec)
 
 ### Fixed
+
 - telegrams matched to masterthermostat 0x18
 - Boiler Junkers Cerapur Aero
 - multiple roomcontrollers
@@ -29,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix ems+ values #723, #732
 
 ### Changed
+
 - split `show values` in smaller packages and separate heating circuits
 - extended length of IP/hostname from 32 to 48 chars (#676)
 - check flowsensor for `tap_water_active`
@@ -39,11 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - thermostat `time` to `datetime`
 - adc scaled to mV output
 - split boiler mqtt to `data`, `data_ww`, `data_info`
-- Reduce Web UI artefact size by removing moment.js 
+- Reduce Web UI artefact size by removing moment.js
 
 ## [2.2.0] December 28 2020
 
 ### Added
+
 - function keys in editor: cursor, del, home, end. F1=help, F2=show, and other shortcuts
 - SM100 pump working time and energy units
 - heating curve parameters and commands for RC300
@@ -60,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RC35 holiday setting with `+` for 'at home'
 
 ### Fixed
+
 - mixer IPM pumpstatus
 - mixer devices in HA were incorrectly named
 - Prevent HA MQTT config messages for thermostat that has no 'currtemp' (#582)
@@ -70,6 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix telegrams matched to masterthermostat 0x18
 
 ### Changed
+
 - optimized MQTT for HA to reduce heap fragmentation issues
 - change syslog settings without reboot
 - HA-config split in smaller blocks
@@ -84,17 +104,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - optimized how console and web display device data ([#632](https://github.com/emsesp/EMS-ESP/issues/632))
 
 ### Removed
-- old shell and python build scripts
 
+- old shell and python build scripts
 
 ## [2.1.0] October 31 2020
 
 ### Added
+
 - boiler `heatingactivated`, automatic select parameter telegrams for write
 - boiler `wWType` parameter, in Console and MQTT
 - support for uploading compressed firmware binaries in web UI
 - setting to manually override the MQTT retain flag
-- New API via HTTP REST API to read and set values. See https://emsesp.github.io/docs/#/API
+- New API via HTTP REST API to read and set values. See <https://emsesp.github.io/docs/#/API>
 - `show commands` command
 - exporting of system settings using the `system info` command in Web and Console. Added link into the Web's Settings page.
 - setting to change how booleans are rendered in MQTT (on/off, true/false, 1/0)
@@ -105,14 +126,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added button and tooltip to EMS Devices in Web
 - wwtemp and wwtemplow to MQTT, Console and Web
 - summer, winter modes for the CW400 thermostat
-- new command under system called `report`. http://ems-esp/api?device=system&cmd=report to generate a report log for troubleshooting
+- new command under system called `report`. <http://ems-esp/api?device=system&cmd=report> to generate a report log for troubleshooting
 - thermostat error codes
 - Console command `publish ha` to also force the creation of the Home Assistant MQTT Discovery topics
 - Heat pump values (dew temperature and relative air humidity)
 - Console up key to repeat last command
-- added RC300 floordrying, building, damped temperature 
+- added RC300 floordrying, building, damped temperature
 
 ### Fixed
+
 - fix wwontime readback
 - fixed support for RC300 via MQTT commands (#505)
 - Some minor optimizations to memory handling in the MQTT service
@@ -125,22 +147,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix month for setting clock from NTP
 
 ### Changed
+
 - renamed wWCircPumpType to wWChargeType
 - Installation and Configuration notes moved to the official EMS-ESP documentation site
 - `call` commands can be done from the Console root for all devices
-- Updated EMS-ESP official documentation (https://emsesp.github.io/docs/#/)
+- Updated EMS-ESP official documentation (<https://emsesp.github.io/docs/#/>)
 - JWT Secret renamed to Super User Password
 - EMS Devices in Web UI shows button and tooltip to remind users they can click on a device
 - MQTT topic name changes (see doc)
 - Mixing renamed to Mixer
 
 ### Removed
+
 - Console contexts for thermostat and boiler
 - Removed option to enable/disable the MQTT Heartbeat. It's always on.
 
 ## [2.0.1] September 13 2020
 
 ### Added
+
 - Able to set individual MQTT publish intervals per device
 - Option to automatically MQTT publish when device data is updated
 - Immediately send out Rx read request after a successful write, and publish via MQTT
@@ -152,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `read <device ID> <type ID>` command in console
 
 ### Fixed
+
 - Sometimes the automatic upgrade from 1.9 to 2.0 bricked the ESP8266
 - Thermostat `set master` wasn't preserved after restart
 - Correctly detect Thermostat heating circuits in Home Assistant
@@ -161,6 +187,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - External Dallas sensor support for DS18S20
 
 ### Changed
+
 - Web user-interface improvements, table alignment and number formatting
 - Spelling of disinfection in MQTT payload
 - Many small minor code improvements and optimizations
@@ -168,16 +195,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Syslog hostname always shown in Web
 
 ### Removed
+
 - NO_LED build option
 
 ## [2.0.0] 29-08-2020
 
 First version of v2 with
+
 - Supporting both ESP8266 and ESP32 modules from Espressif
 - A new multi-user Web interface (based on React/TypeScript)
 - A new Console, accessible via Serial and Telnet
 - Tighter security in both Web and Console. Admin privileges required to access core settings and commands.
-- Support for Home Assistant MQTT Discovery (https://www.home-assistant.io/docs/mqtt/discovery/)
+- Support for Home Assistant MQTT Discovery (<https://www.home-assistant.io/docs/mqtt/discovery/>)
 - Can be run standalone as an independent Access Point or join an existing WiFi network
 - Easier first-time configuration via a web Captive Portal
 - Supporting over 70 EMS devices (boilers, thermostats, solar modules, mixer modules, heat pumps, gateways)
@@ -187,11 +216,12 @@ See README.me for more details.
 ## [1.9.5] 30-04-2020
 
 ### Added
+
 - Solar Module SM200 support
 - Support writing to Junkers FR100 thermostats
 - Support writing to RC100, Moduline 1000/1010 thermostats
 - MM10 Mixing module support (thanks @MichaelDvP)
-- MM200 warm water circuits (https://github.com/emsesp/EMS-ESP/pull/315)
+- MM200 warm water circuits (<https://github.com/emsesp/EMS-ESP/pull/315>)
 - Support for Moduline 200 and Sieger ES72 thermostats
 - First implementation of writing to generic Junker Thermostats (thanks @Neonox31)
 - Added model type (Buderus, Sieger, Junkers, Nefit, Bosch, Worcester) to device names
@@ -203,14 +233,16 @@ See README.me for more details.
 - Added features to WW messages (0x33, 0x34) to improve WW monitoring. (PR#338 by @ypaindaveine)
 - Added mixing log and stub for EMS type 0xAC (PR#338 by @ypaindaveine)
 - Added Thermostat retrieving settings (0xA5) (validated on RC30N) with MQTT support (thanks Yves @ypaindaveine. See #352)
-- Merged with PR https://github.com/emsesp/EMS-ESP/pull/366 from @MichaelDvP fixing RC20 and MM50
+- Merged with PR <https://github.com/emsesp/EMS-ESP/pull/366> from @MichaelDvP fixing RC20 and MM50
 
 ### Fixed
+
 - set boiler warm water temp on Junkers/Bosch HT3
 - fixed detection of the Moduline 400 thermostat
 - RC35 setting temperature also forces the current select temp to change, irrespective of the mode
 
 ### Changed
+
 - improved MQTT publishing to stop network flooding. `publish_time` of -1 is no publish, 0 is automatic otherwise its a time interval
 - External sensors (like Dallas DS18*) are sent as a nested MQTT topic including their unique identifier
 - `mqttlog` console command renamed to `mqttqueue` to only show the current publish queue
@@ -220,8 +252,9 @@ See README.me for more details.
 - `queue` renamed to `txqueue`
 
 ### Removed
- - `autodetect scan`. Replaced with `devices scan` and `devices scan+` for deep scanning
- - `mqttlog all` and showing MQTT log in the web interface - no point showing history of previous mqtt publishes in ESP's precious memory. For debugging I recommend using MQTT Explorer or another external tool.
+
+- `autodetect scan`. Replaced with `devices scan` and `devices scan+` for deep scanning
+- `mqttlog all` and showing MQTT log in the web interface - no point showing history of previous mqtt publishes in ESP's precious memory. For debugging I recommend using MQTT Explorer or another external tool.
 
 ## [1.9.4] 15-12-2019
 
@@ -281,10 +314,11 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ## [1.9.2] 2019-10-19
 
-#### Important! This build has breaking changes:
- - MQTT topics have changed. Use the `mqttlog` command to see the names of the subscriptions and the format of the payload data.
- - Home Assistant `.yaml` files need updating to reflect the recent MQTT changes
- - The web builder has been upgraded to use Gulp 4. Remove `tools/webfilesbuilder/node_modules` and re-install the libraries using `npm ci` from within the `tools/webfilesbuilder` folder
+#### Important! This build has breaking changes
+
+- MQTT topics have changed. Use the `mqttlog` command to see the names of the subscriptions and the format of the payload data.
+- Home Assistant `.yaml` files need updating to reflect the recent MQTT changes
+- The web builder has been upgraded to use Gulp 4. Remove `tools/webfilesbuilder/node_modules` and re-install the libraries using `npm ci` from within the `tools/webfilesbuilder` folder
 
 ### Added
 
@@ -304,7 +338,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 - External dallas sensor values sent in MQTT payload as float values and not strings
 - All MQTT topics for the Thermostat have the Heating Circuit appended (e.g. `thermostat_data1`). This includes the commands.
 - Shower timer and shower alert and not MQTT published at boot up
-- Heating Active logic change to use Selected Flow Temp of min 30 instead of 70 (https://github.com/emsesp/EMS-ESP/issues/193)
+- Heating Active logic change to use Selected Flow Temp of min 30 instead of 70 (<https://github.com/emsesp/EMS-ESP/issues/193>)
 - Cleaned up Telnet messages during bootup to only show key information.
 
 ### Removed
@@ -315,7 +349,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Added
 
-- Support for multiple Heating Circuits - https://github.com/emsesp/EMS-ESP/issues/162
+- Support for multiple Heating Circuits - <https://github.com/emsesp/EMS-ESP/issues/162>
 - new `mqttlog` command also shows which MQTT topics it is subscribed too
 - Optimized event log loading in web and added integrity checks on all config and log files during boot
 - `autodetect quick` for detecting known devices from our database list
@@ -323,7 +357,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Fixed
 
-- fixed zero values (0.0) for setpoint temperature with the RC35 thermostat when in Auto mode - https://github.com/emsesp/EMS-ESP/issues/180
+- fixed zero values (0.0) for setpoint temperature with the RC35 thermostat when in Auto mode - <https://github.com/emsesp/EMS-ESP/issues/180>
 - added check for corrupted event log, which could happen due to SPIFFS writing while UART is active
 - made Junkers work again (broke in 1.9.0)
 
@@ -465,6 +499,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 ## [1.5.5] 2019-03-07
 
 ### Fixed
+
 - Support the latest ArduinoJson v6 and espressif8266 2.0.4 libraries (in PlatformIO do a `pio lib update` and `pio update`)
 
 ### Changed
@@ -475,6 +510,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 - Text changes in the help
 
 ### Added
+
 - Show if MQTT is connected
 - Show version of MyESP (the custom MQTT, Wifi, OTA, MDNS, Telnet library)
 - EMS-OT OpenTherm connector
@@ -486,6 +522,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 - MQTT keep alive changed from 5 minutes to 1 minute
 
 ### Added
+
 - Callback for OTA. This is used to disable EMS bus during a firmware OTA update, which caused problems with the latest ESP89266 core libraries
 - Added rough estimate of WiFi signal strength to info page
 - Added the build time & date to the info page (optional in platformio.ini)
@@ -499,7 +536,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Added
 
-- Improved MQTT LWT (Last Will Testament). Uses payload called 'online' and 'offline'. See https://github.com/emsesp/EMS-ESP/issues/57
+- Improved MQTT LWT (Last Will Testament). Uses payload called 'online' and 'offline'. See <https://github.com/emsesp/EMS-ESP/issues/57>
 - Added ESP32 support to MyESP library
 - Added Bosch Easy thermostat, Buderus Logamax U122
 - Support for changing boiler wwtemp via MQTT (merge #58 from egrekov). thanks!
@@ -547,8 +584,8 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 - Removed the `poll` and `tx` commands
 - `DEBUG_SUPPORT`. Now controlled with the 'set serial' command
-- removed MQTT and WIFI settings from my_config.h. These have to be set either within the application (using set) or hardcoded in platformio.ini You can now check in `my_config.h` without everyone seeing your passwords! 
-- TxCapable removed from `info` 
+- removed MQTT and WIFI settings from my_config.h. These have to be set either within the application (using set) or hardcoded in platformio.ini You can now check in `my_config.h` without everyone seeing your passwords!
+- TxCapable removed from `info`
 
 ## [1.4.1] 2019-01-29
 
@@ -578,7 +615,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Fixed
 
-- Handle thermostats that don't have builtin temperature sensors when showing current temperature (https://github.com/emsesp/EMS-ESP/issues/18#issuecomment-451012963)
+- Handle thermostats that don't have builtin temperature sensors when showing current temperature (<https://github.com/emsesp/EMS-ESP/issues/18#issuecomment-451012963>)
 
 ### Changed
 
@@ -616,7 +653,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 ### Changed
 
 - Renamed project from EMS-ESP-Boiler to EMS-ESP since it's kinda EMS generic now
-- Support for RC20RF and RFM20 (https://github.com/emsesp/EMS-ESP/issues/18)
+- Support for RC20RF and RFM20 (<https://github.com/emsesp/EMS-ESP/issues/18>)
 - Moved all EMS device information into a separate file `ems_devices.h` so no longer need to touch `ems.h`
 - Telnet commands can be strings now and output is suspended when typing
 
@@ -635,9 +672,9 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 ### Changed
 
-- Scanning known EMS Devices now ignores duplicates (https://github.com/emsesp/EMS-ESP/pull/30)
+- Scanning known EMS Devices now ignores duplicates (<https://github.com/emsesp/EMS-ESP/pull/30>)
 - ServiceCode stored as a two byte char
-- Support for RC20RF and RFM20 (https://github.com/emsesp/EMS-ESP/issues/18)
+- Support for RC20RF and RFM20 (<https://github.com/emsesp/EMS-ESP/issues/18>)
 
 ## [1.2.3] 2019-01-03
 
@@ -645,23 +682,23 @@ There are breaking changes in this release. See `publish_time` below and make su
 
 - Can now hardcode Boiler and Thermostat types in my_config.h to bypass auto-detection
 - Fixed MQTT subscribing to Heating and Hot Water active topics
-- Fixed for listening to incoming MQTT topics (https://github.com/emsesp/EMS-ESP/issues/27)
-- Fixed handling of current temperature on an RC35-type thermostat that doesn't have a sensor (https://github.com/emsesp/EMS-ESP/issues/18)
+- Fixed for listening to incoming MQTT topics (<https://github.com/emsesp/EMS-ESP/issues/27>)
+- Fixed handling of current temperature on an RC35-type thermostat that doesn't have a sensor (<https://github.com/emsesp/EMS-ESP/issues/18>)
 
 ## [1.2.2] 2019-01-02
 
 ### Fixed
 
-- Issues in 1.2.1 (see https://github.com/emsesp/EMS-ESP/issues/25)
+- Issues in 1.2.1 (see <https://github.com/emsesp/EMS-ESP/issues/25>)
 - Logic for determining if there is activity on the EMS bus and using the onboard LEDs properly
 
 ## [1.2.1] 2019-01-02
 
 ### Fixed
 
-- Only process broadcast messages if the offset (byte 4) is 0. (https://github.com/emsesp/EMS-ESP/issues/23)
+- Only process broadcast messages if the offset (byte 4) is 0. (<https://github.com/emsesp/EMS-ESP/issues/23>)
 - Improved checking for duplicate sent Tx telegrams by comparing CRCs
-- Removed distinguishing between noise on the line and corrupt telegrams (https://github.com/emsesp/EMS-ESP/issues/24)
+- Removed distinguishing between noise on the line and corrupt telegrams (<https://github.com/emsesp/EMS-ESP/issues/24>)
 
 ## [1.2.0] 2019-01-01
 
@@ -715,7 +752,7 @@ There are breaking changes in this release. See `publish_time` below and make su
 ### Added
 
 - Created this CHANGELOG.md file!
-- [Added support for the Nefit Easy thermostat, reading of temperature values only](https://github.com/emsesp/EMS-ESP/issues/9) - note *read only* (big thanks @**kroon040** for lending me an Easy device) 
+- [Added support for the Nefit Easy thermostat, reading of temperature values only](https://github.com/emsesp/EMS-ESP/issues/9) - note *read only* (big thanks @**kroon040** for lending me an Easy device)
 - [Added support for RC35/Moduline 400](https://github.com/emsesp/EMS-ESP/issues/14) - *read only*
 - [New raw logging mode for logging](https://github.com/emsesp/EMS-ESP/issues/11)
 - [New 'r'command to send raw data to EMS](https://github.com/emsesp/EMS-ESP/issues/11)

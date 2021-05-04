@@ -46,6 +46,11 @@ class Boiler : public EMSdevice {
   private:
     static uuid::log::Logger logger_;
 
+    // specific boiler characteristics, stripping the top 4 bits
+    inline uint8_t model() const {
+        return (flags() & 0x0F);
+    }
+
     void register_mqtt_ha_config();
     void register_mqtt_ha_config_ww();
     void check_active(const bool force = false);
@@ -128,6 +133,7 @@ class Boiler : public EMSdevice {
     uint8_t  wWCurFlow_      = EMS_VALUE_UINT_NOTSET;   // Warm Water current flow temp in l/min
     uint8_t  wWType_         = EMS_VALUE_UINT_NOTSET;   // 0-off, 1-flow, 2-flowbuffer, 3-buffer, 4-layered buffer
     uint8_t  wWActive_       = EMS_VALUE_BOOL_NOTSET;
+    uint8_t  wWMaxPower_     = EMS_VALUE_UINT_NOTSET;   // Warm Water maximum power
 
     // UBATotalUptime
     uint32_t UBAuptime_ = EMS_VALUE_ULONG_NOTSET; // Total UBA working hours
@@ -201,9 +207,10 @@ class Boiler : public EMSdevice {
     void process_UBAMaintenanceStatus(std::shared_ptr<const Telegram> telegram);
     void process_UBAMaintenanceData(std::shared_ptr<const Telegram> telegram);
     void process_UBAErrorMessage(std::shared_ptr<const Telegram> telegram);
-    void process_UBADHWStatus(std::shared_ptr<const Telegram> telegram);
+    void process_UBAMonitorWWPlus(std::shared_ptr<const Telegram> telegram);
     void process_UBAInformation(std::shared_ptr<const Telegram> telegram);
     void process_UBAEnergySupplied(std::shared_ptr<const Telegram> telegram);
+    void process_UBASettingsWW(std::shared_ptr<const Telegram> telegram);
 
     // commands - none of these use the additional id parameter
     bool set_warmwater_mode(const char * value, const int8_t id);
