@@ -151,7 +151,13 @@ void Mixer::register_mqtt_ha_config() {
     snprintf_P(stat_t, sizeof(stat_t), PSTR("%s/mixer_data"), Mqtt::base().c_str());
     doc["stat_t"] = stat_t;
 
-    doc["val_tpl"] = FJSON("{{value_json.type}}"); // HA needs a single value. We take the type which is wwc or hc
+    char tpl[30];
+    if (type_ == Type::HC) {
+        snprintf_P(tpl, sizeof(tpl), PSTR("{{value_json.hc%d.type}}"), device_id() - 0x20 + 1);
+    } else {
+        snprintf_P(tpl, sizeof(tpl), PSTR("{{value_json.wwc%d.type}}"), device_id() - 0x28 + 1);
+    }
+    doc["val_tpl"] = tpl;
 
     JsonObject dev = doc.createNestedObject("dev");
     dev["name"]    = FJSON("EMS-ESP Mixer");
