@@ -1,10 +1,12 @@
 # ![logo](media/EMS-ESP_logo_dark.png)
 
+| **Important - PLEASE READ !!** |
+| - |
+| This repo is for the ESP8266 version. It is no longer maintained and superceeded by version 3 which is based on the ESP32 and located at <https://github.com/emsesp/EMS-ESP32>. To upgrade an interface board from version 2 to version 3 take a look at BBQKees's [instructions](https://bbqkees-electronics.nl/wiki/gateway/upgrade-the-gateway-to-an-esp32.html). |
+
+---
 **EMS-ESP** is an open-source firmware for the Espressif ESP8266 and ESP32 microcontroller that communicates with **EMS** (Energy Management System) based equipment from manufacturers like Bosch, Buderus, Nefit, Junkers, Worcester and Sieger.
 
-This is the firmware for the ESP8266, known as version 2. We've since moved to the ESP32 platform with v3 which opens up many more possibilities for additional features. Make sure you check out <https://github.com/emsesp/EMS-ESP32> and look at the [demo](https://ems-esp.derbyshire.nl).
-
-## **Important: This version will be restricted to maintenance releases only!**
 <br/>
 
 [![version](https://img.shields.io/github/release/emsesp/EMS-ESP.svg?label=Latest%20Release)](https://github.com/emsesp/EMS-ESP/blob/main/CHANGELOG.md)
